@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/schemas/consumption_receipt.schema.json",
+  "title": "ProofRail Permit Consumption Receipt v0.5.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "permit_hash", "nonce", "state", "executor_id", "consumed_at", "next_replay_root", "trust_checkpoint_before", "trust_checkpoint_after", "record_hash", "signature"],
+  "properties": {
+    "kind": {"const": "proofrail.permit-consumption-receipt.v0.5.2"},
+    "permit_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nonce": {"type": "string", "minLength": 16},
+    "state": {"const": "CONSUMED"},
+    "executor_id": {"type": "string", "minLength": 1},
+    "consumed_at": {"type": "string", "format": "date-time"},
+    "next_replay_root": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "trust_checkpoint_before": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "trust_checkpoint_after": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "record_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signature": {"type": "object"}
+  }
+}

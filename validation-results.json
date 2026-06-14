@@ -1,0 +1,197 @@
+[
+  {
+    "actual": "Second execution error: permit_replayed; adapter calls: 1.",
+    "attack": "Execute the same signed permit twice against one registry.",
+    "attack_id": "REPLAY-001",
+    "evidence": [
+      "proofrail/permit.py:consume_permit",
+      "adversarial/replay_attack_suite.py"
+    ],
+    "expected": "Second execution is denied before the adapter call.",
+    "residual_risk": "Registry durability and backup integrity remain operational dependencies.",
+    "suite": "replay_attack_suite",
+    "threat": "Consumed permit replay",
+    "trust_assumption": "The replay registry persists and is consulted atomically.",
+    "verdict": "PASS"
+  },
+  {
+    "actual": "Execution error: replay_root_changed; adapter calls: 1.",
+    "attack": "Delete the replay registry after consumption, then replay the permit.",
+    "attack_id": "REPLAY-002",
+    "evidence": [
+      "proofrail/permit.py:consume_permit",
+      "adversarial/replay_attack_suite.py"
+    ],
+    "expected": "Replay remains denied after recovery-state loss.",
+    "residual_risk": "Loss of both replay state and the independently held trust checkpoint can still erase replay evidence.",
+    "suite": "replay_attack_suite",
+    "threat": "Replay after replay-registry loss",
+    "trust_assumption": "The replay registry cannot be deleted, rolled back, or restored stale.",
+    "verdict": "PASS"
+  },
+  {
+    "actual": "Verification error: invalid_signature: Record hash mismatch.",
+    "attack": "Change the exact PR head after signing.",
+    "attack_id": "FORGE-001",
+    "evidence": [
+      "proofrail/crypto.py:verify_signature",
+      "adversarial/permit_forgery_suite.py"
+    ],
+    "expected": "Signature or record-hash verification denies the permit.",
+    "residual_risk": "Compromise of the verifier private key permits valid-looking forged authority.",
+    "suite": "permit_forgery_suite",
+    "threat": "Signed permit content mutation",
+    "trust_assumption": "Ed25519 verifier key remains uncompromised.",
+    "verdict": "PASS"
+  },
+  {
+    "actual": "Verification error: invalid_signature: Record signature verification failed.",
+    "attack": "Verify a valid permit against a different verifier identity.",
+    "attack_id": "FORGE-002",
+    "evidence": [
+      "proofrail/crypto.py:verify_signature",
+      "adversarial/permit_forgery_suite.py"
+    ],
+    "expected": "Signature verification denies the permit.",
+    "residual_risk": "Key-distribution compromise can substitute an attacker's trusted public key.",
+    "suite": "permit_forgery_suite",
+    "threat": "Permit signed by an untrusted key",
+    "trust_assumption": "The executor resolves the correct verifier public key.",
+    "verdict": "PASS"
+  },
+  {
+    "actual": "Verification error: monotonic_counter_changed.",
+    "attack": "Verify after real expiry while supplying a clock one hour behind.",
+    "attack_id": "FORGE-003",
+    "evidence": [
+      "proofrail/permit.py:verify_permit",
+      "adversarial/permit_forgery_suite.py"
+    ],
+    "expected": "Expired authority remains denied despite local clock rollback.",
+    "residual_risk": "If checkpoint epoch and counter do not advance, wall-clock expiry still depends on trusted time.",
+    "suite": "permit_forgery_suite",
+    "threat": "Expiry bypass through clock rollback",
+    "trust_assumption": "Executor time is trustworthy and monotonic enough for expiry enforcement.",
+    "verdict": "PASS"
+  },
+  {
+    "actual": "Activation error: Principal 'learner' with role 'learner' lacks 'policy:activate' in tenant '<tenant>'.",
+    "attack": "Learner activates a policy candidate.",
+    "attack_id": "ESCALATE-001",
+    "evidence": [
+      "proofrail/rbac.py",
+      "proofrail/control_plane.py:activate_policy"
+    ],
+    "expected": "Activation is denied.",
+    "residual_risk": "A learner granted governor credentials is outside this separation boundary.",
+    "suite": "authority_escalation_suite",
+    "threat": "Learner self-promotion",
+    "trust_assumption": "Role assignments are correct and the learner lacks governor authority.",
+    "verdict": "PASS"
+  },
+  {
+    "actual": "Mint error: issuer_role_forbidden: Role 'executor' cannot mint execution permits.",
+    "attack": "Executor signs a permit using its own key and role.",
+    "attack_id": "ESCALATE-002",
+    "evidence": [
+      "proofrail/permit.py:mint_permit",
+      "adversarial/authority_escalation_suite.py"
+    ],
+    "expected": "Minting is denied.",
+    "residual_risk": "Verifier-key compromise bypasses role intent because the key is the authority.",
+    "suite": "authority_escalation_suite",
+    "threat": "Executor mints its own authority",
+    "trust_assumption": "Permit issuer roles are enforced independently of caller confidence.",
+    "verdict": "PASS"
+  },
+  {
+    "actual": "Activation error: Stale policy activation requires rollback quorum; active version: 2.",
+    "attack": "A second governor reactivates an older policy version.",
+    "attack_id": "ESCALATE-003",
+    "evidence": [
+      "proofrail/control_plane.py:activate_policy",
+      "adversarial/authority_escalation_suite.py"
+    ],
+    "expected": "Stale policy activation is denied without an explicit rollback permit.",
+    "residual_risk": "Compromise of enough governor keys to meet quorum can still authorize rollback.",
+    "suite": "authority_escalation_suite",
+    "threat": "Stale policy promotion by split-brain governors",
+    "trust_assumption": "All authorized governors coordinate policy monotonicity externally.",
+    "verdict": "PASS"
+  },
+  {
+    "actual": "Valid: False; errors: ['line_1:invalid_entry_hash'].",
+    "attack": "Rewrite an old record without recomputing its hash chain.",
+    "attack_id": "LEDGER-001",
+    "evidence": [
+      "proofrail/checkpoint.py:verify_ledger",
+      "adversarial/ledger_rewrite_suite.py"
+    ],
+    "expected": "Ledger verification exposes tampering.",
+    "residual_risk": "An attacker able to rewrite all records and all trusted anchors may still replace history.",
+    "suite": "ledger_rewrite_suite",
+    "threat": "In-place ledger record mutation",
+    "trust_assumption": "Verification is run against the ledger before relying on history.",
+    "verdict": "PASS"
+  },
+  {
+    "actual": "Standalone ledger valid: True; external anchor valid: False; errors: ['anchor_ledger_merkle_root_mismatch', 'anchor_ledger_last_hash_mismatch', 'anchor_sequence_entry_count_mismatch', 'anchor_sequence_end_mismatch'].",
+    "attack": "Delete the final valid ledger record, then verify against its external anchor.",
+    "attack_id": "LEDGER-002",
+    "evidence": [
+      "proofrail/anchor.py:verify_anchor",
+      "adversarial/ledger_rewrite_suite.py"
+    ],
+    "expected": "External anchor verification detects missing history.",
+    "residual_risk": "Deleting or replacing both ledger and independently retained anchor defeats continuity detection.",
+    "suite": "ledger_rewrite_suite",
+    "threat": "External-anchor tail truncation",
+    "trust_assumption": "The signed anchor and verification key remain independently available.",
+    "verdict": "PASS"
+  },
+  {
+    "actual": "Valid: False; errors: ['checkpoint_entry_count_mismatch', 'checkpoint_last_hash_mismatch', 'checkpoint_merkle_root_mismatch'].",
+    "attack": "Verify a truncated ledger against its prior signed checkpoint.",
+    "attack_id": "LEDGER-003",
+    "evidence": [
+      "proofrail/checkpoint.py:verify_checkpoint",
+      "adversarial/ledger_rewrite_suite.py"
+    ],
+    "expected": "Checkpoint verification exposes truncation.",
+    "residual_risk": "Checkpoint deletion or signing-key compromise defeats this detection path.",
+    "suite": "ledger_rewrite_suite",
+    "threat": "Anchored tail truncation",
+    "trust_assumption": "The checkpoint public key and checkpoint artifact remain independently available.",
+    "verdict": "PASS"
+  },
+  {
+    "actual": "State: RECONCILIATION_FAILED; observed SHA: None.",
+    "attack": "Submit a false merged state and SHA in the reconciliation request.",
+    "attack_id": "RECONCILE-001",
+    "evidence": [
+      "proofrail/server.py:_reconcile_github_merge",
+      "adversarial/reconciliation_bypass_suite.py"
+    ],
+    "expected": "Provider observation overrides the request and reconciliation fails.",
+    "residual_risk": "A compromised provider observation channel remains authoritative.",
+    "suite": "reconciliation_bypass_suite",
+    "threat": "Reconciler request-body outcome forgery",
+    "trust_assumption": "The control plane ignores caller-asserted provider outcomes.",
+    "verdict": "PASS"
+  },
+  {
+    "actual": "State: RECONCILIATION_FAILED; observed SHA: None.",
+    "attack": "Return a fabricated but well-formed merged observation from the adapter.",
+    "attack_id": "RECONCILE-002",
+    "evidence": [
+      "proofrail/server.py:_reconcile_github_merge",
+      "adversarial/reconciliation_bypass_suite.py"
+    ],
+    "expected": "A second independent channel prevents false reconciliation.",
+    "residual_risk": "Compromise of enough observer keys to meet quorum can still falsely reconcile.",
+    "suite": "reconciliation_bypass_suite",
+    "threat": "Compromised provider observation adapter",
+    "trust_assumption": "The adapter and provider response are authentic and independently secured.",
+    "verdict": "PASS"
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/schemas/reproduction_manifest.schema.json",
+  "title": "ProofRail Reproduction Manifest v0.5.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "created_at", "files", "validation_report_sha256", "expected_checks", "record_hash", "signature"],
+  "properties": {
+    "kind": {"const": "proofrail.reproduction-manifest.v0.5.2"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "files": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    },
+    "validation_report_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "expected_checks": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "record_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signature": {"type": "object"}
+  }
+}

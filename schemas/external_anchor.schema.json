@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/schemas/external_anchor.schema.json",
+  "title": "ProofRail External Anchor v0.5.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "created_at", "anchor_provider", "anchor_reference", "ledger_merkle_root", "ledger_first_hash", "ledger_last_hash", "trust_checkpoint_hash", "trust_checkpoint_present", "sequence_range", "record_hash", "anchor_signature"],
+  "properties": {
+    "kind": {"const": "proofrail.external-anchor.v0.5.2"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "anchor_provider": {"type": "string", "minLength": 1},
+    "anchor_reference": {"type": "string", "minLength": 1},
+    "ledger_merkle_root": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "ledger_first_hash": {"type": ["string", "null"]},
+    "ledger_last_hash": {"type": ["string", "null"]},
+    "trust_checkpoint_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "trust_checkpoint_present": {"type": "boolean"},
+    "sequence_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end", "entry_count"],
+      "properties": {
+        "start": {"type": "integer", "minimum": 0},
+        "end": {"type": "integer", "minimum": 0},
+        "entry_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "record_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "anchor_signature": {"type": "object"}
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "kind": "proofrail.action.v1",
+  "action_id": "action-config-1",
+  "action_type": "config_change",
+  "target": "openclaw.json",
+  "risk": "high",
+  "reversible": true,
+  "claim_ids": [
+    "claim-config-valid"
+  ],
+  "requested_by": "agent:aurex"
+}

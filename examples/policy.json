@@ -1,0 +1,24 @@
+{
+  "allowed_action_types": [
+    "config_change",
+    "deploy",
+    "external_message",
+    "financial_transaction"
+  ],
+  "approval_required_for_risks": [
+    "medium",
+    "high",
+    "critical"
+  ],
+  "require_observed_for_risks": [
+    "high",
+    "critical"
+  ],
+  "minimum_evidence_refs": {
+    "low": 1,
+    "medium": 1,
+    "high": 2,
+    "critical": 2
+  },
+  "max_evidence_age_seconds": 3600
+}

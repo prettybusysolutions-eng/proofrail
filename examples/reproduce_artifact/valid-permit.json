@@ -1,0 +1,40 @@
+{
+  "approval_digest": "5555555555555555555555555555555555555555555555555555555555555555",
+  "constraints": {},
+  "effect": {
+    "action_type": "github_merge",
+    "expected_head_sha": "abcdef1234567890",
+    "merge_method": "squash",
+    "pull_number": 42,
+    "repository": "example/repository"
+  },
+  "expires_at": "2026-06-12T23:45:00Z",
+  "issued_at": "2026-06-11T23:45:00Z",
+  "issuer": {
+    "principal_id": "verifier:reproduce",
+    "role": "verifier"
+  },
+  "kind": "proofrail.execution-permit.v0.2",
+  "nonce": "reproduce-valid-nonce-0001",
+  "permit_id": "proofrail-reproduce-valid-permit",
+  "record_hash": "674ab4d428f0ae9c4898b0d4c9171c4f138cbdddf86b55f94fb1959e03174334",
+  "roots": {
+    "evidence": "2222222222222222222222222222222222222222222222222222222222222222",
+    "identity": "1111111111111111111111111111111111111111111111111111111111111111",
+    "policy": "3333333333333333333333333333333333333333333333333333333333333333",
+    "state": "4444444444444444444444444444444444444444444444444444444444444444"
+  },
+  "signature": {
+    "algorithm": "ed25519",
+    "key_id": "reproduce-verifier",
+    "value": "o04n7M9-924dPxdTC3Pb6nfaoxmDNKInsRJsRpXCbMLcTq6KNm0ryHSaZCfoEHlximRNJQhAuzisDzLu6XEGBw"
+  },
+  "state": "PERMITTED",
+  "trust": {
+    "checkpoint_root": "539a6708890c62ce1e735abe36edc4b5f699b8ef5532e45223200d6268d747ab",
+    "minimum_checkpoint_epoch": 12,
+    "monotonic_counter": 34,
+    "observation_root": "7c4e029cb5a28631678a04bf72a08e4e4c90741bdaef154d5e3b65abd28f9131",
+    "replay_root": "c56792ecb2f0dc36e7cc65d7f005cac13dba0885c4d9613e88758908bda85480"
+  }
+}

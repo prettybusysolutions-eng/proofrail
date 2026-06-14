@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/schemas/evidence_root.schema.json",
+  "title": "ProofRail Evidence Root v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "record_id", "created_at", "artifacts", "approval", "merkle_root", "record_hash", "signature"],
+  "properties": {
+    "kind": {"const": "proofrail.evidence-root.v0.2"},
+    "record_id": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "format": "date-time"},
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_id", "sha256", "observed_at"],
+        "properties": {
+          "artifact_id": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "observed_at": {"type": "string", "format": "date-time"},
+          "uri": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest", "approved_by", "scope"],
+      "properties": {
+        "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "approved_by": {"type": "string", "minLength": 1},
+        "scope": {"type": "object"}
+      }
+    },
+    "merkle_root": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "previous_hash": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      ]
+    },
+    "record_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signature": {"$ref": "#/$defs/signature"}
+  },
+  "$defs": {
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "key_id", "value"],
+      "properties": {
+        "algorithm": {"const": "ed25519"},
+        "key_id": {"type": "string", "minLength": 1},
+        "value": {"type": "string", "minLength": 80}
+      }
+    }
+  }
+}

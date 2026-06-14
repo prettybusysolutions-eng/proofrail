@@ -1,0 +1,19 @@
+{
+  "kind": "proofrail.claim.v1",
+  "claim_id": "claim-config-valid",
+  "claim": "The candidate configuration passed schema validation.",
+  "epistemic_status": "observed",
+  "observed_at": "2026-06-10T01:00:00Z",
+  "expires_at": "2027-06-10T01:00:00Z",
+  "principal": "verifier:config-validator",
+  "evidence": [
+    {
+      "uri": "file:///var/lib/proofrail/config-validation.json",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "uri": "file:///var/lib/proofrail/config-diff.json",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ]
+}

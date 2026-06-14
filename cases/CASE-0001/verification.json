@@ -1,0 +1,37 @@
+{
+  "case_id": "CASE-0001",
+  "recorded_at": "2026-03-30T02:57:00Z",
+  "verification_status": "passed",
+  "checks": [
+    {
+      "name": "issue_anchor_exists",
+      "target": "github://prettybusysolutions-eng/xzenia-attestation/issues/1",
+      "status": "passed"
+    },
+    {
+      "name": "pull_request_exists",
+      "target": "github://prettybusysolutions-eng/xzenia-attestation/pull/2",
+      "status": "passed"
+    },
+    {
+      "name": "workflow_run_pull_request_succeeds",
+      "target": "github://prettybusysolutions-eng/xzenia-attestation/actions/runs/23724200038",
+      "status": "passed"
+    },
+    {
+      "name": "workflow_run_post_merge_push_succeeds",
+      "target": "github://prettybusysolutions-eng/xzenia-attestation/actions/runs/23724209545",
+      "status": "passed"
+    },
+    {
+      "name": "merge_visible",
+      "target": "github://prettybusysolutions-eng/xzenia-attestation/commit/48b65c26cb6326b6b2fdd3442eb6c8ffe82488a5",
+      "status": "passed"
+    },
+    {
+      "name": "issue_closed",
+      "target": "github://prettybusysolutions-eng/xzenia-attestation/issues/1#closed",
+      "status": "passed"
+    }
+  ]
+}

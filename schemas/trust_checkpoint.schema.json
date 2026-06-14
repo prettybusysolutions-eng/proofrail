@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/schemas/trust_checkpoint.schema.json",
+  "title": "ProofRail Signed Trust Checkpoint v0.5.1",
+  "type": "object",
+  "required": ["kind", "epoch", "monotonic_counter", "roots", "trust_root", "record_hash", "signature"],
+  "properties": {
+    "kind": {"const": "proofrail.trust-checkpoint.v0.5.1"},
+    "epoch": {"type": "integer", "minimum": 0},
+    "monotonic_counter": {"type": "integer", "minimum": 0},
+    "roots": {
+      "type": "object",
+      "required": ["replay", "ledger_checkpoint", "observation"],
+      "properties": {
+        "replay": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "ledger_checkpoint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "observation": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "trust_root": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "previous_checkpoint_hash": {"type": ["string", "null"]},
+    "record_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signature": {"type": "object"}
+  }
+}

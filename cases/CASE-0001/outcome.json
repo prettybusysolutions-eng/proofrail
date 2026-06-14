@@ -1,0 +1,14 @@
+{
+  "case_id": "CASE-0001",
+  "recorded_at": "2026-03-30T02:57:00Z",
+  "outcome_type": "github_attestation_loop_completed",
+  "outcome_value": 1,
+  "outcome_notes": "CASE-0001 completed as the first real GitHub-native attestation loop: issue created, governed PR opened, workflow passed, PR merged, merge commit visible, and linked issue closed.",
+  "evidence_refs": [
+    "https://github.com/prettybusysolutions-eng/xzenia-attestation/issues/1",
+    "https://github.com/prettybusysolutions-eng/xzenia-attestation/pull/2",
+    "https://github.com/prettybusysolutions-eng/xzenia-attestation/actions/runs/23724200038",
+    "https://github.com/prettybusysolutions-eng/xzenia-attestation/actions/runs/23724209545",
+    "https://github.com/prettybusysolutions-eng/xzenia-attestation/commit/48b65c26cb6326b6b2fdd3442eb6c8ffe82488a5"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "anchor_provider": "local-file",
+  "anchor_reference": "file:anchor-public-key.txt",
+  "anchor_signature": {
+    "algorithm": "ed25519",
+    "key_id": "reproduce-anchor",
+    "value": "cM7dphxhWQ7NBmNjmlq2h4HD-sAuEzBNMxFnf9osxlYkEu6poFH927FGgrmgJM-t6YG0azh49EFgRQiMpYBSBA"
+  },
+  "created_at": "2026-06-11T23:45:00Z",
+  "kind": "proofrail.external-anchor.v0.5.2",
+  "ledger_first_hash": "3d863d35f2e322c74e43a121da07d3bd0d3dd0230664d5702fa8224bcee829b0",
+  "ledger_last_hash": "c97b67440f3939e9665d32352ae7fe4654d96f11485730796cbc0026490e84f0",
+  "ledger_merkle_root": "aa754425ba0da8dc20a24361a58ca7b80624f9fc29ab600b605d91f5a79f83f0",
+  "record_hash": "5da7f789709d1d933792c302eecbfe4e4b56b8120e2f384b5d0a6d0e35d6c4a0",
+  "sequence_range": {
+    "end": 6,
+    "entry_count": 6,
+    "start": 1
+  },
+  "trust_checkpoint_hash": "da39c9ed6c0427a8d09a0cd3d1537eb84ed378d6ef90a3d4159a6e3cf39e1279",
+  "trust_checkpoint_present": true
+}

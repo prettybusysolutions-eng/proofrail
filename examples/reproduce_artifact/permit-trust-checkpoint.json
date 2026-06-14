@@ -1,0 +1,18 @@
+{
+  "epoch": 12,
+  "kind": "proofrail.trust-checkpoint.v0.5.1",
+  "monotonic_counter": 34,
+  "previous_checkpoint_hash": null,
+  "record_hash": "539a6708890c62ce1e735abe36edc4b5f699b8ef5532e45223200d6268d747ab",
+  "roots": {
+    "ledger_checkpoint": "f2285d77ed5c06bccd329ea92f4cd58e7eca5139aae4d0e43864dc8788742559",
+    "observation": "7c4e029cb5a28631678a04bf72a08e4e4c90741bdaef154d5e3b65abd28f9131",
+    "replay": "c56792ecb2f0dc36e7cc65d7f005cac13dba0885c4d9613e88758908bda85480"
+  },
+  "signature": {
+    "algorithm": "ed25519",
+    "key_id": "reproduce-trust-checkpoint",
+    "value": "fAqWOQSm644GYMC_IZHD76SDmeHH4F47jlY-9yNQpLvhwu0PlXIrQRkThvyqW5sLBgiG08ak399IrYhcvnVRDw"
+  },
+  "trust_root": "c9e6698d0c58d3d54c47129950b2c4d3fc0aa2d1e2e65edf7f15b6682984fa87"
+}

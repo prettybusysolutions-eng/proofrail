@@ -1,0 +1,20 @@
+{
+  "checkpoint_id": "ce84551a-89e0-409e-a920-385da2853762",
+  "created_at": "2026-06-11T21:31:00Z",
+  "kind": "proofrail.merkle-checkpoint.v0.3",
+  "ledger": {
+    "entry_count": 6,
+    "first_hash": "3d863d35f2e322c74e43a121da07d3bd0d3dd0230664d5702fa8224bcee829b0",
+    "format": "jsonl",
+    "hash_algorithm": "sha256",
+    "last_hash": "c97b67440f3939e9665d32352ae7fe4654d96f11485730796cbc0026490e84f0",
+    "merkle_root": "aa754425ba0da8dc20a24361a58ca7b80624f9fc29ab600b605d91f5a79f83f0",
+    "tree_algorithm": "proofrail-merkle-v1"
+  },
+  "record_hash": "f2285d77ed5c06bccd329ea92f4cd58e7eca5139aae4d0e43864dc8788742559",
+  "signature": {
+    "algorithm": "ed25519",
+    "key_id": "demo-checkpoint-key",
+    "value": "AQcrJ_zRpoabVVzLgBuo7MDfAa-qihX0YkZEVE1B8IN6TTkpTALmWrIa0TBN7nuoCkkIDe4j7eqsSnchJQQ-CA"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/schemas/quorum_attestation.schema.json",
+  "title": "ProofRail Signed Quorum Attestation v0.5.1",
+  "type": "object",
+  "required": ["kind", "subject_digest", "statement", "statement_hash", "signer", "record_hash", "signature"],
+  "properties": {
+    "kind": {"type": "string", "minLength": 1},
+    "subject_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "statement": {"type": "object"},
+    "statement_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signer": {
+      "type": "object",
+      "required": ["principal_id", "role"],
+      "properties": {
+        "principal_id": {"type": "string", "minLength": 1},
+        "role": {"type": "string", "minLength": 1}
+      }
+    },
+    "record_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signature": {"type": "object"}
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Xzenia Attested Case",
+  "type": "object",
+  "required": ["case_id", "created_at", "source_system", "source_event_id", "recommendation", "verification_path", "status"],
+  "properties": {
+    "case_id": {"type": "string"},
+    "created_at": {"type": "string"},
+    "source_system": {"type": "string"},
+    "source_event_id": {"type": "string"},
+    "recommendation": {"type": "string"},
+    "verification_path": {"type": "string"},
+    "status": {"type": "string", "enum": ["open", "approved", "executed", "verified", "closed"]},
+    "evidence": {"type": "array", "items": {"type": "object"}}
+  }
+}

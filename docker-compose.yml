@@ -1,0 +1,13 @@
+services:
+  proofrail:
+    build: .
+    image: xzenia/proofrail:0.1.0
+    environment:
+      PROOFRAIL_EVIDENCE_SECRET: ${PROOFRAIL_EVIDENCE_SECRET:?required}
+      PROOFRAIL_APPROVAL_SECRET: ${PROOFRAIL_APPROVAL_SECRET:?required}
+      PROOFRAIL_DECISION_SECRET: ${PROOFRAIL_DECISION_SECRET:?required}
+    volumes:
+      - proofrail-data:/var/lib/proofrail
+
+volumes:
+  proofrail-data:

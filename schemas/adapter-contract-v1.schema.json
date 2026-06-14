@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProofRail Adapter Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "idempotency_key",
+    "remote_operation_id",
+    "status",
+    "side_effect_confirmed",
+    "retry_safe",
+    "receipt_evidence"
+  ],
+  "properties": {
+    "contract": {
+      "const": "proofrail.adapter-receipt.v1"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 32
+    },
+    "remote_operation_id": {
+      "type": ["string", "null"]
+    },
+    "status": {
+      "enum": ["success", "failed", "unknown"]
+    },
+    "side_effect_confirmed": {
+      "type": "boolean"
+    },
+    "retry_safe": {
+      "type": "boolean"
+    },
+    "receipt_evidence": {
+      "type": "object"
+    }
+  }
+}

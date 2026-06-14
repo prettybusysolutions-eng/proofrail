@@ -1,0 +1,42 @@
+{
+  "ecs.version": "8.11.0",
+  "event.action": "proofrail_action",
+  "event.category": [
+    "configuration"
+  ],
+  "event.id": "5b1a6c7ae31cdf8d5aae6d30fa78817a8c19ce2af506e23a99a7bba03c13ebbb",
+  "event.kind": "event",
+  "event.outcome": "success",
+  "event.type": [
+    "access"
+  ],
+  "organization.id": "pilot-tenant",
+  "proofrail.ledger_entries": 1,
+  "proofrail.ledger_errors": [],
+  "proofrail.ledger_valid": true,
+  "proofrail.result": {
+    "action_id": "pilot-merge-42",
+    "actor": "agent:pilot",
+    "details": {
+      "execution": {
+        "contract": "proofrail.adapter-receipt.v1",
+        "idempotency_key": "5b1a6c7ae31cdf8d5aae6d30fa78817a8c19ce2af506e23a99a7bba03c13ebbb",
+        "receipt_evidence": {
+          "http_status": 200,
+          "message": "Pull Request successfully merged",
+          "phase": "merge"
+        },
+        "remote_operation_id": "merge789",
+        "retry_safe": true,
+        "side_effect_confirmed": true,
+        "status": "success"
+      }
+    },
+    "kind": "proofrail.receipt.v1",
+    "outcome": "success",
+    "previous_hash": "GENESIS",
+    "sequence": 1
+  },
+  "proofrail.status": "success",
+  "user.id": "pilot-merge-42"
+}

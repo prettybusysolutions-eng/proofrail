@@ -1,0 +1,12 @@
+{
+  "case_id": "CASE-0001",
+  "recorded_at": "2026-03-30T01:35:00Z",
+  "decision_type": "recommendation",
+  "decision": "Open a governed pull request that adds explicit execution, verification, and outcome records for CASE-0001.",
+  "basis": [
+    "Issue #1 exists as the externally addressable case anchor.",
+    "Attestation repo and workflow are live.",
+    "A PR is the cleanest visible approval and execution surface for the first loop."
+  ],
+  "verification_ref": "github://prettybusysolutions-eng/xzenia-attestation/issues/1"
+}

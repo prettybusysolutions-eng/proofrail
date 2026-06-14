@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proofrail"
+version = "0.6.0"
+description = "Evidence-bound action gate for autonomous AI systems"
+requires-python = ">=3.11"
+dependencies = [
+  "cryptography>=42",
+  "rfc8785>=0.1.4",
+  "jsonschema>=4.23",
+]
+
+[project.scripts]
+proofrail = "proofrail.cli:main"
+proofrail-server = "proofrail.server:main"
+
+[tool.setuptools.packages.find]
+include = ["proofrail*", "integrations*", "schemas*"]
+
+[tool.setuptools.package-data]
+schemas = ["*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

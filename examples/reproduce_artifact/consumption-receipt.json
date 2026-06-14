@@ -1,0 +1,17 @@
+{
+  "consumed_at": "2026-06-11T23:46:00Z",
+  "executor_id": "executor:reproduce",
+  "kind": "proofrail.permit-consumption-receipt.v0.5.2",
+  "next_replay_root": "1417ca179392db4754f4dd01aeb5f15b03a269a7bf40b0eba91a45dec293c8eb",
+  "nonce": "reproduce-valid-nonce-0001",
+  "permit_hash": "674ab4d428f0ae9c4898b0d4c9171c4f138cbdddf86b55f94fb1959e03174334",
+  "record_hash": "a5e10ea054aafba285d662f2ef79797e99c5af6deb394cfeabddd55278a99ccf",
+  "signature": {
+    "algorithm": "ed25519",
+    "key_id": "reproduce-executor",
+    "value": "kLDucJIWYA7s-xN_EfXj86Yv1MPYE7yhz0-RsuNcPn1-R9JPAjw49fFS-3IRaXcRrY8FcscxVS8NTT41MYBZDg"
+  },
+  "state": "CONSUMED",
+  "trust_checkpoint_after": "da39c9ed6c0427a8d09a0cd3d1537eb84ed378d6ef90a3d4159a6e3cf39e1279",
+  "trust_checkpoint_before": "539a6708890c62ce1e735abe36edc4b5f699b8ef5532e45223200d6268d747ab"
+}

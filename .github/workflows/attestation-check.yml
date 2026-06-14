@@ -1,0 +1,107 @@
+name: Attestation Check
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  attestation-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install ProofRail
+        run: python -m pip install -e .
+      - name: Verify required structure exists
+        run: |
+          test -f README.md
+          test -f POLICY.md
+          test -f THREAT_MODEL.md
+          test -f STATE_MACHINE.md
+          test -f docs/PROOFRAIL_AUTHORITY_OBJECT.md
+          test -f docs/ACTION_AUTHORITY_ENVELOPE_V1.md
+          test -f docs/OPEN_STANDARD_DIRECTION.md
+          test -f docs/ADVERSARIAL_PROOF_MATRIX.md
+          test -f docs/SECURITY_MODEL.md
+          test -f docs/TRUST_BOUNDARIES.md
+          test -f docs/KNOWN_LIMITATIONS.md
+          test -f docs/TRUST_ELIMINATION.md
+          test -f docs/ANCHORING_MODEL.md
+          test -f docs/INDEPENDENT_REPRODUCTION.md
+          test -f docs/INDEPENDENT_REPRODUCTION_TRIAL.md
+          test -f docs/SECOND_EXECUTION_DOMAIN.md
+          test -f PUBLIC_RELEASE.md
+          test -f LICENSE
+          test -f VALIDATION_REPORT.md
+          test -f validation-results.json
+          test -f proofrail/checkpoint.py
+          test -f proofrail/server.py
+          test -f proofrail/rbac.py
+          test -f proofrail/audit_export.py
+          test -f proofrail/trust.py
+          test -f proofrail/quorum.py
+          test -f proofrail/anchor.py
+          test -f proofrail/reproduce.py
+          test -f proofrail/migration.py
+          test -f proofrail/envelope.py
+          test -f integrations/openclaw/database_adapter.py
+          test -f examples/github_merge_authority_demo.py
+          test -f examples/github-merge-authority-artifact/proofrail-ledger.jsonl
+          test -f examples/github-merge-authority-artifact/proofrail-checkpoint.json
+          test -f examples/reproduce_artifact/reproduction-manifest.json
+          test -f schemas/case.schema.json
+          test -f schemas/outcome.schema.json
+          test -f schemas/identity_root.schema.json
+          test -f schemas/evidence_root.schema.json
+          test -f schemas/policy_root.schema.json
+          test -f schemas/state_root.schema.json
+          test -f schemas/permit.schema.json
+          test -f schemas/receipt.schema.json
+          test -f schemas/trust_checkpoint.schema.json
+          test -f schemas/quorum_attestation.schema.json
+          test -f schemas/external_anchor.schema.json
+          test -f schemas/reproduction_manifest.schema.json
+          test -f schemas/consumption_receipt.schema.json
+          test -f schemas/database_migration_permit.schema.json
+          test -f schemas/action_authority_envelope.schema.json
+          test -f ledger/events.jsonl
+          test -f cases/CASE-0001/case.json
+      - name: Run ProofRail tests
+        run: python -m unittest discover -s tests -v
+      - name: Verify pilot server entry point
+        run: proofrail-server --help
+      - name: Regenerate adversarial validation evidence
+        run: |
+          python scripts/generate_validation_report.py \
+            --out /tmp/VALIDATION_REPORT.md \
+            --evidence-out /tmp/validation-results.json
+          diff -u VALIDATION_REPORT.md /tmp/VALIDATION_REPORT.md
+          diff -u validation-results.json /tmp/validation-results.json
+      - name: Run externally verifiable authority demo
+        run: |
+          demo_dir="$(mktemp -d)"
+          proofrail demo github-merge-authority --out-dir "$demo_dir"
+          proofrail ledger verify "$demo_dir/proofrail-ledger.jsonl"
+          if proofrail ledger verify "$demo_dir/tampered-ledger.jsonl"; then
+            echo "tampered ledger unexpectedly verified"
+            exit 1
+          fi
+      - name: Reproduce portable authority artifact
+        run: |
+          proofrail reproduce examples/reproduce_artifact/
+          generated_dir="$(mktemp -d)"
+          python -c "from pathlib import Path; from scripts.generate_reproduce_artifact import generate; generate(Path('$generated_dir'))"
+          diff -ru examples/reproduce_artifact "$generated_dir"
+          artifact_dir="$(mktemp -d)"
+          cp -R examples/reproduce_artifact/. "$artifact_dir/"
+          printf '\nforged\n' >> "$artifact_dir/VALIDATION_REPORT.md"
+          if proofrail reproduce "$artifact_dir"; then
+            echo "tampered reproduction artifact unexpectedly verified"
+            exit 1
+          fi
+      - name: Show case payload
+        run: cat cases/CASE-0001/case.json

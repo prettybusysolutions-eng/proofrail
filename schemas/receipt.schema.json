@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/schemas/receipt.schema.json",
+  "title": "ProofRail Execution and Reconciliation Receipt v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "receipt_id", "permit_hash", "state", "observed_at", "executor_claim", "reconciliation", "previous_hash", "record_hash", "signature"],
+  "properties": {
+    "kind": {"const": "proofrail.execution-receipt.v0.2"},
+    "receipt_id": {"type": "string", "minLength": 1},
+    "permit_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "state": {
+      "enum": ["EXECUTING", "CONSUMED", "RECONCILED", "EXECUTION_FAILED", "RECONCILIATION_FAILED"]
+    },
+    "observed_at": {"type": "string", "format": "date-time"},
+    "executor_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {"enum": ["success", "failed", "unknown"]},
+        "remote_operation_id": {
+          "oneOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "evidence_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "reconciliation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["confirmed", "provider"],
+      "properties": {
+        "confirmed": {"type": "boolean"},
+        "provider": {"const": "github"},
+        "observed_merge_sha": {
+          "oneOf": [{"type": "string"}, {"type": "null"}]
+        },
+        "evidence_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "previous_hash": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      ]
+    },
+    "record_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signature": {"$ref": "#/$defs/signature"}
+  },
+  "$defs": {
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "key_id", "value"],
+      "properties": {
+        "algorithm": {"const": "ed25519"},
+        "key_id": {"type": "string", "minLength": 1},
+        "value": {"type": "string", "minLength": 80}
+      }
+    }
+  }
+}

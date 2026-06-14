@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/schemas/permit.schema.json",
+  "title": "ProofRail Single-Use Execution Permit v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "permit_id", "state", "issued_at", "expires_at", "nonce", "issuer", "roots", "approval_digest", "effect", "record_hash", "signature"],
+  "properties": {
+    "kind": {"const": "proofrail.execution-permit.v0.2"},
+    "permit_id": {"type": "string", "minLength": 1},
+    "state": {"const": "PERMITTED"},
+    "issued_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "nonce": {"type": "string", "minLength": 16},
+    "issuer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal_id", "role"],
+      "properties": {
+        "principal_id": {"type": "string", "minLength": 1},
+        "role": {"enum": ["verifier", "governor"]}
+      }
+    },
+    "roots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "evidence", "policy", "state"],
+      "properties": {
+        "identity": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "evidence": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "policy": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "state": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "approval_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action_type", "repository", "pull_number", "expected_head_sha", "merge_method"],
+      "properties": {
+        "action_type": {"const": "github_merge"},
+        "repository": {"type": "string", "pattern": "^[^/]+/[^/]+$"},
+        "pull_number": {"type": "integer", "minimum": 1},
+        "expected_head_sha": {"type": "string", "pattern": "^[0-9a-f]{7,64}$"},
+        "merge_method": {"enum": ["merge", "squash", "rebase"]}
+      }
+    },
+    "constraints": {"type": "object"},
+    "trust": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["replay_root", "checkpoint_root", "observation_root", "minimum_checkpoint_epoch", "monotonic_counter"],
+      "properties": {
+        "replay_root": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "checkpoint_root": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "observation_root": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "minimum_checkpoint_epoch": {"type": "integer", "minimum": 0},
+        "monotonic_counter": {"type": "integer", "minimum": 0}
+      }
+    },
+    "record_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signature": {"$ref": "#/$defs/signature"}
+  },
+  "$defs": {
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "key_id", "value"],
+      "properties": {
+        "algorithm": {"const": "ed25519"},
+        "key_id": {"type": "string", "minLength": 1},
+        "value": {"type": "string", "minLength": 80}
+      }
+    }
+  }
+}

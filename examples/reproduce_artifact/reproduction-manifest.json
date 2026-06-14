@@ -1,0 +1,47 @@
+{
+  "created_at": "2026-06-11T23:45:00Z",
+  "expected_checks": [
+    "schemas_valid",
+    "manifest_signature",
+    "valid_permit_verifies",
+    "invalid_permit_denied",
+    "ledger_verifies",
+    "checkpoint_verifies",
+    "anchor_verifies",
+    "trust_checkpoint_signature",
+    "trust_checkpoint_verifies",
+    "consumed_permit_verifies",
+    "validation_report_hash_matches",
+    "tampered_artifact_fails"
+  ],
+  "files": {
+    "TRANSCRIPT.md": "30b2449cd71f81391bdf233eb6c1ac28f806a13f7ac80699bf31965d284ba38e",
+    "VALIDATION_REPORT.md": "c517aa1889fd469f231467c0e9e3da7982465ad1aae4eca25935039b1fcf430b",
+    "anchor-public-key.txt": "6c311dd98ccb72a0a284a8aed017c7b38caa3f60837d287fe40c904bd78dd39c",
+    "anchor.json": "d04285454d525a7b40f0ac40a05f642f17fa428e4fbfd6c43487ba6517b058dd",
+    "checkpoint-public-key.txt": "23caf603b19ff01acefb056aa681756f5541c1a689d34dd7506d4b27ae24d635",
+    "consumption-receipt.json": "d0df330c8f38aaf5d4e8c813f963f3de3dba693b54b1de6c5f38656bbf196e43",
+    "executor-public-key.txt": "75f566d4726fee12c087cae4625dc9f136dfccbf013446bdec12658c2e92574d",
+    "invalid-permit.json": "54c59baeb1cc41dd0e87b691d0e76e5f595308ecd5af35252ccaac471843e7bd",
+    "manifest-public-key.txt": "e49f1ae516e0c4aef31caf80621a588c36a1b45568d55449e7bf446bc5296d4c",
+    "permit-context.json": "f929ff29e824f81161cf3a2963f099ac7f92fe6f37d6cca2cbc7de187ba98760",
+    "permit-trust-checkpoint.json": "ab9f8f7616fa951998c72b936162759186b3fb256f49ee3a46525edf36ef8b87",
+    "proofrail-checkpoint.json": "1ad118d1f027db801980e367fcd78a8c84777879118235823c59e1bba59a9484",
+    "proofrail-ledger.jsonl": "6704a4b906ef40a4ed450847f4a6da8da70cdebe25c7c686e676be8f96650a8d",
+    "replay-registry.sqlite3": "cd99a0ed9eacc51101ecc0855592be305029a6f4f47da26dd8720e52909ae296",
+    "tampered-ledger.jsonl": "c3e257c0682f2f82ca407e52a088485fb6db96251df338d44155d207ad5ad8e3",
+    "trust-checkpoint-public-key.txt": "abbe44e6eb3f9a7c9c3e285f068471f5b0c734ca191c9acef85fac79dc3f2440",
+    "trust-checkpoint.json": "0b8006e5562d966bdc3cb99b24ee9e91ee6836f9670b9838b3aba86ec3eaba92",
+    "valid-permit.json": "59577657d73ea716a555d93e111e5b86060de4115734ba6cee59ba6a31a728c7",
+    "validation-results.json": "88d765b6319cb2431b78a854b242a9bf333d66b7d0808853c224f07b168704ff",
+    "verifier-public-key.txt": "be1f31c5a57b5096660744a493712a6ca08f60b3ba942d0e525c5503a03ce10f"
+  },
+  "kind": "proofrail.reproduction-manifest.v0.5.2",
+  "record_hash": "9a6601e49c47c0e266a20966aa1731b540979cb223869c74197d3b377ea793da",
+  "signature": {
+    "algorithm": "ed25519",
+    "key_id": "reproduce-manifest",
+    "value": "30MmgsyOvKqAhY4Ms056HNS1trzpuD2cvigZ0fHzFMejbLnch7z1E1a2EPLrmXEh9IIylaWNl39AnMdIWCAkDQ"
+  },
+  "validation_report_sha256": "c517aa1889fd469f231467c0e9e3da7982465ad1aae4eca25935039b1fcf430b"
+}
