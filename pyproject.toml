@@ -8,7 +8,7 @@ version = "0.6.0"
 description = "Evidence-bound action gate for autonomous AI systems"
 requires-python = ">=3.11"
 dependencies = [
-  "cryptography>=42",
+  "cryptography>=50.0.0",
   "rfc8785>=0.1.4",
   "jsonschema>=4.23",
 ]
