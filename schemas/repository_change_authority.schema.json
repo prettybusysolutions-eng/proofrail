@@ -38,6 +38,7 @@
             "allowed_commands",
             "objective_digest",
             "acceptance_test_digest",
+            "canonical_job_digest",
             "max_runtime_seconds",
             "max_model_calls",
             "expected_effect_class"
@@ -51,6 +52,7 @@
             "allowed_commands": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}},
             "objective_digest": {"$ref": "#/$defs/digest"},
             "acceptance_test_digest": {"$ref": "#/$defs/digest"},
+            "canonical_job_digest": {"$ref": "#/$defs/digest"},
             "max_runtime_seconds": {"type": "integer", "minimum": 1},
             "max_model_calls": {"type": "integer", "minimum": 1},
             "expected_effect_class": {"type": "string", "minLength": 1}

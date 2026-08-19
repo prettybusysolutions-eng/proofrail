@@ -10,9 +10,14 @@
     "single_use_repository_change_authority",
     "authority_before_worker_spawn",
     "exact_scope_binding",
+    "canonical_job_digest_binding",
+    "signed_consumption_grant_before_worker_spawn",
     "replay_denial",
     "state_drift_denial",
     "independent_local_reconciliation",
+    "independent_acceptance_test_execution",
+    "committed_unauthorized_change_detection",
+    "untracked_unauthorized_change_detection",
     "race_single_consumer"
   ],
   "not_yet_demonstrated": [
@@ -31,11 +36,16 @@
   ],
   "negative_cases": [
     "missing_authority_denied_before_worker",
+    "split_job_attack_denied_before_worker",
+    "forged_consumption_receipt_denied_before_worker",
+    "valid_authority_wrong_job_digest_denied_before_worker",
+    "post_consumption_job_file_mutation_denied_before_worker",
     "replayed_authority_denied_before_worker",
     "mutated_scope_denied",
     "repo_base_drift_denied",
-    "worker_false_success_rejected",
-    "failing_tests_rejected",
+    "fake_worker_test_success_rejected_by_independent_tests",
+    "committed_unauthorized_change_rejected",
+    "untracked_unauthorized_change_rejected",
     "expired_authority_denied",
     "two_worker_race_single_consumer"
   ]

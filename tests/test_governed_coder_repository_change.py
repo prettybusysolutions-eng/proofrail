@@ -10,12 +10,14 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from integrations.openclaw.repository_change import (
     RepositoryAuthorityError,
     XzeniaCoderRepositoryAdapter,
     consume_repository_change_authority,
+    mint_consumption_grant,
     mint_repository_change_authority,
     parameters_from_job,
     reconcile_repository_change,
@@ -88,6 +90,140 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                 )
             self.assertFalse((Path(directory) / "called.txt").exists())
 
+    def test_job_object_and_job_file_mismatch_is_denied_before_worker(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            action = _action(job, repo, directory, authority=authority)
+            split_job = copy.deepcopy(job)
+            split_job["allowed_paths"] = ["allowed.py", "escape.py"]
+            Path(action["execution"]["job_file"]).write_text(
+                json.dumps(split_job, sort_keys=True),
+                encoding="utf-8",
+            )
+            dispatcher = _dispatcher(directory, "success")
+            adapter = self._adapter(directory, dispatcher)
+            with self.assertRaisesRegex(RepositoryAuthorityError, "job_file_mismatch"):
+                adapter.execute(action, idempotency_key="split")
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_forged_consumption_receipt_cannot_directly_dispatch(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            job_file = Path(directory) / "job.json"
+            job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
+            output = Path(directory) / "evidence"
+            fake = output / "proofrail-consumption.json"
+            fake.parent.mkdir(parents=True)
+            fake.write_text(
+                json.dumps(
+                    {
+                        "state": "CONSUMED",
+                        "authority_digest": "a" * 64,
+                        "executor_id": "xzenia-coder",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            public_key_file = output / "proofrail-consumption-public-key.hex"
+            public_key_file.write_text(_public_key_hex(self.public_key), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/xzenia-coder-dispatch",
+                    "--job-file",
+                    str(job_file),
+                    "--repo-path",
+                    str(repo),
+                    "--output-dir",
+                    str(output),
+                    "--proofrail-consumption-file",
+                    str(fake),
+                    "--proofrail-public-key-file",
+                    str(public_key_file),
+                    "--worker-path",
+                    str(_worker(directory)),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("invalid_consumption_grant", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_valid_authority_wrong_job_digest_is_denied_before_worker(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            mutated = copy.deepcopy(job)
+            mutated["objective"] = "Change value to 3."
+            dispatcher = _dispatcher(directory, "success")
+            adapter = self._adapter(directory, dispatcher)
+            with self.assertRaisesRegex(Exception, "parameters_changed"):
+                adapter.execute(
+                    _action(mutated, repo, directory, authority=authority),
+                    idempotency_key="digest",
+                )
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_authorized_job_file_modified_after_consumption_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            parameters = parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo))
+            grant = consume_repository_change_authority(
+                authority,
+                registry_path=Path(directory) / "registry.sqlite3",
+                public_key=self.public_key,
+                expected_roots=ROOTS,
+                expected_approval_digest=APPROVAL,
+                parameters=parameters,
+                executor_id="xzenia-coder",
+                private_key=self.private_key,
+                key_id="execution-key",
+            )
+            job_file = Path(directory) / "job.json"
+            mutated = copy.deepcopy(job)
+            mutated["objective"] = "Do something else."
+            job_file.write_text(json.dumps(mutated, sort_keys=True), encoding="utf-8")
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            consumption_file = output / "proofrail-consumption.json"
+            consumption_file.write_text(json.dumps(grant), encoding="utf-8")
+            public_key_file = output / "proofrail-consumption-public-key.hex"
+            public_key_file.write_text(_public_key_hex(self.public_key), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/xzenia-coder-dispatch",
+                    "--job-file",
+                    str(job_file),
+                    "--repo-path",
+                    str(repo),
+                    "--output-dir",
+                    str(output),
+                    "--proofrail-consumption-file",
+                    str(consumption_file),
+                    "--proofrail-public-key-file",
+                    str(public_key_file),
+                    "--worker-path",
+                    str(_worker(directory)),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("job_digest_mismatch", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
     def test_repo_base_drift_is_denied_before_worker(self):
         with TemporaryDirectory() as directory:
             repo = _repo(directory)
@@ -105,29 +241,68 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                 )
             self.assertFalse((Path(directory) / "called.txt").exists())
 
-    def test_false_success_and_failing_tests_are_reconciliation_failures(self):
+    def test_fake_tests_json_pass_but_actual_acceptance_test_fails(self):
         with TemporaryDirectory() as directory:
             repo = _repo(directory)
             job = _job(repo)
-            before = {"state_root": "before", "changed_files": []}
-            after = {"state_root": "after", "changed_files": ["allowed.py"]}
-            output = Path(directory) / "evidence"
-            output.mkdir()
-            for name in ("job.json", "transcript.jsonl", "patch.diff", "commands.jsonl", "hashes.json", "final_report.json"):
-                (output / name).write_text("{}\n", encoding="utf-8")
-            (output / "tests.json").write_text(
-                json.dumps({"final": [{"returncode": 1}]}),
-                encoding="utf-8",
+            authority = self._authority(job, repo)
+            dispatcher = _dispatcher(directory, "fake_tests")
+            adapter = self._adapter(directory, dispatcher)
+            result = adapter.execute(
+                _action(job, repo, directory, authority=authority),
+                idempotency_key="fake-tests",
             )
-            result = reconcile_repository_change(
-                job=job,
-                before=before,
-                after=after,
-                worker_report={"status": "PASS", "changed_files": ["allowed.py"]},
-                output_dir=output,
+            self.assertEqual(result["status"], "failed")
+            self.assertIn(
+                "tests_failed",
+                result["receipt_evidence"]["reconciliation"]["errors"],
             )
-            self.assertEqual(result["state"], "RECONCILIATION_FAILED")
-            self.assertIn("tests_failed", result["errors"])
+
+    def test_committed_unauthorized_change_is_reconciliation_failure(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            dispatcher = _dispatcher(directory, "unauthorized_commit")
+            adapter = self._adapter(directory, dispatcher)
+            result = adapter.execute(
+                _action(job, repo, directory, authority=authority),
+                idempotency_key="unauthorized-commit",
+            )
+            reconciliation = result["receipt_evidence"]["reconciliation"]
+            self.assertEqual(reconciliation["state"], "RECONCILIATION_FAILED")
+            self.assertIn("unauthorized_changes", reconciliation["errors"])
+            self.assertIn("escape.py", reconciliation["unauthorized_changes"])
+
+    def test_allowed_committed_change_is_visible_and_reconciles(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            dispatcher = _dispatcher(directory, "allowed_commit")
+            adapter = self._adapter(directory, dispatcher)
+            result = adapter.execute(
+                _action(job, repo, directory, authority=authority),
+                idempotency_key="allowed-commit",
+            )
+            reconciliation = result["receipt_evidence"]["reconciliation"]
+            self.assertEqual(reconciliation["state"], "RECONCILED")
+            self.assertIn("allowed.py", reconciliation["changed_files"])
+
+    def test_untracked_unauthorized_file_is_reconciliation_failure(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            dispatcher = _dispatcher(directory, "untracked_unauthorized")
+            adapter = self._adapter(directory, dispatcher)
+            result = adapter.execute(
+                _action(job, repo, directory, authority=authority),
+                idempotency_key="untracked",
+            )
+            reconciliation = result["receipt_evidence"]["reconciliation"]
+            self.assertEqual(reconciliation["state"], "RECONCILIATION_FAILED")
+            self.assertIn("escape.py", reconciliation["unauthorized_changes"])
 
     def test_expired_authority_is_denied(self):
         with TemporaryDirectory() as directory:
@@ -156,6 +331,8 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                     expected_approval_digest=APPROVAL,
                     parameters=parameters,
                     executor_id="xzenia-coder",
+                    private_key=self.private_key,
+                    key_id="execution-key",
                     now=NOW + timedelta(seconds=1),
                 )
 
@@ -178,6 +355,8 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                         expected_approval_digest=APPROVAL,
                         parameters=parameters,
                         executor_id="xzenia-coder",
+                        private_key=self.private_key,
+                        key_id="execution-key",
                     )
                     outcomes.append("consumed")
                 except Exception as exc:
@@ -214,6 +393,8 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             dispatcher_path=dispatcher,
             registry_path=Path(directory) / "registry.sqlite3",
             public_key=self.public_key,
+            consumption_private_key=self.private_key,
+            consumption_key_id="execution-key",
             expected_roots=ROOTS,
             expected_approval_digest=APPROVAL,
             executor_id="xzenia-coder",
@@ -227,7 +408,14 @@ def _repo(directory):
     subprocess.run(["git", "config", "user.email", "proofrail@example.test"], cwd=repo, check=True)
     subprocess.run(["git", "config", "user.name", "ProofRail Test"], cwd=repo, check=True)
     (repo / "allowed.py").write_text("def value():\n    return 1\n", encoding="utf-8")
-    subprocess.run(["git", "add", "allowed.py"], cwd=repo, check=True)
+    (repo / "test_allowed.py").write_text(
+        "import unittest\n\nfrom allowed import value\n\n\n"
+        "class AllowedTests(unittest.TestCase):\n"
+        "    def test_value(self):\n"
+        "        self.assertEqual(value(), 2)\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "add", "allowed.py", "test_allowed.py"], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
     return repo
 
@@ -239,8 +427,8 @@ def _job(repo):
         "repo_path": str(repo),
         "allowed_paths": ["allowed.py"],
         "forbidden_paths": [],
-        "allowed_commands": [[sys.executable, "-m", "pytest", "-q"]],
-        "acceptance_tests": [[sys.executable, "-m", "pytest", "-q"]],
+        "allowed_commands": [[sys.executable, "-m", "unittest", "discover", "-s", ".", "-p", "test_*.py"]],
+        "acceptance_tests": [[sys.executable, "-m", "unittest", "discover", "-s", ".", "-p", "test_*.py"]],
         "max_runtime_seconds": 30,
         "max_model_calls": 1,
     }
@@ -265,24 +453,56 @@ def _action(job, repo, directory, *, authority):
 def _dispatcher(directory, mode):
     path = Path(directory) / "dispatcher.py"
     path.write_text(
-        """#!/usr/bin/env python3
-import json, pathlib, sys
-pathlib.Path(sys.argv[sys.argv.index('--repo-path') + 1], 'allowed.py').write_text('def value():\\n    return 2\\n')
+        f"""#!/usr/bin/env python3
+import json, pathlib, subprocess, sys
+mode = {mode!r}
+repo = pathlib.Path(sys.argv[sys.argv.index('--repo-path') + 1])
+if mode == 'fake_tests':
+    pathlib.Path(repo, 'allowed.py').write_text('def value():\\n    return 3\\n')
+elif mode in ('unauthorized_commit', 'untracked_unauthorized'):
+    pathlib.Path(repo, 'allowed.py').write_text('def value():\\n    return 2\\n')
+    pathlib.Path(repo, 'escape.py').write_text('escape = True\\n')
+    if mode == 'unauthorized_commit':
+        subprocess.run(['git', 'add', 'allowed.py', 'escape.py'], cwd=repo, check=True)
+        subprocess.run(['git', 'commit', '-m', 'worker change'], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+elif mode == 'allowed_commit':
+    pathlib.Path(repo, 'allowed.py').write_text('def value():\\n    return 2\\n')
+    subprocess.run(['git', 'add', 'allowed.py'], cwd=repo, check=True)
+    subprocess.run(['git', 'commit', '-m', 'worker change'], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+else:
+    pathlib.Path(repo, 'allowed.py').write_text('def value():\\n    return 2\\n')
 out = pathlib.Path(sys.argv[sys.argv.index('--output-dir') + 1])
 out.mkdir(parents=True, exist_ok=True)
 for name in ('transcript.jsonl', 'commands.jsonl', 'patch.diff'):
     (out / name).write_text('x\\n')
 (out / 'job.json').write_text(pathlib.Path(sys.argv[sys.argv.index('--job-file') + 1]).read_text())
-(out / 'tests.json').write_text(json.dumps({'final': [{'returncode': 0}]}))
-(out / 'hashes.json').write_text('{}')
-(out / 'final_report.json').write_text(json.dumps({'status': 'PASS', 'changed_files': ['allowed.py']}))
+(out / 'tests.json').write_text(json.dumps({{'final': [{{'returncode': 0}}]}}))
+(out / 'hashes.json').write_text('{{}}')
+(out / 'final_report.json').write_text(json.dumps({{'status': 'PASS', 'changed_files': ['allowed.py']}}))
 pathlib.Path(pathlib.Path(sys.argv[sys.argv.index('--output-dir') + 1]).parent, 'called.txt').write_text('called')
-print(json.dumps({'status': 'DISPATCHED'}))
+print(json.dumps({{'status': 'DISPATCHED'}}))
 """,
         encoding="utf-8",
     )
     os.chmod(path, 0o755)
     return path
+
+
+def _worker(directory):
+    path = Path(directory) / "worker.py"
+    path.write_text(
+        "#!/usr/bin/env python3\nraise SystemExit('worker_should_not_start')\n",
+        encoding="utf-8",
+    )
+    os.chmod(path, 0o755)
+    return path
+
+
+def _public_key_hex(public_key):
+    return public_key.public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    ).hex()
 
 
 def _head(repo):

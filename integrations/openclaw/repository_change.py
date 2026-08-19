@@ -7,16 +7,18 @@ import sqlite3
 import subprocess
 import time
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PrivateKey,
     Ed25519PublicKey,
 )
 
 from proofrail.core import ProofRailError
-from proofrail.crypto import hash_record
+from proofrail.crypto import canonical_json, hash_record, sign_record, verify_signature
 from proofrail.envelope import (
     mint_action_authority_envelope,
     verify_action_authority_envelope,
@@ -24,6 +26,8 @@ from proofrail.envelope import (
 
 
 ACTION_TYPE = "repository_change"
+JOB_CONTRACT = "proofrail.xzenia-job.v1"
+CONSUMPTION_GRANT_KIND = "proofrail.execution-consumption-grant.v1"
 TERMINAL_WORKER_STATES = {
     "PASS",
     "FAILED_TESTS",
@@ -53,8 +57,10 @@ def repository_change_parameters(
     acceptance_tests: list[list[str]],
     max_runtime_seconds: int,
     max_model_calls: int,
+    canonical_job_digest: str,
     expected_effect_class: str = "code_patch",
 ) -> dict[str, Any]:
+    _require_digest(canonical_job_digest, "canonical_job_digest")
     return {
         "repository_identity": repository_identity,
         "repository_path": str(Path(repository_path).resolve()),
@@ -64,6 +70,7 @@ def repository_change_parameters(
         "allowed_commands": sorted(allowed_commands),
         "objective_digest": _sha256_text(objective),
         "acceptance_test_digest": _sha256_json(acceptance_tests),
+        "canonical_job_digest": canonical_job_digest,
         "max_runtime_seconds": max_runtime_seconds,
         "max_model_calls": max_model_calls,
         "expected_effect_class": expected_effect_class,
@@ -124,6 +131,8 @@ def consume_repository_change_authority(
     expected_approval_digest: str,
     parameters: Mapping[str, Any],
     executor_id: str,
+    private_key: Ed25519PrivateKey | bytes,
+    key_id: str,
     now=None,
 ) -> dict[str, Any]:
     if authority is None:
@@ -151,14 +160,83 @@ def consume_repository_change_authority(
         executor_id=executor_id,
         consumed_at=consumed_at,
     )
-    return {
-        "authority_digest": permit_hash,
-        "nonce": nonce,
+    return mint_consumption_grant(
+        authority_digest=permit_hash,
+        authority_nonce=nonce,
+        parameters=parameters,
+        executor_id=executor_id,
+        consumed_at=consumed_at,
+        expires_at=_required_text(authority, "expires_at"),
+        private_key=private_key,
+        key_id=key_id,
+        registry_path=path,
+    )
+
+
+def mint_consumption_grant(
+    *,
+    authority_digest: str,
+    authority_nonce: str,
+    parameters: Mapping[str, Any],
+    executor_id: str,
+    consumed_at: str,
+    expires_at: str,
+    private_key: Ed25519PrivateKey | bytes,
+    key_id: str,
+    registry_path: str | Path | None = None,
+) -> dict[str, Any]:
+    _require_digest(authority_digest, "authority_digest")
+    _require_digest(str(parameters.get("canonical_job_digest")), "canonical_job_digest")
+    record = {
+        "kind": CONSUMPTION_GRANT_KIND,
         "state": "CONSUMED",
+        "authority_digest": authority_digest,
+        "authority_nonce": authority_nonce,
+        "canonical_job_digest": parameters["canonical_job_digest"],
+        "repository_identity": parameters["repository_identity"],
+        "repository_path": parameters["repository_path"],
+        "base_commit_sha": parameters["base_commit_sha"],
         "executor_id": executor_id,
-        "consumed_at": consumed_at,
-        "registry_path": str(path),
+        "issued_at": consumed_at,
+        "expires_at": expires_at,
     }
+    if registry_path is not None:
+        record["registry_path"] = str(Path(registry_path))
+    return sign_record(record, private_key, key_id=key_id)
+
+
+def verify_consumption_grant(
+    grant: Mapping[str, Any],
+    *,
+    public_key: Ed25519PublicKey | bytes,
+    parameters: Mapping[str, Any],
+    executor_id: str,
+    now: datetime | None = None,
+) -> bool:
+    try:
+        verify_signature(grant, public_key)
+    except Exception as exc:
+        raise RepositoryAuthorityError("invalid_consumption_grant") from exc
+    if grant.get("kind") != CONSUMPTION_GRANT_KIND:
+        raise RepositoryAuthorityError("invalid_consumption_grant_kind")
+    if grant.get("state") != "CONSUMED":
+        raise RepositoryAuthorityError("proofrail_authority_consumption_required")
+    if grant.get("executor_id") != executor_id:
+        raise RepositoryAuthorityError("proofrail_authority_executor_mismatch")
+    comparisons = (
+        ("canonical_job_digest", parameters["canonical_job_digest"], "job_digest_mismatch"),
+        ("repository_identity", parameters["repository_identity"], "repository_identity_mismatch"),
+        ("repository_path", parameters["repository_path"], "repository_path_mismatch"),
+        ("base_commit_sha", parameters["base_commit_sha"], "base_commit_mismatch"),
+    )
+    for field, expected, code in comparisons:
+        if grant.get(field) != expected:
+            raise RepositoryAuthorityError(code)
+    expiry = datetime.fromisoformat(str(grant["expires_at"]).replace("Z", "+00:00"))
+    current = now or datetime.now(timezone.utc)
+    if current.astimezone(timezone.utc) >= expiry.astimezone(timezone.utc):
+        raise RepositoryAuthorityError("consumption_grant_expired")
+    return True
 
 
 class XzeniaCoderRepositoryAdapter:
@@ -168,6 +246,8 @@ class XzeniaCoderRepositoryAdapter:
         dispatcher_path: str | Path,
         registry_path: str | Path,
         public_key: Ed25519PublicKey | bytes,
+        consumption_private_key: Ed25519PrivateKey | bytes,
+        consumption_key_id: str,
         expected_roots: Mapping[str, str],
         expected_approval_digest: str,
         executor_id: str,
@@ -176,6 +256,8 @@ class XzeniaCoderRepositoryAdapter:
         self.dispatcher_path = Path(dispatcher_path)
         self.registry_path = Path(registry_path)
         self.public_key = public_key
+        self.consumption_private_key = consumption_private_key
+        self.consumption_key_id = consumption_key_id
         self.expected_roots = dict(expected_roots)
         self.expected_approval_digest = expected_approval_digest
         self.executor_id = executor_id
@@ -184,10 +266,12 @@ class XzeniaCoderRepositoryAdapter:
     def execute(self, action: dict[str, Any], *, idempotency_key: str) -> dict[str, Any]:
         execution = _mapping(action, "execution")
         authority = execution.get("authority")
-        job = _mapping(execution, "job")
         repo_path = Path(_required_text(execution, "repo_path")).resolve()
         output_dir = Path(_required_text(execution, "output_dir")).resolve()
         job_file = Path(_required_text(execution, "job_file")).resolve()
+        job = read_canonical_job_file(job_file, expected_repo_path=repo_path)
+        if "job" in execution and canonicalize_job(_mapping(execution, "job"), repo_path=repo_path) != dict(job):
+            raise RepositoryAuthorityError("job_file_mismatch")
         current_base = git_head(repo_path)
         parameters = parameters_from_job(job, repo_path=repo_path, base_commit_sha=current_base)
         claim = consume_repository_change_authority(
@@ -198,33 +282,56 @@ class XzeniaCoderRepositoryAdapter:
             expected_approval_digest=self.expected_approval_digest,
             parameters=parameters,
             executor_id=self.executor_id,
+            private_key=self.consumption_private_key,
+            key_id=self.consumption_key_id,
+        )
+        verify_consumption_grant(
+            claim,
+            public_key=self.public_key,
+            parameters=parameters,
+            executor_id=self.executor_id,
         )
         consumption_file = output_dir / "proofrail-consumption.json"
+        public_key_file = output_dir / "proofrail-consumption-public-key.hex"
         consumption_file.parent.mkdir(parents=True, exist_ok=True)
         consumption_file.write_text(
             json.dumps(claim, sort_keys=True) + "\n",
             encoding="utf-8",
         )
-        before = observe_repository(repo_path, allowed_paths=job["allowed_paths"])
+        public_key_file.write_text(_public_key_hex(self.public_key) + "\n", encoding="utf-8")
+        before = observe_repository(
+            repo_path,
+            allowed_paths=job["allowed_paths"],
+            base_commit_sha=current_base,
+        )
         dispatch = _run_dispatcher(
             self.dispatcher_path,
             job_file=job_file,
             repo_path=repo_path,
             output_dir=output_dir,
             consumption_file=consumption_file,
+            public_key_file=public_key_file,
             timeout=int(job["max_runtime_seconds"]),
         )
         worker_report = _read_worker_report(
             output_dir,
             timeout_seconds=int(job["max_runtime_seconds"]),
         )
-        after = observe_repository(repo_path, allowed_paths=job["allowed_paths"])
+        after = observe_repository(
+            repo_path,
+            allowed_paths=job["allowed_paths"],
+            base_commit_sha=current_base,
+        )
         reconciliation = reconcile_repository_change(
             job=job,
             before=before,
             after=after,
             worker_report=worker_report,
             output_dir=output_dir,
+            repo_path=repo_path,
+            consumption_grant=claim,
+            public_key=self.public_key,
+            base_commit_sha=current_base,
         )
         status = "success" if reconciliation["state"] == "RECONCILED" else "failed"
         return {
@@ -255,25 +362,85 @@ def parameters_from_job(
     base_commit_sha: str,
     repository_identity: str | None = None,
 ) -> dict[str, Any]:
+    canonical_job = canonicalize_job(job, repo_path=repo_path)
     return repository_change_parameters(
         repository_identity=repository_identity or str(Path(repo_path).resolve()),
         repository_path=repo_path,
         base_commit_sha=base_commit_sha,
-        allowed_paths=list(job.get("allowed_paths", [])),
-        forbidden_paths=list(job.get("forbidden_paths", [])),
-        allowed_commands=list(job.get("allowed_commands", [])),
-        objective=str(job.get("objective", "")),
-        acceptance_tests=list(job.get("acceptance_tests", [])),
-        max_runtime_seconds=int(job.get("max_runtime_seconds", 0)),
-        max_model_calls=int(job.get("max_model_calls", 1)),
+        allowed_paths=list(canonical_job["allowed_paths"]),
+        forbidden_paths=list(canonical_job["forbidden_paths"]),
+        allowed_commands=list(canonical_job["allowed_commands"]),
+        objective=str(canonical_job["objective"]),
+        acceptance_tests=list(canonical_job["acceptance_tests"]),
+        max_runtime_seconds=int(canonical_job["max_runtime_seconds"]),
+        max_model_calls=int(canonical_job["max_model_calls"]),
+        canonical_job_digest=canonical_job_digest(canonical_job),
     )
 
 
-def observe_repository(repo_path: str | Path, *, allowed_paths: list[str]) -> dict[str, Any]:
+def canonicalize_job(job: Mapping[str, Any], *, repo_path: str | Path | None = None) -> dict[str, Any]:
+    required = (
+        "job_id",
+        "objective",
+        "repo_path",
+        "allowed_paths",
+        "allowed_commands",
+        "acceptance_tests",
+        "max_runtime_seconds",
+    )
+    for field in required:
+        if field not in job:
+            raise RepositoryAuthorityError(f"{field}_missing")
+    resolved_repo = str(Path(repo_path or str(job["repo_path"])).resolve())
+    canonical = {
+        "kind": JOB_CONTRACT,
+        "job_id": str(job["job_id"]),
+        "objective": str(job["objective"]),
+        "repo_path": resolved_repo,
+        "allowed_paths": sorted(str(item) for item in job["allowed_paths"]),
+        "forbidden_paths": sorted(str(item) for item in job.get("forbidden_paths", [])),
+        "allowed_commands": sorted(_canonical_command(item) for item in job["allowed_commands"]),
+        "acceptance_tests": sorted(_canonical_command(item) for item in job["acceptance_tests"]),
+        "max_runtime_seconds": int(job["max_runtime_seconds"]),
+        "max_model_calls": int(job.get("max_model_calls", 1)),
+    }
+    return canonical
+
+
+def canonical_job_digest(job: Mapping[str, Any]) -> str:
+    canonical = dict(job) if job.get("kind") == JOB_CONTRACT else canonicalize_job(job)
+    return hashlib.sha256(canonical_json(canonical)).hexdigest()
+
+
+def read_canonical_job_file(path: str | Path, *, expected_repo_path: str | Path | None = None) -> dict[str, Any]:
+    raw = _read_json(Path(path), default=None)
+    if not isinstance(raw, Mapping):
+        raise RepositoryAuthorityError("invalid_job_file")
+    return canonicalize_job(raw, repo_path=expected_repo_path)
+
+
+def observe_repository(
+    repo_path: str | Path,
+    *,
+    allowed_paths: list[str],
+    base_commit_sha: str | None = None,
+) -> dict[str, Any]:
     repo = Path(repo_path).resolve()
     changed = _git_lines(repo, ["status", "--short"])
+    changed_files = set()
+    for line in changed:
+        if len(line) >= 4:
+            changed_files.add(line[3:])
+    if base_commit_sha:
+        for args in (
+            ["diff", "--name-only", base_commit_sha, "HEAD"],
+            ["diff", "--name-only", base_commit_sha],
+            ["diff", "--cached", "--name-only"],
+        ):
+            changed_files.update(_git_lines(repo, args))
+    changed_files.update(_git_lines(repo, ["ls-files", "--others", "--exclude-standard"]))
     diff = subprocess.run(
-        ["git", "diff", "--binary"],
+        ["git", "diff", "--binary", *( [base_commit_sha] if base_commit_sha else [] )],
         cwd=repo,
         capture_output=True,
         text=True,
@@ -287,7 +454,7 @@ def observe_repository(repo_path: str | Path, *, allowed_paths: list[str]) -> di
             file_hashes[rel] = _sha256_bytes(path.read_bytes())
     state = {
         "head": git_head(repo),
-        "changed_files": sorted(line[3:] for line in changed if len(line) >= 4),
+        "changed_files": sorted(path for path in changed_files if path),
         "diff_sha256": _sha256_text(diff),
         "allowed_file_hashes": file_hashes,
     }
@@ -302,6 +469,10 @@ def reconcile_repository_change(
     after: Mapping[str, Any],
     worker_report: Mapping[str, Any],
     output_dir: str | Path,
+    repo_path: str | Path | None = None,
+    consumption_grant: Mapping[str, Any] | None = None,
+    public_key: Ed25519PublicKey | bytes | None = None,
+    base_commit_sha: str | None = None,
 ) -> dict[str, Any]:
     allowed = set(job.get("allowed_paths", []))
     changed = set(after.get("changed_files", []))
@@ -312,20 +483,33 @@ def reconcile_repository_change(
         for name in ("job.json", "transcript.jsonl", "patch.diff", "commands.jsonl", "tests.json", "hashes.json", "final_report.json")
         if not (Path(output_dir) / name).exists()
     ]
-    tests = _read_json(Path(output_dir) / "tests.json", default={"final": []})
-    final_tests = tests.get("final", [])
-    command_failures = [
-        item
-        for item in final_tests
-        if isinstance(item, Mapping) and item.get("returncode") != 0
-    ]
+    evidence_errors = verify_hashes_json(Path(output_dir))
+    independent_tests = []
+    if repo_path is not None:
+        independent_tests = run_acceptance_tests(repo_path, job.get("acceptance_tests", []))
+    else:
+        tests = _read_json(Path(output_dir) / "tests.json", default={"final": []})
+        independent_tests = tests.get("final", [])
+    command_failures = [item for item in independent_tests if isinstance(item, Mapping) and item.get("returncode") != 0]
     errors: list[str] = []
+    if consumption_grant is not None and public_key is not None and base_commit_sha is not None:
+        try:
+            verify_consumption_grant(
+                consumption_grant,
+                public_key=public_key,
+                parameters=parameters_from_job(job, repo_path=repo_path or job["repo_path"], base_commit_sha=base_commit_sha),
+                executor_id="xzenia-coder",
+            )
+        except RepositoryAuthorityError as exc:
+            errors.append(str(exc))
     if worker_report.get("status") != "PASS":
         errors.append("worker_status_not_pass")
     if unauthorized:
         errors.append("unauthorized_changes")
     if missing_artifacts:
         errors.append("evidence_missing")
+    if evidence_errors:
+        errors.append("artifact_hash_mismatch")
     if command_failures:
         errors.append("tests_failed")
     if changed and not changed.issubset(report_changed):
@@ -338,11 +522,52 @@ def reconcile_repository_change(
         "changed_files": sorted(changed),
         "unauthorized_changes": unauthorized,
         "tests_passed": not command_failures,
+        "independent_tests": independent_tests,
         "artifact_hashes": {
             name: _optional_sha256(Path(output_dir) / name)
             for name in ("job.json", "transcript.jsonl", "patch.diff", "commands.jsonl", "tests.json", "hashes.json", "final_report.json")
         },
+        "artifact_hash_errors": evidence_errors,
     }
+
+
+def run_acceptance_tests(repo_path: str | Path, commands: Any) -> list[dict[str, Any]]:
+    results = []
+    for command in commands:
+        argv = _canonical_command(command)
+        start = time.time()
+        completed = subprocess.run(
+            argv,
+            cwd=Path(repo_path),
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        results.append(
+            {
+                "command": argv,
+                "returncode": completed.returncode,
+                "stdout_sha256": _sha256_text(completed.stdout),
+                "stderr_sha256": _sha256_text(completed.stderr),
+                "duration_ms": int((time.time() - start) * 1000),
+            }
+        )
+    return results
+
+
+def verify_hashes_json(output_dir: Path) -> list[str]:
+    hashes = _read_json(output_dir / "hashes.json", default={})
+    if not isinstance(hashes, Mapping):
+        return ["hashes_json_invalid"]
+    errors = []
+    for name, expected in hashes.items():
+        if not isinstance(name, str) or not isinstance(expected, str) or len(expected) != 64:
+            continue
+        actual = _optional_sha256(output_dir / name)
+        if actual != expected:
+            errors.append(name)
+    return errors
 
 
 def git_head(repo_path: str | Path) -> str:
@@ -412,6 +637,7 @@ def _run_dispatcher(
     repo_path: Path,
     output_dir: Path,
     consumption_file: Path,
+    public_key_file: Path,
     timeout: int,
 ) -> dict[str, Any]:
     completed = subprocess.run(
@@ -425,6 +651,8 @@ def _run_dispatcher(
             str(output_dir),
             "--proofrail-consumption-file",
             str(consumption_file),
+            "--proofrail-public-key-file",
+            str(public_key_file),
         ],
         capture_output=True,
         text=True,
@@ -467,6 +695,30 @@ def _required_text(document: Mapping[str, Any], field: str) -> str:
     if not isinstance(value, str) or not value:
         raise RepositoryAuthorityError(f"{field}_missing")
     return value
+
+
+def _require_digest(value: object, field: str) -> None:
+    if not isinstance(value, str) or len(value) != 64:
+        raise RepositoryAuthorityError(f"{field}_invalid")
+    try:
+        int(value, 16)
+    except ValueError as exc:
+        raise RepositoryAuthorityError(f"{field}_invalid") from exc
+
+
+def _canonical_command(value: Any) -> list[str]:
+    if not isinstance(value, list) or not value:
+        raise RepositoryAuthorityError("invalid_command")
+    return [str(item) for item in value]
+
+
+def _public_key_hex(value: Ed25519PublicKey | bytes) -> str:
+    if isinstance(value, bytes):
+        return value.hex()
+    return value.public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    ).hex()
 
 
 def _git_lines(repo_path: Path, args: list[str]) -> list[str]:
