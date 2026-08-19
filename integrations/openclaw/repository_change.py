@@ -28,6 +28,17 @@ from proofrail.envelope import (
 ACTION_TYPE = "repository_change"
 JOB_CONTRACT = "proofrail.xzenia-job.v1"
 CONSUMPTION_GRANT_KIND = "proofrail.execution-consumption-grant.v1"
+CONSUMPTION_TRUST_STORE_KIND = "proofrail.consumption-trust-store.v1"
+RECONCILED_ARTIFACT_MANIFEST_KIND = "proofrail.reconciled-artifact-manifest.v1"
+REQUIRED_WORKER_ARTIFACTS = (
+    "job.json",
+    "transcript.jsonl",
+    "patch.diff",
+    "commands.jsonl",
+    "tests.json",
+    "hashes.json",
+    "final_report.json",
+)
 TERMINAL_WORKER_STATES = {
     "PASS",
     "FAILED_TESTS",
@@ -199,6 +210,7 @@ def mint_consumption_grant(
         "executor_id": executor_id,
         "issued_at": consumed_at,
         "expires_at": expires_at,
+        "signing_key_id": key_id,
     }
     if registry_path is not None:
         record["registry_path"] = str(Path(registry_path))
@@ -208,11 +220,13 @@ def mint_consumption_grant(
 def verify_consumption_grant(
     grant: Mapping[str, Any],
     *,
-    public_key: Ed25519PublicKey | bytes,
+    public_key: Ed25519PublicKey | bytes | None = None,
+    trust_store_path: str | Path | None = None,
     parameters: Mapping[str, Any],
     executor_id: str,
     now: datetime | None = None,
 ) -> bool:
+    public_key = public_key or load_consumption_verification_key(grant, trust_store_path=trust_store_path)
     try:
         verify_signature(grant, public_key)
     except Exception as exc:
@@ -223,6 +237,9 @@ def verify_consumption_grant(
         raise RepositoryAuthorityError("proofrail_authority_consumption_required")
     if grant.get("executor_id") != executor_id:
         raise RepositoryAuthorityError("proofrail_authority_executor_mismatch")
+    signature = grant.get("signature")
+    if not isinstance(signature, Mapping) or grant.get("signing_key_id") != signature.get("key_id"):
+        raise RepositoryAuthorityError("consumption_signing_key_mismatch")
     comparisons = (
         ("canonical_job_digest", parameters["canonical_job_digest"], "job_digest_mismatch"),
         ("repository_identity", parameters["repository_identity"], "repository_identity_mismatch"),
@@ -239,6 +256,76 @@ def verify_consumption_grant(
     return True
 
 
+def default_consumption_trust_store_path() -> Path:
+    configured = os.environ.get("XZENIA_PROOFRAIL_CONSUMPTION_TRUST_STORE")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return Path.cwd() / "config" / "proofrail-consumption-trust-store.json"
+
+
+def write_consumption_trust_store(
+    path: str | Path,
+    *,
+    keys: Mapping[str, Ed25519PublicKey | bytes],
+) -> dict[str, Any]:
+    entries = []
+    for key_id, public_key in sorted(keys.items()):
+        key_hex = _public_key_hex(public_key)
+        entries.append(
+            {
+                "key_id": key_id,
+                "algorithm": "ed25519",
+                "public_key_hex": key_hex,
+                "public_key_fingerprint": _sha256_text(key_hex),
+            }
+        )
+    trust_store = {
+        "kind": CONSUMPTION_TRUST_STORE_KIND,
+        "keys": entries,
+    }
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(trust_store, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return trust_store
+
+
+def load_consumption_verification_key(
+    grant: Mapping[str, Any],
+    *,
+    trust_store_path: str | Path | None = None,
+) -> Ed25519PublicKey:
+    key_id = grant.get("signing_key_id")
+    signature = grant.get("signature")
+    if not isinstance(key_id, str) or not key_id:
+        raise RepositoryAuthorityError("consumption_signing_key_missing")
+    if not isinstance(signature, Mapping) or signature.get("key_id") != key_id:
+        raise RepositoryAuthorityError("consumption_signing_key_mismatch")
+    store_path = Path(trust_store_path).resolve() if trust_store_path is not None else default_consumption_trust_store_path()
+    trust_store = _read_json(store_path, default=None)
+    if not isinstance(trust_store, Mapping) or trust_store.get("kind") != CONSUMPTION_TRUST_STORE_KIND:
+        raise RepositoryAuthorityError("consumption_trust_store_invalid")
+    matches = [
+        item
+        for item in trust_store.get("keys", [])
+        if isinstance(item, Mapping) and item.get("key_id") == key_id
+    ]
+    if len(matches) != 1:
+        raise RepositoryAuthorityError("untrusted_consumption_signer")
+    entry = matches[0]
+    if entry.get("algorithm") != "ed25519":
+        raise RepositoryAuthorityError("untrusted_consumption_signer")
+    public_key_hex = entry.get("public_key_hex")
+    expected_fingerprint = entry.get("public_key_fingerprint")
+    if not isinstance(public_key_hex, str) or not isinstance(expected_fingerprint, str):
+        raise RepositoryAuthorityError("consumption_trust_store_invalid")
+    if _sha256_text(public_key_hex) != expected_fingerprint:
+        raise RepositoryAuthorityError("consumption_trust_store_fingerprint_mismatch")
+    try:
+        return Ed25519PublicKey.from_public_bytes(bytes.fromhex(public_key_hex))
+    except ValueError as exc:
+        raise RepositoryAuthorityError("consumption_trust_store_invalid") from exc
+
+
 class XzeniaCoderRepositoryAdapter:
     def __init__(
         self,
@@ -248,6 +335,8 @@ class XzeniaCoderRepositoryAdapter:
         public_key: Ed25519PublicKey | bytes,
         consumption_private_key: Ed25519PrivateKey | bytes,
         consumption_key_id: str,
+        consumption_public_key: Ed25519PublicKey | bytes | None = None,
+        consumption_trust_store_path: str | Path | None = None,
         expected_roots: Mapping[str, str],
         expected_approval_digest: str,
         executor_id: str,
@@ -258,6 +347,8 @@ class XzeniaCoderRepositoryAdapter:
         self.public_key = public_key
         self.consumption_private_key = consumption_private_key
         self.consumption_key_id = consumption_key_id
+        self.consumption_public_key = consumption_public_key or public_key
+        self.consumption_trust_store_path = Path(consumption_trust_store_path).resolve() if consumption_trust_store_path else None
         self.expected_roots = dict(expected_roots)
         self.expected_approval_digest = expected_approval_digest
         self.executor_id = executor_id
@@ -287,18 +378,21 @@ class XzeniaCoderRepositoryAdapter:
         )
         verify_consumption_grant(
             claim,
-            public_key=self.public_key,
+            public_key=self.consumption_public_key,
             parameters=parameters,
             executor_id=self.executor_id,
         )
         consumption_file = output_dir / "proofrail-consumption.json"
-        public_key_file = output_dir / "proofrail-consumption-public-key.hex"
+        trust_store_file = self.consumption_trust_store_path or output_dir / "proofrail-consumption-trust-store.json"
         consumption_file.parent.mkdir(parents=True, exist_ok=True)
         consumption_file.write_text(
             json.dumps(claim, sort_keys=True) + "\n",
             encoding="utf-8",
         )
-        public_key_file.write_text(_public_key_hex(self.public_key) + "\n", encoding="utf-8")
+        write_consumption_trust_store(
+            trust_store_file,
+            keys={self.consumption_key_id: self.consumption_public_key},
+        )
         before = observe_repository(
             repo_path,
             allowed_paths=job["allowed_paths"],
@@ -310,7 +404,7 @@ class XzeniaCoderRepositoryAdapter:
             repo_path=repo_path,
             output_dir=output_dir,
             consumption_file=consumption_file,
-            public_key_file=public_key_file,
+            trust_store_file=trust_store_file,
             timeout=int(job["max_runtime_seconds"]),
         )
         worker_report = _read_worker_report(
@@ -330,7 +424,7 @@ class XzeniaCoderRepositoryAdapter:
             output_dir=output_dir,
             repo_path=repo_path,
             consumption_grant=claim,
-            public_key=self.public_key,
+            consumption_trust_store_path=trust_store_file,
             base_commit_sha=current_base,
         )
         status = "success" if reconciliation["state"] == "RECONCILED" else "failed"
@@ -472,18 +566,15 @@ def reconcile_repository_change(
     repo_path: str | Path | None = None,
     consumption_grant: Mapping[str, Any] | None = None,
     public_key: Ed25519PublicKey | bytes | None = None,
+    consumption_trust_store_path: str | Path | None = None,
     base_commit_sha: str | None = None,
 ) -> dict[str, Any]:
     allowed = set(job.get("allowed_paths", []))
     changed = set(after.get("changed_files", []))
     unauthorized = sorted(path for path in changed if path not in allowed)
     report_changed = set(worker_report.get("changed_files", []))
-    missing_artifacts = [
-        name
-        for name in ("job.json", "transcript.jsonl", "patch.diff", "commands.jsonl", "tests.json", "hashes.json", "final_report.json")
-        if not (Path(output_dir) / name).exists()
-    ]
-    evidence_errors = verify_hashes_json(Path(output_dir))
+    missing_artifacts = [name for name in REQUIRED_WORKER_ARTIFACTS if not (Path(output_dir) / name).exists()]
+    worker_hash_errors = verify_hashes_json(Path(output_dir))
     independent_tests = []
     if repo_path is not None:
         independent_tests = run_acceptance_tests(repo_path, job.get("acceptance_tests", []))
@@ -492,11 +583,12 @@ def reconcile_repository_change(
         independent_tests = tests.get("final", [])
     command_failures = [item for item in independent_tests if isinstance(item, Mapping) and item.get("returncode") != 0]
     errors: list[str] = []
-    if consumption_grant is not None and public_key is not None and base_commit_sha is not None:
+    if consumption_grant is not None and (public_key is not None or consumption_trust_store_path is not None) and base_commit_sha is not None:
         try:
             verify_consumption_grant(
                 consumption_grant,
                 public_key=public_key,
+                trust_store_path=consumption_trust_store_path,
                 parameters=parameters_from_job(job, repo_path=repo_path or job["repo_path"], base_commit_sha=base_commit_sha),
                 executor_id="xzenia-coder",
             )
@@ -508,27 +600,75 @@ def reconcile_repository_change(
         errors.append("unauthorized_changes")
     if missing_artifacts:
         errors.append("evidence_missing")
-    if evidence_errors:
-        errors.append("artifact_hash_mismatch")
     if command_failures:
         errors.append("tests_failed")
     if changed and not changed.issubset(report_changed):
         errors.append("worker_report_omitted_changed_files")
     if before.get("state_root") == after.get("state_root"):
         errors.append("no_repository_change_observed")
+    independent_test_digest = _sha256_json(independent_tests)
+    final_repo_state_root = str(after.get("state_root"))
+    state = "RECONCILED" if not errors else "RECONCILIATION_FAILED"
+    artifact_manifest = reconciled_artifact_manifest(
+        output_dir=Path(output_dir),
+        authority_digest=str(consumption_grant.get("authority_digest")) if isinstance(consumption_grant, Mapping) else "",
+        canonical_job_digest=str(job.get("canonical_job_digest") or canonical_job_digest(job)),
+        base_commit_sha=base_commit_sha or "",
+        final_repo_state_root=final_repo_state_root,
+        independent_acceptance_test_digest=independent_test_digest,
+        reconciliation_state=state,
+    )
+    (Path(output_dir) / "reconciled-artifact-manifest.json").write_text(
+        json.dumps(artifact_manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     return {
-        "state": "RECONCILED" if not errors else "RECONCILIATION_FAILED",
+        "state": state,
         "errors": errors,
         "changed_files": sorted(changed),
         "unauthorized_changes": unauthorized,
         "tests_passed": not command_failures,
         "independent_tests": independent_tests,
-        "artifact_hashes": {
-            name: _optional_sha256(Path(output_dir) / name)
-            for name in ("job.json", "transcript.jsonl", "patch.diff", "commands.jsonl", "tests.json", "hashes.json", "final_report.json")
-        },
-        "artifact_hash_errors": evidence_errors,
+        "artifact_manifest": artifact_manifest,
+        "authoritative_artifact_root": artifact_manifest["manifest_hash"],
+        "worker_hashes_json_trust_level": "untrusted_evidence",
+        "worker_hash_errors": worker_hash_errors,
     }
+
+
+def reconciled_artifact_manifest(
+    *,
+    output_dir: Path,
+    authority_digest: str,
+    canonical_job_digest: str,
+    base_commit_sha: str,
+    final_repo_state_root: str,
+    independent_acceptance_test_digest: str,
+    reconciliation_state: str,
+) -> dict[str, Any]:
+    artifacts = []
+    for name in REQUIRED_WORKER_ARTIFACTS:
+        path = output_dir / name
+        artifacts.append(
+            {
+                "path": name,
+                "sha256": _optional_sha256(path),
+                "present": path.exists(),
+            }
+        )
+    manifest = {
+        "kind": RECONCILED_ARTIFACT_MANIFEST_KIND,
+        "authority_digest": authority_digest,
+        "canonical_job_digest": canonical_job_digest,
+        "base_commit_sha": base_commit_sha,
+        "final_repo_state_root": final_repo_state_root,
+        "artifacts": artifacts,
+        "independent_acceptance_test_digest": independent_acceptance_test_digest,
+        "reconciliation_state": reconciliation_state,
+        "worker_hashes_json_trust_level": "untrusted_evidence",
+    }
+    manifest["manifest_hash"] = hash_record(manifest)
+    return manifest
 
 
 def run_acceptance_tests(repo_path: str | Path, commands: Any) -> list[dict[str, Any]]:
@@ -637,9 +777,10 @@ def _run_dispatcher(
     repo_path: Path,
     output_dir: Path,
     consumption_file: Path,
-    public_key_file: Path,
+    trust_store_file: Path,
     timeout: int,
 ) -> dict[str, Any]:
+    env = {**os.environ, "XZENIA_PROOFRAIL_CONSUMPTION_TRUST_STORE": str(trust_store_file)}
     completed = subprocess.run(
         [
             str(dispatcher_path),
@@ -651,9 +792,8 @@ def _run_dispatcher(
             str(output_dir),
             "--proofrail-consumption-file",
             str(consumption_file),
-            "--proofrail-public-key-file",
-            str(public_key_file),
         ],
+        env=env,
         capture_output=True,
         text=True,
         timeout=timeout,

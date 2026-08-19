@@ -17,9 +17,8 @@ def main() -> int:
         [
             sys.executable,
             "-m",
-            "pytest",
-            "tests/test_governed_coder_repository_change.py",
-            "-q",
+            "unittest",
+            "tests.test_governed_coder_repository_change",
         ],
         cwd=ROOT,
         capture_output=True,

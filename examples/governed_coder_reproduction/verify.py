@@ -31,7 +31,7 @@ def run(command: list[str]) -> dict[str, object]:
 
 def main() -> int:
     commands = [
-        [sys.executable, "-m", "pytest", "tests/test_governed_coder_repository_change.py", "-q"],
+        [sys.executable, "-m", "unittest", "tests.test_governed_coder_repository_change"],
         [sys.executable, "adversarial/governed_coder_suite.py"],
     ]
     results = [run(command) for command in commands]

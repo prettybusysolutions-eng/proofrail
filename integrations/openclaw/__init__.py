@@ -8,13 +8,16 @@ from .repository_change import (
     canonical_job_digest,
     canonicalize_job,
     consume_repository_change_authority,
+    load_consumption_verification_key,
     mint_repository_change_authority,
     mint_consumption_grant,
     parameters_from_job,
     read_canonical_job_file,
     reconcile_repository_change,
+    reconciled_artifact_manifest,
     repository_change_parameters,
     verify_consumption_grant,
+    write_consumption_trust_store,
 )
 
 __all__ = [
@@ -27,11 +30,14 @@ __all__ = [
     "canonical_job_digest",
     "canonicalize_job",
     "consume_repository_change_authority",
+    "load_consumption_verification_key",
     "mint_repository_change_authority",
     "mint_consumption_grant",
     "parameters_from_job",
     "read_canonical_job_file",
     "reconcile_repository_change",
+    "reconciled_artifact_manifest",
     "repository_change_parameters",
     "verify_consumption_grant",
+    "write_consumption_trust_store",
 ]

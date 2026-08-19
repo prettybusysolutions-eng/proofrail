@@ -18,6 +18,11 @@
     "independent_acceptance_test_execution",
     "committed_unauthorized_change_detection",
     "untracked_unauthorized_change_detection",
+    "trusted_consumption_key_registry",
+    "authority_and_consumption_key_separation",
+    "signer_substitution_denial",
+    "reconciler_authored_artifact_manifest",
+    "worker_hash_manifest_untrusted",
     "race_single_consumer"
   ],
   "not_yet_demonstrated": [
@@ -30,7 +35,7 @@
     "industry_standard_adoption"
   ],
   "offline_reproduction_commands": [
-    "python -m pytest tests/test_governed_coder_repository_change.py -q",
+    "python -m unittest tests.test_governed_coder_repository_change",
     "python adversarial/governed_coder_suite.py",
     "python examples/governed_coder_reproduction/verify.py"
   ],
@@ -46,6 +51,11 @@
     "fake_worker_test_success_rejected_by_independent_tests",
     "committed_unauthorized_change_rejected",
     "untracked_unauthorized_change_rejected",
+    "signer_substitution_rejected",
+    "legit_grant_wrong_trust_key_rejected",
+    "unknown_consumption_key_id_rejected",
+    "modified_trust_store_fingerprint_rejected",
+    "empty_worker_hashes_manifest_does_not_define_authoritative_root",
     "expired_authority_denied",
     "two_worker_race_single_consumer"
   ]
