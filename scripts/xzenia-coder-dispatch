@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Dispatch a ProofRail-consumed xzenia-coder job out of process.
+
+The dispatcher is intentionally small: ProofRail authority verification and
+consumption happen before this program is invoked. This entry point verifies
+that a consumption receipt is present, starts the configured worker process,
+and writes portable dispatch evidence into the job evidence directory.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+import time
+from typing import Any
+
+
+def read_json(path: pathlib.Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def write_json(path: pathlib.Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def resolve_worker(explicit: str | None) -> str:
+    candidate = explicit or os.environ.get("XZENIA_CODER_WORKER") or "xzenia-coder"
+    if os.sep in candidate or (os.altsep and os.altsep in candidate):
+        path = pathlib.Path(candidate).expanduser().resolve()
+        if not path.exists():
+            raise SystemExit("xzenia_coder_worker_not_found")
+        return str(path)
+    resolved = shutil.which(candidate)
+    if not resolved:
+        raise SystemExit("xzenia_coder_worker_not_found")
+    return resolved
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="xzenia-coder-dispatch")
+    parser.add_argument("--job-file", required=True, type=pathlib.Path)
+    parser.add_argument("--repo-path", required=True, type=pathlib.Path)
+    parser.add_argument("--output-dir", required=True, type=pathlib.Path)
+    parser.add_argument("--proofrail-consumption-file", required=True, type=pathlib.Path)
+    parser.add_argument("--worker-path")
+    args = parser.parse_args()
+
+    job = read_json(args.job_file)
+    job_id = str(job["job_id"])
+    consumption = read_json(args.proofrail_consumption_file)
+    if consumption.get("state") != "CONSUMED":
+        raise SystemExit("proofrail_authority_consumption_required")
+    authority_digest = consumption.get("authority_digest")
+    if not isinstance(authority_digest, str) or len(authority_digest) != 64:
+        raise SystemExit("proofrail_authority_digest_invalid")
+    if consumption.get("executor_id") != "xzenia-coder":
+        raise SystemExit("proofrail_authority_executor_mismatch")
+
+    worker = resolve_worker(args.worker_path)
+    dispatch_dir = args.output_dir.resolve() / "dispatch"
+    dispatch_dir.mkdir(parents=True, exist_ok=True)
+    stdout = dispatch_dir / "worker.stdout.log"
+    stderr = dispatch_dir / "worker.stderr.log"
+    with stdout.open("w", encoding="utf-8") as out, stderr.open("w", encoding="utf-8") as err:
+        proc = subprocess.Popen(
+            [
+                worker,
+                "run",
+                "--job-file",
+                str(args.job_file.resolve()),
+                "--repo-path",
+                str(args.repo_path.resolve()),
+                "--output-dir",
+                str(args.output_dir.resolve()),
+            ],
+            stdout=out,
+            stderr=err,
+            start_new_session=True,
+        )
+    result = {
+        "job_id": job_id,
+        "status": "DISPATCHED",
+        "pid": proc.pid,
+        "started_ms": int(time.time() * 1000),
+        "evidence_directory": str(args.output_dir.resolve()),
+        "stdout_log": str(stdout),
+        "stderr_log": str(stderr),
+        "gateway_blocking": False,
+    }
+    write_json(dispatch_dir / "dispatch.json", result)
+    print(json.dumps(result, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

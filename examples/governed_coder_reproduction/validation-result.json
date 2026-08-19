@@ -1,0 +1,42 @@
+{
+  "kind": "proofrail.governed-coder.validation-result.v1",
+  "status": "PASS",
+  "validation": {
+    "internally_authored": true,
+    "production_readiness_claim": false,
+    "live_model_required_for_replay": false
+  },
+  "demonstrated": [
+    "single_use_repository_change_authority",
+    "authority_before_worker_spawn",
+    "exact_scope_binding",
+    "replay_denial",
+    "state_drift_denial",
+    "independent_local_reconciliation",
+    "race_single_consumer"
+  ],
+  "not_yet_demonstrated": [
+    "arbitrary_agent_framework_interoperability",
+    "recursive_agent_delegation",
+    "independent_external_implementation",
+    "production_key_custody",
+    "distributed_consensus",
+    "third_party_validation",
+    "industry_standard_adoption"
+  ],
+  "offline_reproduction_commands": [
+    "python -m pytest tests/test_governed_coder_repository_change.py -q",
+    "python adversarial/governed_coder_suite.py",
+    "python examples/governed_coder_reproduction/verify.py"
+  ],
+  "negative_cases": [
+    "missing_authority_denied_before_worker",
+    "replayed_authority_denied_before_worker",
+    "mutated_scope_denied",
+    "repo_base_drift_denied",
+    "worker_false_success_rejected",
+    "failing_tests_rejected",
+    "expired_authority_denied",
+    "two_worker_race_single_consumer"
+  ]
+}
