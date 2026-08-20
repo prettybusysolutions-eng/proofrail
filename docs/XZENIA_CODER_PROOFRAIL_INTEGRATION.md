@@ -10,7 +10,7 @@ single-use ProofRail `repository_change` authority.
 3. A verifier or governor mints a signed action authority envelope. The worker cannot mint this authority.
 4. The OpenClaw repository adapter verifies the signature, roots, approval digest, expiry, target repo/base SHA, and exact effect parameters.
 5. The adapter atomically consumes the authority in SQLite and emits a signed `proofrail.execution-consumption-grant.v1` using a role-separated consumption signing key.
-6. `xzenia-coder-dispatch` verifies the signed consumption grant against the canonical job digest, live repo base, and an explicit preconfigured consumption trust store before spawning the worker. It does not accept a caller-supplied public key or environment-selected trust store as the dispatch trust anchor.
+6. `xzenia-coder-dispatch` verifies the signed consumption grant against the canonical job digest, live repo base, and the installation-owned consumption trust store before spawning the worker. It does not accept a caller-supplied public key, CLI-selected trust store, or environment-selected trust store as the dispatch trust anchor.
 7. The dispatcher writes a private verified canonical job snapshot and gives the worker that snapshot path, not the original caller-presented job file.
 8. The reconciler independently observes git state, changed files, patch, command log, worker ledger, actual artifact bytes, and final repository state root, then reruns the signed acceptance tests locally.
 9. Replay, drift, split-job execution, forged consumption grants, signer substitution, scope expansion, false worker success, and failed tests produce explicit denial or reconciliation failure.
@@ -32,16 +32,26 @@ reconciliation time.
 
 ## Trust Anchor Boundary
 
-The dispatcher resolves the consumption grant verification key from a local
-trust store keyed by `signing_key_id`; the caller cannot pass an arbitrary
-public key or select a replacement trust store through environment variables.
-The adapter is initialized with a preconfigured trust-store path and does not
-create or rewrite that trust root during job execution. This pilot assumes
-integrity of the installed dispatcher, integrity and correct distribution of
-the consumption trust store, and filesystem permissions that keep untrusted
-jobs from replacing that trust store. It does not claim production key custody
-or resistance to a same-OS-user compromise that can modify both the installed
-dispatcher and its trusted configuration.
+The dispatcher resolves the consumption grant verification key from the
+installation-owned trust store at
+`config/proofrail-consumption-trust-store.json`, keyed by `signing_key_id`.
+The caller cannot pass an arbitrary public key or select a replacement trust
+store through CLI flags, environment variables, adapter parameters, or the job
+file. The adapter resolves the same installation trust store and does not
+create or rewrite the trust root during job execution.
+
+Trust-store bootstrap and key rotation are out-of-band administrator actions:
+provision the trust-store file before dispatch, keep the configuration
+directory writable only by the installation owner or administrator, rotate keys
+by updating the trust store and issuing future consumption grants with the new
+`signing_key_id`, and treat in-flight grants signed by removed keys as
+untrusted. If the installation config is missing, malformed, has an unknown key
+ID, or has a fingerprint mismatch, dispatch fails closed before worker spawn.
+This pilot assumes integrity of the installed dispatcher, integrity and correct
+distribution of the consumption trust store, and filesystem permissions that
+keep untrusted jobs from replacing that trust store. It does not claim
+production key custody or resistance to a same-OS-user compromise that can
+modify both the installed dispatcher and its trusted configuration.
 
 ## Demonstrated Boundary
 
@@ -51,9 +61,9 @@ binding, forged consumption grant denial, split-job denial, replay denial, state
 drift denial, independent local reconciliation, committed unauthorized change
 detection, untracked unauthorized change detection, signer substitution denial,
 unknown consumption-key denial, environment-selected trust-store denial,
-trust-store fingerprint fail-closed behavior, verified worker-input snapshot
-binding, reconciler-authored artifact manifest generation, and a race where
-only one consumer can consume the authority.
+CLI-selected trust-store denial, trust-store fingerprint fail-closed behavior,
+verified worker-input snapshot binding, reconciler-authored artifact manifest
+generation, and a race where only one consumer can consume the authority.
 
 The included tests do not demonstrate arbitrary agent framework
 interoperability, recursive agent delegation, an independent external

@@ -220,12 +220,11 @@ def verify_consumption_grant(
     grant: Mapping[str, Any],
     *,
     public_key: Ed25519PublicKey | bytes | None = None,
-    trust_store_path: str | Path | None = None,
     parameters: Mapping[str, Any],
     executor_id: str,
     now: datetime | None = None,
 ) -> bool:
-    public_key = public_key or load_consumption_verification_key(grant, trust_store_path=trust_store_path)
+    public_key = public_key or load_consumption_verification_key(grant)
     try:
         verify_signature(grant, public_key)
     except Exception as exc:
@@ -256,7 +255,7 @@ def verify_consumption_grant(
 
 
 def default_consumption_trust_store_path() -> Path:
-    return Path.cwd() / "config" / "proofrail-consumption-trust-store.json"
+    return Path(__file__).resolve().parents[2] / "config" / "proofrail-consumption-trust-store.json"
 
 
 def write_consumption_trust_store(
@@ -287,8 +286,6 @@ def write_consumption_trust_store(
 
 def load_consumption_verification_key(
     grant: Mapping[str, Any],
-    *,
-    trust_store_path: str | Path | None = None,
 ) -> Ed25519PublicKey:
     key_id = grant.get("signing_key_id")
     signature = grant.get("signature")
@@ -296,7 +293,7 @@ def load_consumption_verification_key(
         raise RepositoryAuthorityError("consumption_signing_key_missing")
     if not isinstance(signature, Mapping) or signature.get("key_id") != key_id:
         raise RepositoryAuthorityError("consumption_signing_key_mismatch")
-    store_path = Path(trust_store_path).resolve() if trust_store_path is not None else default_consumption_trust_store_path()
+    store_path = default_consumption_trust_store_path()
     trust_store = _read_json(store_path, default=None)
     if not isinstance(trust_store, Mapping) or trust_store.get("kind") != CONSUMPTION_TRUST_STORE_KIND:
         raise RepositoryAuthorityError("consumption_trust_store_invalid")
@@ -332,7 +329,6 @@ class XzeniaCoderRepositoryAdapter:
         consumption_private_key: Ed25519PrivateKey | bytes,
         consumption_key_id: str,
         consumption_public_key: Ed25519PublicKey | bytes | None = None,
-        consumption_trust_store_path: str | Path | None = None,
         expected_roots: Mapping[str, str],
         expected_approval_digest: str,
         executor_id: str,
@@ -344,9 +340,7 @@ class XzeniaCoderRepositoryAdapter:
         self.consumption_private_key = consumption_private_key
         self.consumption_key_id = consumption_key_id
         self.consumption_public_key = consumption_public_key or public_key
-        if consumption_trust_store_path is None:
-            raise RepositoryAuthorityError("consumption_trust_store_required")
-        self.consumption_trust_store_path = Path(consumption_trust_store_path).resolve()
+        self.consumption_trust_store_path = default_consumption_trust_store_path()
         self.expected_roots = dict(expected_roots)
         self.expected_approval_digest = expected_approval_digest
         self.executor_id = executor_id
@@ -376,7 +370,6 @@ class XzeniaCoderRepositoryAdapter:
         )
         verify_consumption_grant(
             claim,
-            trust_store_path=self.consumption_trust_store_path,
             parameters=parameters,
             executor_id=self.executor_id,
         )
@@ -397,7 +390,6 @@ class XzeniaCoderRepositoryAdapter:
             repo_path=repo_path,
             output_dir=output_dir,
             consumption_file=consumption_file,
-            trust_store_file=self.consumption_trust_store_path,
             timeout=int(job["max_runtime_seconds"]),
         )
         worker_report = _read_worker_report(
@@ -417,7 +409,6 @@ class XzeniaCoderRepositoryAdapter:
             output_dir=output_dir,
             repo_path=repo_path,
             consumption_grant=claim,
-            consumption_trust_store_path=self.consumption_trust_store_path,
             base_commit_sha=current_base,
         )
         status = "success" if reconciliation["state"] == "RECONCILED" else "failed"
@@ -559,7 +550,6 @@ def reconcile_repository_change(
     repo_path: str | Path | None = None,
     consumption_grant: Mapping[str, Any] | None = None,
     public_key: Ed25519PublicKey | bytes | None = None,
-    consumption_trust_store_path: str | Path | None = None,
     base_commit_sha: str | None = None,
 ) -> dict[str, Any]:
     allowed = set(job.get("allowed_paths", []))
@@ -576,12 +566,11 @@ def reconcile_repository_change(
         independent_tests = tests.get("final", [])
     command_failures = [item for item in independent_tests if isinstance(item, Mapping) and item.get("returncode") != 0]
     errors: list[str] = []
-    if consumption_grant is not None and (public_key is not None or consumption_trust_store_path is not None) and base_commit_sha is not None:
+    if consumption_grant is not None and base_commit_sha is not None:
         try:
             verify_consumption_grant(
                 consumption_grant,
                 public_key=public_key,
-                trust_store_path=consumption_trust_store_path,
                 parameters=parameters_from_job(job, repo_path=repo_path or job["repo_path"], base_commit_sha=base_commit_sha),
                 executor_id="xzenia-coder",
             )
@@ -770,7 +759,6 @@ def _run_dispatcher(
     repo_path: Path,
     output_dir: Path,
     consumption_file: Path,
-    trust_store_file: Path,
     timeout: int,
 ) -> dict[str, Any]:
     completed = subprocess.run(
@@ -784,8 +772,6 @@ def _run_dispatcher(
             str(output_dir),
             "--proofrail-consumption-file",
             str(consumption_file),
-            "--proofrail-consumption-trust-store",
-            str(trust_store_file),
         ],
         capture_output=True,
         text=True,

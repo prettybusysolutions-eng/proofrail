@@ -18,6 +18,7 @@ from integrations.openclaw.repository_change import (
     RepositoryAuthorityError,
     XzeniaCoderRepositoryAdapter,
     consume_repository_change_authority,
+    default_consumption_trust_store_path,
     mint_consumption_grant,
     mint_repository_change_authority,
     parameters_from_job,
@@ -42,6 +43,23 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
         self.public_key = self.private_key.public_key()
         self.consumption_private_key = Ed25519PrivateKey.generate()
         self.consumption_public_key = self.consumption_private_key.public_key()
+        self.installation_trust_store = default_consumption_trust_store_path()
+        self._existing_trust_store = (
+            self.installation_trust_store.read_bytes()
+            if self.installation_trust_store.exists()
+            else None
+        )
+        self._write_installation_trust_store({"execution-key": self.consumption_public_key})
+
+    def tearDown(self):
+        if self._existing_trust_store is None:
+            self.installation_trust_store.unlink(missing_ok=True)
+        else:
+            self.installation_trust_store.parent.mkdir(parents=True, exist_ok=True)
+            self.installation_trust_store.write_bytes(self._existing_trust_store)
+
+    def _write_installation_trust_store(self, keys):
+        return write_consumption_trust_store(self.installation_trust_store, keys=keys)
 
     def test_missing_authority_is_denied_before_worker(self):
         with TemporaryDirectory() as directory:
@@ -138,11 +156,6 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            trust_store = Path(directory) / "trust-store.json"
-            write_consumption_trust_store(
-                trust_store,
-                keys={"execution-key": self.consumption_public_key},
-            )
             completed = subprocess.run(
                 [
                     sys.executable,
@@ -155,8 +168,6 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                     str(output),
                     "--proofrail-consumption-file",
                     str(fake),
-                    "--proofrail-consumption-trust-store",
-                    str(trust_store),
                     "--worker-path",
                     str(_worker(directory)),
                 ],
@@ -186,12 +197,7 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                 private_key=attacker_key,
                 key_id="execution-key",
             )
-            trust_store = Path(directory) / "trust-store.json"
-            write_consumption_trust_store(
-                trust_store,
-                keys={"execution-key": self.consumption_public_key},
-            )
-            completed = _direct_dispatch(directory, repo, job, output, fake_grant, trust_store)
+            completed = _direct_dispatch(directory, repo, job, output, fake_grant)
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn("invalid_consumption_grant", completed.stderr + completed.stdout)
             self.assertFalse((Path(directory) / "called.txt").exists())
@@ -212,9 +218,8 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                 private_key=self.consumption_private_key,
                 key_id="execution-key",
             )
-            trust_store = Path(directory) / "trust-store.json"
-            write_consumption_trust_store(trust_store, keys={"execution-key": self.public_key})
-            completed = _direct_dispatch(directory, repo, job, output, grant, trust_store)
+            self._write_installation_trust_store({"execution-key": self.public_key})
+            completed = _direct_dispatch(directory, repo, job, output, grant)
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn("invalid_consumption_grant", completed.stderr + completed.stdout)
             self.assertFalse((Path(directory) / "called.txt").exists())
@@ -235,12 +240,7 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                 private_key=self.consumption_private_key,
                 key_id="unknown-key",
             )
-            trust_store = Path(directory) / "trust-store.json"
-            write_consumption_trust_store(
-                trust_store,
-                keys={"execution-key": self.consumption_public_key},
-            )
-            completed = _direct_dispatch(directory, repo, job, output, grant, trust_store)
+            completed = _direct_dispatch(directory, repo, job, output, grant)
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn("untrusted_consumption_signer", completed.stderr + completed.stdout)
             self.assertFalse((Path(directory) / "called.txt").exists())
@@ -261,14 +261,10 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                 private_key=self.consumption_private_key,
                 key_id="execution-key",
             )
-            trust_store = Path(directory) / "trust-store.json"
-            store = write_consumption_trust_store(
-                trust_store,
-                keys={"execution-key": self.consumption_public_key},
-            )
+            store = self._write_installation_trust_store({"execution-key": self.consumption_public_key})
             store["keys"][0]["public_key_fingerprint"] = "0" * 64
-            trust_store.write_text(json.dumps(store), encoding="utf-8")
-            completed = _direct_dispatch(directory, repo, job, output, grant, trust_store)
+            self.installation_trust_store.write_text(json.dumps(store), encoding="utf-8")
+            completed = _direct_dispatch(directory, repo, job, output, grant)
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn("consumption_trust_store_fingerprint_mismatch", completed.stderr + completed.stdout)
             self.assertFalse((Path(directory) / "called.txt").exists())
@@ -292,19 +288,87 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             )
             attacker_store = Path(directory) / "attacker-trust-store.json"
             write_consumption_trust_store(attacker_store, keys={"attacker-key": attacker_key.public_key()})
-            trusted_store = Path(directory) / "trusted-store.json"
-            write_consumption_trust_store(trusted_store, keys={"execution-key": self.consumption_public_key})
             completed = _direct_dispatch(
                 directory,
                 repo,
                 job,
                 output,
                 attacker_grant,
-                trusted_store,
                 env={**os.environ, "XZENIA_PROOFRAIL_CONSUMPTION_TRUST_STORE": str(attacker_store)},
             )
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn("untrusted_consumption_signer", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_missing_installation_trust_store_fails_closed(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            grant = mint_consumption_grant(
+                authority_digest="6" * 64,
+                authority_nonce="missing-config-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+            )
+            self.installation_trust_store.unlink()
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("consumption_trust_store_invalid", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_caller_selected_cli_trust_store_is_impossible(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            attacker_key = Ed25519PrivateKey.generate()
+            attacker_grant = mint_consumption_grant(
+                authority_digest="7" * 64,
+                authority_nonce="cli-override-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=attacker_key,
+                key_id="attacker-key",
+            )
+            attacker_store = Path(directory) / "attacker-trust-store.json"
+            write_consumption_trust_store(attacker_store, keys={"attacker-key": attacker_key.public_key()})
+            job_file = Path(directory) / "job.json"
+            job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
+            consumption_file = output / "proofrail-consumption.json"
+            consumption_file.write_text(json.dumps(attacker_grant, sort_keys=True), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/xzenia-coder-dispatch",
+                    "--job-file",
+                    str(job_file),
+                    "--repo-path",
+                    str(repo),
+                    "--output-dir",
+                    str(output),
+                    "--proofrail-consumption-file",
+                    str(consumption_file),
+                    "--proofrail-consumption-trust-store",
+                    str(attacker_store),
+                    "--worker-path",
+                    str(_worker(directory)),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("unrecognized arguments", completed.stderr + completed.stdout)
             self.assertFalse((Path(directory) / "called.txt").exists())
 
     def test_valid_authority_wrong_job_digest_is_denied_before_worker(self):
@@ -348,11 +412,6 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             output.mkdir()
             consumption_file = output / "proofrail-consumption.json"
             consumption_file.write_text(json.dumps(grant), encoding="utf-8")
-            trust_store = Path(directory) / "trust-store.json"
-            write_consumption_trust_store(
-                trust_store,
-                keys={"execution-key": self.consumption_public_key},
-            )
             completed = subprocess.run(
                 [
                     sys.executable,
@@ -365,8 +424,6 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                     str(output),
                     "--proofrail-consumption-file",
                     str(consumption_file),
-                    "--proofrail-consumption-trust-store",
-                    str(trust_store),
                     "--worker-path",
                     str(_worker(directory)),
                 ],
@@ -395,8 +452,6 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                 private_key=self.consumption_private_key,
                 key_id="execution-key",
             )
-            trust_store = Path(directory) / "trust-store.json"
-            write_consumption_trust_store(trust_store, keys={"execution-key": self.consumption_public_key})
             job_file = Path(directory) / "job.json"
             job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
             consumption_file = output / "proofrail-consumption.json"
@@ -414,8 +469,6 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                     str(output),
                     "--proofrail-consumption-file",
                     str(consumption_file),
-                    "--proofrail-consumption-trust-store",
-                    str(trust_store),
                     "--worker-path",
                     str(worker),
                 ],
@@ -602,8 +655,6 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
         )
 
     def _adapter(self, directory, dispatcher):
-        trust_store = Path(directory) / "configured-consumption-trust-store.json"
-        write_consumption_trust_store(trust_store, keys={"execution-key": self.consumption_public_key})
         return XzeniaCoderRepositoryAdapter(
             dispatcher_path=dispatcher,
             registry_path=Path(directory) / "registry.sqlite3",
@@ -611,7 +662,6 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             consumption_private_key=self.consumption_private_key,
             consumption_key_id="execution-key",
             consumption_public_key=self.consumption_public_key,
-            consumption_trust_store_path=trust_store,
             expected_roots=ROOTS,
             expected_approval_digest=APPROVAL,
             executor_id="xzenia-coder",
@@ -667,7 +717,7 @@ def _action(job, repo, directory, *, authority):
     }
 
 
-def _direct_dispatch(directory, repo, job, output, consumption_grant, trust_store, env=None):
+def _direct_dispatch(directory, repo, job, output, consumption_grant, env=None):
     job_file = Path(directory) / "job.json"
     job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
     consumption_file = Path(output) / "proofrail-consumption.json"
@@ -684,8 +734,6 @@ def _direct_dispatch(directory, repo, job, output, consumption_grant, trust_stor
             str(output),
             "--proofrail-consumption-file",
             str(consumption_file),
-            "--proofrail-consumption-trust-store",
-            str(trust_store),
             "--worker-path",
             str(_worker(directory)),
         ],
