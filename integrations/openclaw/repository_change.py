@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import sqlite3
 import subprocess
 import time
@@ -257,9 +256,6 @@ def verify_consumption_grant(
 
 
 def default_consumption_trust_store_path() -> Path:
-    configured = os.environ.get("XZENIA_PROOFRAIL_CONSUMPTION_TRUST_STORE")
-    if configured:
-        return Path(configured).expanduser().resolve()
     return Path.cwd() / "config" / "proofrail-consumption-trust-store.json"
 
 
@@ -348,7 +344,9 @@ class XzeniaCoderRepositoryAdapter:
         self.consumption_private_key = consumption_private_key
         self.consumption_key_id = consumption_key_id
         self.consumption_public_key = consumption_public_key or public_key
-        self.consumption_trust_store_path = Path(consumption_trust_store_path).resolve() if consumption_trust_store_path else None
+        if consumption_trust_store_path is None:
+            raise RepositoryAuthorityError("consumption_trust_store_required")
+        self.consumption_trust_store_path = Path(consumption_trust_store_path).resolve()
         self.expected_roots = dict(expected_roots)
         self.expected_approval_digest = expected_approval_digest
         self.executor_id = executor_id
@@ -378,20 +376,15 @@ class XzeniaCoderRepositoryAdapter:
         )
         verify_consumption_grant(
             claim,
-            public_key=self.consumption_public_key,
+            trust_store_path=self.consumption_trust_store_path,
             parameters=parameters,
             executor_id=self.executor_id,
         )
         consumption_file = output_dir / "proofrail-consumption.json"
-        trust_store_file = self.consumption_trust_store_path or output_dir / "proofrail-consumption-trust-store.json"
         consumption_file.parent.mkdir(parents=True, exist_ok=True)
         consumption_file.write_text(
             json.dumps(claim, sort_keys=True) + "\n",
             encoding="utf-8",
-        )
-        write_consumption_trust_store(
-            trust_store_file,
-            keys={self.consumption_key_id: self.consumption_public_key},
         )
         before = observe_repository(
             repo_path,
@@ -404,7 +397,7 @@ class XzeniaCoderRepositoryAdapter:
             repo_path=repo_path,
             output_dir=output_dir,
             consumption_file=consumption_file,
-            trust_store_file=trust_store_file,
+            trust_store_file=self.consumption_trust_store_path,
             timeout=int(job["max_runtime_seconds"]),
         )
         worker_report = _read_worker_report(
@@ -424,7 +417,7 @@ class XzeniaCoderRepositoryAdapter:
             output_dir=output_dir,
             repo_path=repo_path,
             consumption_grant=claim,
-            consumption_trust_store_path=trust_store_file,
+            consumption_trust_store_path=self.consumption_trust_store_path,
             base_commit_sha=current_base,
         )
         status = "success" if reconciliation["state"] == "RECONCILED" else "failed"
@@ -780,7 +773,6 @@ def _run_dispatcher(
     trust_store_file: Path,
     timeout: int,
 ) -> dict[str, Any]:
-    env = {**os.environ, "XZENIA_PROOFRAIL_CONSUMPTION_TRUST_STORE": str(trust_store_file)}
     completed = subprocess.run(
         [
             str(dispatcher_path),
@@ -792,8 +784,9 @@ def _run_dispatcher(
             str(output_dir),
             "--proofrail-consumption-file",
             str(consumption_file),
+            "--proofrail-consumption-trust-store",
+            str(trust_store_file),
         ],
-        env=env,
         capture_output=True,
         text=True,
         timeout=timeout,
