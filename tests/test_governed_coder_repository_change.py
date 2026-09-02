@@ -18,12 +18,16 @@ from integrations.openclaw.repository_change import (
     RepositoryAuthorityError,
     XzeniaCoderRepositoryAdapter,
     consume_repository_change_authority,
+    DEFAULT_EXECUTOR_CONTRACT_VERSION,
     default_consumption_trust_store_path,
+    default_worker_registry_path,
+    executable_fingerprint,
     mint_consumption_grant,
     mint_repository_change_authority,
     parameters_from_job,
     reconcile_repository_change,
     write_consumption_trust_store,
+    write_worker_registry,
 )
 
 
@@ -50,6 +54,13 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             else None
         )
         self._write_installation_trust_store({"execution-key": self.consumption_public_key})
+        self.installation_worker_registry = default_worker_registry_path()
+        self._existing_worker_registry = (
+            self.installation_worker_registry.read_bytes()
+            if self.installation_worker_registry.exists()
+            else None
+        )
+        self.installation_worker_registry.unlink(missing_ok=True)
 
     def tearDown(self):
         if self._existing_trust_store is None:
@@ -57,9 +68,28 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
         else:
             self.installation_trust_store.parent.mkdir(parents=True, exist_ok=True)
             self.installation_trust_store.write_bytes(self._existing_trust_store)
+        if self._existing_worker_registry is None:
+            self.installation_worker_registry.unlink(missing_ok=True)
+        else:
+            self.installation_worker_registry.parent.mkdir(parents=True, exist_ok=True)
+            self.installation_worker_registry.write_bytes(self._existing_worker_registry)
 
     def _write_installation_trust_store(self, keys):
         return write_consumption_trust_store(self.installation_trust_store, keys=keys)
+
+    def _write_installation_worker_registry(self, worker, *, fingerprint=None):
+        fingerprint = fingerprint or executable_fingerprint(worker)
+        write_worker_registry(
+            self.installation_worker_registry,
+            workers={
+                "xzenia-coder": {
+                    "path": str(Path(worker).resolve()),
+                    "contract_version": DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                    "executable_identity_digest": fingerprint,
+                }
+            },
+        )
+        return fingerprint
 
     def test_missing_authority_is_denied_before_worker(self):
         with TemporaryDirectory() as directory:
@@ -168,8 +198,6 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                     str(output),
                     "--proofrail-consumption-file",
                     str(fake),
-                    "--worker-path",
-                    str(_worker(directory)),
                 ],
                 cwd=Path(__file__).resolve().parents[1],
                 capture_output=True,
@@ -359,8 +387,6 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                     str(consumption_file),
                     "--proofrail-consumption-trust-store",
                     str(attacker_store),
-                    "--worker-path",
-                    str(_worker(directory)),
                 ],
                 cwd=Path(__file__).resolve().parents[1],
                 capture_output=True,
@@ -424,8 +450,6 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                     str(output),
                     "--proofrail-consumption-file",
                     str(consumption_file),
-                    "--worker-path",
-                    str(_worker(directory)),
                 ],
                 cwd=Path(__file__).resolve().parents[1],
                 capture_output=True,
@@ -442,6 +466,10 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             job = _job(repo)
             output = Path(directory) / "evidence"
             output.mkdir()
+            job_file = Path(directory) / "job.json"
+            job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
+            worker = _recording_worker(directory, mutate_original_job=job_file)
+            fingerprint = self._write_installation_worker_registry(worker)
             grant = mint_consumption_grant(
                 authority_digest="f" * 64,
                 authority_nonce="snapshot-nonce",
@@ -451,12 +479,11 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                 expires_at=(NOW + timedelta(minutes=5)).isoformat(),
                 private_key=self.consumption_private_key,
                 key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
             )
-            job_file = Path(directory) / "job.json"
-            job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
             consumption_file = output / "proofrail-consumption.json"
             consumption_file.write_text(json.dumps(grant, sort_keys=True), encoding="utf-8")
-            worker = _recording_worker(directory, mutate_original_job=job_file)
             completed = subprocess.run(
                 [
                     sys.executable,
@@ -469,8 +496,6 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                     str(output),
                     "--proofrail-consumption-file",
                     str(consumption_file),
-                    "--worker-path",
-                    str(worker),
                 ],
                 cwd=Path(__file__).resolve().parents[1],
                 capture_output=True,
@@ -488,7 +513,255 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             worker_seen = json.loads(worker_seen_path.read_text(encoding="utf-8"))
             self.assertEqual(worker_seen["objective"], "Change value to 2.")
             self.assertEqual(dispatch["verified_worker_input_digest"], parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo))["canonical_job_digest"])
-            self.assertNotEqual(Path(dispatch["verified_job_file"]).resolve(), job_file.resolve())
+            self.assertEqual(dispatch["verified_input_transport"], "stdin_pipe")
+            self.assertEqual(dispatch["resolved_executor_identity"], "xzenia-coder")
+            self.assertEqual(dispatch["resolved_executor_contract_version"], DEFAULT_EXECUTOR_CONTRACT_VERSION)
+            self.assertEqual(dispatch["resolved_executor_fingerprint"], fingerprint)
+
+
+    def test_verified_snapshot_replacement_race_cannot_change_worker_input(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            job_file = Path(directory) / "job.json"
+            job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
+            worker = _recording_worker(directory, marker="legitimate")
+            fingerprint = self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="8" * 64,
+                authority_nonce="snapshot-race-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            consumption_file = output / "proofrail-consumption.json"
+            consumption_file.write_text(json.dumps(grant, sort_keys=True), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/xzenia-coder-dispatch",
+                    "--job-file",
+                    str(job_file),
+                    "--repo-path",
+                    str(repo),
+                    "--output-dir",
+                    str(output),
+                    "--proofrail-consumption-file",
+                    str(consumption_file),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            (output / "dispatch" / "verified-job.json").write_text(
+                json.dumps({"objective": "attacker replacement"}),
+                encoding="utf-8",
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
+            worker_seen_path = output / "worker-seen-job.json"
+            for _ in range(50):
+                if worker_seen_path.exists():
+                    break
+                time.sleep(0.05)
+            worker_seen = json.loads(worker_seen_path.read_text(encoding="utf-8"))
+            self.assertEqual(worker_seen["objective"], "Change value to 2.")
+
+    def test_attacker_cli_worker_override_is_impossible(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            worker = _recording_worker(directory, marker="legitimate")
+            fingerprint = self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="9" * 64,
+                authority_nonce="cli-worker-override-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            job_file = Path(directory) / "job.json"
+            job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
+            consumption_file = output / "proofrail-consumption.json"
+            consumption_file.write_text(json.dumps(grant, sort_keys=True), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/xzenia-coder-dispatch",
+                    "--job-file",
+                    str(job_file),
+                    "--repo-path",
+                    str(repo),
+                    "--output-dir",
+                    str(output),
+                    "--proofrail-consumption-file",
+                    str(consumption_file),
+                    "--worker-path",
+                    str(_recording_worker(directory, marker="attacker")),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("unrecognized arguments", completed.stderr + completed.stdout)
+            self.assertFalse((output / "worker-marker.txt").exists())
+
+    def test_attacker_env_worker_override_is_ignored(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            worker = _recording_worker(directory, marker="legitimate")
+            attacker = _recording_worker(directory, marker="attacker")
+            fingerprint = self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="a1" * 32,
+                authority_nonce="env-worker-override-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            completed = _direct_dispatch(
+                directory,
+                repo,
+                job,
+                output,
+                grant,
+                env={**os.environ, "XZENIA_CODER_WORKER": str(attacker)},
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
+            marker_path = output / "worker-marker.txt"
+            marker_text = ""
+            for _ in range(50):
+                if marker_path.exists():
+                    marker_text = marker_path.read_text(encoding="utf-8")
+                    if marker_text:
+                        break
+                time.sleep(0.05)
+            self.assertEqual(marker_text, "legitimate")
+
+    def test_substituted_binary_same_filename_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            worker = _recording_worker(directory, marker="legitimate")
+            fingerprint = self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="a2" * 32,
+                authority_nonce="substituted-worker-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            Path(worker).write_text("#!/usr/bin/env python3\nraise SystemExit('attacker')\n", encoding="utf-8")
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("installed_worker_fingerprint_mismatch", completed.stderr + completed.stdout)
+
+    def test_wrong_worker_fingerprint_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            worker = _recording_worker(directory, marker="legitimate")
+            self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="a3" * 32,
+                authority_nonce="wrong-worker-fingerprint-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest="0" * 64,
+            )
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("executor_fingerprint_mismatch", completed.stderr + completed.stdout)
+
+    def test_missing_installed_worker_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            worker = _recording_worker(directory, marker="legitimate")
+            fingerprint = self._write_installation_worker_registry(worker)
+            Path(worker).unlink()
+            grant = mint_consumption_grant(
+                authority_digest="a4" * 32,
+                authority_nonce="missing-worker-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("installed_worker_missing", completed.stderr + completed.stdout)
+
+    def test_legitimate_installed_worker_dispatches_with_fingerprint_receipt(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            worker = _recording_worker(directory, marker="legitimate")
+            fingerprint = self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="a5" * 32,
+                authority_nonce="legitimate-installed-worker-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
+            dispatch = json.loads(completed.stdout)
+            self.assertEqual(dispatch["resolved_executor_fingerprint"], fingerprint)
+            self.assertEqual(dispatch["verified_input_transport"], "stdin_pipe")
+            self.assertEqual(len(dispatch["consumption_grant_digest"]), 64)
 
     def test_repo_base_drift_is_denied_before_worker(self):
         with TemporaryDirectory() as directory:
@@ -734,8 +1007,6 @@ def _direct_dispatch(directory, repo, job, output, consumption_grant, env=None):
             str(output),
             "--proofrail-consumption-file",
             str(consumption_file),
-            "--worker-path",
-            str(_worker(directory)),
         ],
         cwd=Path(__file__).resolve().parents[1],
         env=env,
@@ -793,16 +1064,28 @@ def _worker(directory):
     return path
 
 
-def _recording_worker(directory, *, mutate_original_job):
-    path = Path(directory) / "recording_worker.py"
+def _recording_worker(directory, *, mutate_original_job=None, marker=None):
+    path = Path(directory) / f"recording_worker_{marker or 'default'}.py"
+    mutation = (
+        f"pathlib.Path({str(mutate_original_job)!r}).write_text(json.dumps({{'objective': 'unauthorized mutation'}}))"
+        if mutate_original_job is not None
+        else ""
+    )
     path.write_text(
         f"""#!/usr/bin/env python3
 import json, pathlib, sys
-job_file = pathlib.Path(sys.argv[sys.argv.index('--job-file') + 1])
+job_bytes = sys.stdin.buffer.read()
 output_dir = pathlib.Path(sys.argv[sys.argv.index('--output-dir') + 1])
-pathlib.Path({str(mutate_original_job)!r}).write_text(json.dumps({{'objective': 'unauthorized mutation'}}))
+{mutation}
 output_dir.mkdir(parents=True, exist_ok=True)
-(output_dir / 'worker-seen-job.json').write_text(job_file.read_text())
+(output_dir / 'worker-seen-job.json').write_bytes(job_bytes)
+(output_dir / 'worker-marker.txt').write_text({(marker or 'legitimate')!r})
+for name in ('transcript.jsonl', 'commands.jsonl', 'patch.diff'):
+    (output_dir / name).write_text('x\\n')
+(output_dir / 'job.json').write_bytes(job_bytes)
+(output_dir / 'tests.json').write_text(json.dumps({{'final': [{{'returncode': 0}}]}}))
+(output_dir / 'hashes.json').write_text('{{}}')
+(output_dir / 'final_report.json').write_text(json.dumps({{'status': 'PASS', 'changed_files': []}}))
 """,
         encoding="utf-8",
     )

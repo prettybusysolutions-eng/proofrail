@@ -28,6 +28,8 @@ ACTION_TYPE = "repository_change"
 JOB_CONTRACT = "proofrail.xzenia-job.v1"
 CONSUMPTION_GRANT_KIND = "proofrail.execution-consumption-grant.v1"
 CONSUMPTION_TRUST_STORE_KIND = "proofrail.consumption-trust-store.v1"
+WORKER_REGISTRY_KIND = "proofrail.worker-registry.v1"
+DEFAULT_EXECUTOR_CONTRACT_VERSION = "xzenia-coder.v1"
 RECONCILED_ARTIFACT_MANIFEST_KIND = "proofrail.reconciled-artifact-manifest.v1"
 REQUIRED_WORKER_ARTIFACTS = (
     "job.json",
@@ -69,9 +71,11 @@ def repository_change_parameters(
     max_model_calls: int,
     canonical_job_digest: str,
     expected_effect_class: str = "code_patch",
+    executor_contract_version: str | None = None,
+    executable_identity_digest: str | None = None,
 ) -> dict[str, Any]:
     _require_digest(canonical_job_digest, "canonical_job_digest")
-    return {
+    parameters = {
         "repository_identity": repository_identity,
         "repository_path": str(Path(repository_path).resolve()),
         "base_commit_sha": base_commit_sha,
@@ -85,6 +89,12 @@ def repository_change_parameters(
         "max_model_calls": max_model_calls,
         "expected_effect_class": expected_effect_class,
     }
+    if executor_contract_version is not None:
+        parameters["executor_contract_version"] = str(executor_contract_version)
+    if executable_identity_digest is not None:
+        _require_digest(executable_identity_digest, "executable_identity_digest")
+        parameters["executable_identity_digest"] = executable_identity_digest
+    return parameters
 
 
 def mint_repository_change_authority(
@@ -194,9 +204,13 @@ def mint_consumption_grant(
     private_key: Ed25519PrivateKey | bytes,
     key_id: str,
     registry_path: str | Path | None = None,
+    executor_contract_version: str | None = None,
+    executable_identity_digest: str | None = None,
 ) -> dict[str, Any]:
     _require_digest(authority_digest, "authority_digest")
     _require_digest(str(parameters.get("canonical_job_digest")), "canonical_job_digest")
+    executor_contract_version = executor_contract_version or parameters.get("executor_contract_version")
+    executable_identity_digest = executable_identity_digest or parameters.get("executable_identity_digest")
     record = {
         "kind": CONSUMPTION_GRANT_KIND,
         "state": "CONSUMED",
@@ -211,6 +225,11 @@ def mint_consumption_grant(
         "expires_at": expires_at,
         "signing_key_id": key_id,
     }
+    if executor_contract_version is not None:
+        record["executor_contract_version"] = str(executor_contract_version)
+    if executable_identity_digest is not None:
+        _require_digest(str(executable_identity_digest), "executable_identity_digest")
+        record["executable_identity_digest"] = str(executable_identity_digest)
     if registry_path is not None:
         record["registry_path"] = str(Path(registry_path))
     return sign_record(record, private_key, key_id=key_id)
@@ -247,6 +266,9 @@ def verify_consumption_grant(
     for field, expected, code in comparisons:
         if grant.get(field) != expected:
             raise RepositoryAuthorityError(code)
+    for field in ("executor_contract_version", "executable_identity_digest"):
+        if field in parameters and grant.get(field) != parameters[field]:
+            raise RepositoryAuthorityError(f"{field}_mismatch")
     expiry = datetime.fromisoformat(str(grant["expires_at"]).replace("Z", "+00:00"))
     current = now or datetime.now(timezone.utc)
     if current.astimezone(timezone.utc) >= expiry.astimezone(timezone.utc):
@@ -256,6 +278,84 @@ def verify_consumption_grant(
 
 def default_consumption_trust_store_path() -> Path:
     return Path(__file__).resolve().parents[2] / "config" / "proofrail-consumption-trust-store.json"
+
+
+def default_worker_registry_path() -> Path:
+    return Path(__file__).resolve().parents[2] / "config" / "proofrail-worker-registry.json"
+
+
+def executable_fingerprint(path: str | Path) -> str:
+    target = Path(path)
+    if not target.exists() or not target.is_file() or target.is_symlink():
+        raise RepositoryAuthorityError("installed_worker_missing")
+    return _sha256_bytes(target.read_bytes())
+
+
+def write_worker_registry(
+    path: str | Path,
+    *,
+    workers: Mapping[str, Mapping[str, Any] | str | Path],
+) -> dict[str, Any]:
+    entries = []
+    for executor_id, value in sorted(workers.items()):
+        if isinstance(value, Mapping):
+            worker_path = Path(_required_text(value, "path")).resolve()
+            contract_version = str(value.get("contract_version") or DEFAULT_EXECUTOR_CONTRACT_VERSION)
+            fingerprint = str(value.get("executable_identity_digest") or executable_fingerprint(worker_path))
+        else:
+            worker_path = Path(value).resolve()
+            contract_version = DEFAULT_EXECUTOR_CONTRACT_VERSION
+            fingerprint = executable_fingerprint(worker_path)
+        _require_digest(fingerprint, "executable_identity_digest")
+        entries.append({
+            "executor_id": str(executor_id),
+            "contract_version": contract_version,
+            "path": str(worker_path),
+            "executable_identity_digest": fingerprint,
+        })
+    registry = {"kind": WORKER_REGISTRY_KIND, "workers": entries}
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(registry, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return registry
+
+
+def load_worker_registry_executor(
+    executor_id: str,
+    *,
+    contract_version: str | None = None,
+    executable_identity_digest: str | None = None,
+) -> dict[str, str]:
+    registry = _read_json(default_worker_registry_path(), default=None)
+    if not isinstance(registry, Mapping) or registry.get("kind") != WORKER_REGISTRY_KIND:
+        raise RepositoryAuthorityError("worker_registry_invalid")
+    matches = [
+        item for item in registry.get("workers", [])
+        if isinstance(item, Mapping) and item.get("executor_id") == executor_id
+    ]
+    if contract_version is not None:
+        matches = [item for item in matches if item.get("contract_version") == contract_version]
+    if len(matches) != 1:
+        raise RepositoryAuthorityError("untrusted_executor_identity")
+    entry = matches[0]
+    path_text = entry.get("path")
+    entry_contract_version = entry.get("contract_version")
+    entry_fingerprint = entry.get("executable_identity_digest")
+    if not isinstance(path_text, str) or not isinstance(entry_contract_version, str) or not isinstance(entry_fingerprint, str):
+        raise RepositoryAuthorityError("worker_registry_invalid")
+    _require_digest(entry_fingerprint, "executable_identity_digest")
+    if executable_identity_digest is not None and entry_fingerprint != executable_identity_digest:
+        raise RepositoryAuthorityError("executor_fingerprint_mismatch")
+    worker_path = Path(path_text)
+    actual = executable_fingerprint(worker_path)
+    if actual != entry_fingerprint:
+        raise RepositoryAuthorityError("installed_worker_fingerprint_mismatch")
+    return {
+        "executor_id": executor_id,
+        "contract_version": entry_contract_version,
+        "path": str(worker_path.resolve()),
+        "executable_identity_digest": entry_fingerprint,
+    }
 
 
 def write_consumption_trust_store(

@@ -3,17 +3,16 @@
 
 The dispatcher is intentionally small: ProofRail authority verification and
 consumption happen before this program is invoked. This entry point verifies
-the signed consumption grant against a trusted local key registry, starts the
-configured worker process, and writes portable dispatch evidence.
+the signed consumption grant against installation-owned trust roots, resolves
+an installation-owned worker executable, and writes portable dispatch evidence.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
-import os
 import pathlib
-import shutil
 import subprocess
 import sys
 import time
@@ -28,6 +27,7 @@ from integrations.openclaw.repository_change import (
     canonical_job_digest,
     canonical_json,
     git_head,
+    load_worker_registry_executor,
     parameters_from_job,
     read_canonical_job_file,
     verify_consumption_grant,
@@ -43,17 +43,28 @@ def write_json(path: pathlib.Path, data: Any) -> None:
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def resolve_worker(explicit: str | None) -> str:
-    candidate = explicit or os.environ.get("XZENIA_CODER_WORKER") or "xzenia-coder"
-    if os.sep in candidate or (os.altsep and os.altsep in candidate):
-        path = pathlib.Path(candidate).expanduser().resolve()
-        if not path.exists():
-            raise SystemExit("xzenia_coder_worker_not_found")
-        return str(path)
-    resolved = shutil.which(candidate)
-    if not resolved:
-        raise SystemExit("xzenia_coder_worker_not_found")
-    return resolved
+def record_digest(record: Any) -> str:
+    return hashlib.sha256(canonical_json(record)).hexdigest()
+
+
+def resolve_worker(consumption: dict[str, Any]) -> dict[str, str]:
+    executor_id = consumption.get("executor_id")
+    contract_version = consumption.get("executor_contract_version")
+    executable_digest = consumption.get("executable_identity_digest")
+    if not isinstance(executor_id, str) or not executor_id:
+        raise SystemExit("executor_identity_missing")
+    if not isinstance(contract_version, str) or not contract_version:
+        raise SystemExit("executor_contract_version_missing")
+    if not isinstance(executable_digest, str) or len(executable_digest) != 64:
+        raise SystemExit("executor_fingerprint_missing")
+    try:
+        return load_worker_registry_executor(
+            executor_id,
+            contract_version=contract_version,
+            executable_identity_digest=executable_digest,
+        )
+    except RepositoryAuthorityError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def main() -> int:
@@ -62,13 +73,13 @@ def main() -> int:
     parser.add_argument("--repo-path", required=True, type=pathlib.Path)
     parser.add_argument("--output-dir", required=True, type=pathlib.Path)
     parser.add_argument("--proofrail-consumption-file", required=True, type=pathlib.Path)
-    parser.add_argument("--worker-path")
     args = parser.parse_args()
 
     repo_path = args.repo_path.resolve()
     job = read_canonical_job_file(args.job_file, expected_repo_path=repo_path)
     job_id = str(job["job_id"])
     consumption = read_json(args.proofrail_consumption_file)
+    verified_job_bytes = canonical_json(job)
     verified_job_digest = canonical_job_digest(job)
     parameters = parameters_from_job(
         job,
@@ -84,35 +95,30 @@ def main() -> int:
     except RepositoryAuthorityError as exc:
         raise SystemExit(str(exc)) from exc
 
-    worker = resolve_worker(args.worker_path)
+    worker_spec = resolve_worker(consumption)
     dispatch_dir = args.output_dir.resolve() / "dispatch"
     dispatch_dir.mkdir(parents=True, exist_ok=True)
-    verified_job_file = dispatch_dir / "verified-job.json"
-    try:
-        with verified_job_file.open("xb") as snapshot:
-            snapshot.write(canonical_json(job))
-    except FileExistsError as exc:
-        raise SystemExit("verified_job_snapshot_exists") from exc
-    if canonical_job_digest(read_canonical_job_file(verified_job_file, expected_repo_path=repo_path)) != verified_job_digest:
-        raise SystemExit("verified_job_snapshot_digest_mismatch")
     stdout = dispatch_dir / "worker.stdout.log"
     stderr = dispatch_dir / "worker.stderr.log"
     with stdout.open("w", encoding="utf-8") as out, stderr.open("w", encoding="utf-8") as err:
         proc = subprocess.Popen(
             [
-                worker,
+                worker_spec["path"],
                 "run",
-                "--job-file",
-                str(verified_job_file),
+                "--job-stdin",
                 "--repo-path",
-                str(args.repo_path.resolve()),
+                str(repo_path),
                 "--output-dir",
                 str(args.output_dir.resolve()),
             ],
+            stdin=subprocess.PIPE,
             stdout=out,
             stderr=err,
             start_new_session=True,
         )
+        assert proc.stdin is not None
+        proc.stdin.write(verified_job_bytes)
+        proc.stdin.close()
     result = {
         "job_id": job_id,
         "status": "DISPATCHED",
@@ -120,8 +126,13 @@ def main() -> int:
         "started_ms": int(time.time() * 1000),
         "evidence_directory": str(args.output_dir.resolve()),
         "original_job_file": str(args.job_file.resolve()),
-        "verified_job_file": str(verified_job_file),
+        "verified_input_transport": "stdin_pipe",
         "verified_worker_input_digest": verified_job_digest,
+        "resolved_executor_identity": worker_spec["executor_id"],
+        "resolved_executor_contract_version": worker_spec["contract_version"],
+        "resolved_executor_fingerprint": worker_spec["executable_identity_digest"],
+        "authority_digest": consumption.get("authority_digest"),
+        "consumption_grant_digest": record_digest(consumption),
         "stdout_log": str(stdout),
         "stderr_log": str(stderr),
         "gateway_blocking": False,
