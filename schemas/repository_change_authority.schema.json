@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/schemas/repository_change_authority.schema.json",
+  "title": "ProofRail Repository Change Authority v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["kind", "state", "issuer", "subject", "roots", "approval_digest", "effect", "failure_semantics", "record_hash", "signature"],
+  "properties": {
+    "kind": {"const": "proofrail.action-authority-envelope.v1"},
+    "state": {"const": "PERMITTED"},
+    "issuer": {"type": "object", "required": ["principal_id", "role"]},
+    "subject": {"type": "object", "required": ["principal_id", "role"]},
+    "roots": {
+      "type": "object",
+      "required": ["identity", "evidence", "policy", "state"],
+      "properties": {
+        "identity": {"$ref": "#/$defs/digest"},
+        "evidence": {"$ref": "#/$defs/digest"},
+        "policy": {"$ref": "#/$defs/digest"},
+        "state": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "approval_digest": {"$ref": "#/$defs/digest"},
+    "effect": {
+      "type": "object",
+      "required": ["action_type", "target", "parameters", "effect_digest"],
+      "properties": {
+        "action_type": {"const": "repository_change"},
+        "target": {"type": "string", "pattern": "^repo:.+@[0-9a-f]{7,64}$"},
+        "parameters": {
+          "type": "object",
+          "required": [
+            "repository_identity",
+            "repository_path",
+            "base_commit_sha",
+            "allowed_paths",
+            "forbidden_paths",
+            "allowed_commands",
+            "objective_digest",
+            "acceptance_test_digest",
+            "canonical_job_digest",
+            "max_runtime_seconds",
+            "max_model_calls",
+            "expected_effect_class"
+          ],
+          "properties": {
+            "repository_identity": {"type": "string", "minLength": 1},
+            "repository_path": {"type": "string", "minLength": 1},
+            "base_commit_sha": {"type": "string", "pattern": "^[0-9a-f]{7,64}$"},
+            "allowed_paths": {"type": "array", "items": {"type": "string"}},
+            "forbidden_paths": {"type": "array", "items": {"type": "string"}},
+            "allowed_commands": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}},
+            "objective_digest": {"$ref": "#/$defs/digest"},
+            "acceptance_test_digest": {"$ref": "#/$defs/digest"},
+            "canonical_job_digest": {"$ref": "#/$defs/digest"},
+            "max_runtime_seconds": {"type": "integer", "minimum": 1},
+            "max_model_calls": {"type": "integer", "minimum": 1},
+            "expected_effect_class": {"type": "string", "minLength": 1}
+          }
+        },
+        "effect_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "failure_semantics": {
+      "type": "object",
+      "required": ["consume_before_effect", "ambiguous_outcome", "retry"],
+      "properties": {
+        "consume_before_effect": {"const": true},
+        "ambiguous_outcome": {"const": "RECONCILIATION_FAILED"},
+        "retry": {"const": "NEW_AUTHORITY_REQUIRED"}
+      }
+    },
+    "record_hash": {"$ref": "#/$defs/digest"},
+    "signature": {"type": "object"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
