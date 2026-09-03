@@ -1,0 +1,77 @@
+{
+  "$id": "https://proofrail.local/schemas/proofrail.transition.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "const": "proofrail.transition"
+    },
+    "domain": {
+      "const": "proofrail.esrm.transition"
+    },
+    "from_state": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "input_artifact_digests": {
+      "items": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "notes": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "output_artifact_digests": {
+      "items": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "raw_input_digest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "reason_code": {
+      "type": "string"
+    },
+    "rejection_stage": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "esrm.v0.1"
+    },
+    "to_state": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    },
+    "transition_id": {
+      "pattern": "^trn-[A-Za-z0-9._-]{8,96}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "domain",
+    "transition_id",
+    "from_state",
+    "to_state",
+    "input_artifact_digests",
+    "output_artifact_digests",
+    "rejection_stage",
+    "reason_code",
+    "raw_input_digest"
+  ],
+  "title": "proofrail.transition",
+  "type": "object"
+}

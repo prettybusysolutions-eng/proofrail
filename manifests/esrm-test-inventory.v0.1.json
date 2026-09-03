@@ -1,0 +1,329 @@
+{
+  "claim_boundary": "no_conformance_claim",
+  "kind": "proofrail.esrm.test-inventory.v0.1",
+  "requirements": [
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-23-MUST-001",
+      "vector_ids": [
+        "ESRM-VEC-001"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-23-MUST-002",
+      "vector_ids": [
+        "ESRM-VEC-002"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-23-MUST-NOT-001",
+      "vector_ids": [
+        "ESRM-VEC-003"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-23-MUST-NOT-002",
+      "vector_ids": [
+        "ESRM-VEC-004"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-24-MUST-001",
+      "vector_ids": [
+        "ESRM-VEC-005"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-24-MUST-002",
+      "vector_ids": [
+        "ESRM-VEC-006"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-24-MUST-NOT-001",
+      "vector_ids": [
+        "ESRM-VEC-007"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-24-MUST-NOT-002",
+      "vector_ids": [
+        "ESRM-VEC-008"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-25-MUST-001",
+      "vector_ids": [
+        "ESRM-VEC-009"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-25-MUST-002",
+      "vector_ids": [
+        "ESRM-VEC-010"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-25-MUST-003",
+      "vector_ids": [
+        "ESRM-VEC-011"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-25-MUST-NOT-001",
+      "vector_ids": [
+        "ESRM-VEC-012"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-25-MUST-NOT-002",
+      "vector_ids": [
+        "ESRM-VEC-013"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-26-MUST-001",
+      "vector_ids": [
+        "ESRM-VEC-014"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-26-MUST-002",
+      "vector_ids": [
+        "ESRM-VEC-015"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-26-MUST-003",
+      "vector_ids": [
+        "ESRM-VEC-016"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-26-MUST-NOT-001",
+      "vector_ids": [
+        "ESRM-VEC-017"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-26-MUST-NOT-002",
+      "vector_ids": [
+        "ESRM-VEC-018"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-27-MUST-001",
+      "vector_ids": [
+        "ESRM-VEC-019"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-27-MUST-002",
+      "vector_ids": [
+        "ESRM-VEC-020"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-27-MUST-003",
+      "vector_ids": [
+        "ESRM-VEC-021"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-27-MUST-NOT-001",
+      "vector_ids": [
+        "ESRM-VEC-022"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-27-MUST-NOT-002",
+      "vector_ids": [
+        "ESRM-VEC-023"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-28-MUST-001",
+      "vector_ids": [
+        "ESRM-VEC-024"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-28-MUST-002",
+      "vector_ids": [
+        "ESRM-VEC-025"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-28-MUST-NOT-001",
+      "vector_ids": [
+        "ESRM-VEC-026"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-28-MUST-NOT-002",
+      "vector_ids": [
+        "ESRM-VEC-027"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-29-MUST-001",
+      "vector_ids": [
+        "ESRM-VEC-028"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-29-MUST-002",
+      "vector_ids": [
+        "ESRM-VEC-029"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-29-MUST-NOT-001",
+      "vector_ids": [
+        "ESRM-VEC-030"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-29-MUST-NOT-002",
+      "vector_ids": [
+        "ESRM-VEC-031"
+      ]
+    },
+    {
+      "coverage": "stopped_by_ambiguity",
+      "requirement_id": "ESRM-LP-30-MUST-001",
+      "vector_ids": [
+        "ESRM-VEC-032"
+      ]
+    },
+    {
+      "coverage": "stopped_by_ambiguity",
+      "requirement_id": "ESRM-LP-30-MUST-002",
+      "vector_ids": [
+        "ESRM-VEC-033"
+      ]
+    },
+    {
+      "coverage": "stopped_by_ambiguity",
+      "requirement_id": "ESRM-LP-30-MUST-NOT-001",
+      "vector_ids": [
+        "ESRM-VEC-034"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-41-MUST-001",
+      "vector_ids": [
+        "ESRM-VEC-035"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-41-MUST-002",
+      "vector_ids": [
+        "ESRM-VEC-036"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-41-MUST-NOT-001",
+      "vector_ids": [
+        "ESRM-VEC-037"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-42-MUST-001",
+      "vector_ids": [
+        "ESRM-VEC-038"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-42-MUST-002",
+      "vector_ids": [
+        "ESRM-VEC-039"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-42-MUST-NOT-001",
+      "vector_ids": [
+        "ESRM-VEC-040"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-43-MUST-001",
+      "vector_ids": [
+        "ESRM-VEC-041"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-43-MUST-002",
+      "vector_ids": [
+        "ESRM-VEC-042"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-43-MUST-NOT-001",
+      "vector_ids": [
+        "ESRM-VEC-043"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-44-MUST-001",
+      "vector_ids": [
+        "ESRM-VEC-044"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-44-MUST-002",
+      "vector_ids": [
+        "ESRM-VEC-045"
+      ]
+    },
+    {
+      "coverage": "planned",
+      "requirement_id": "ESRM-LP-44-MUST-NOT-001",
+      "vector_ids": [
+        "ESRM-VEC-046"
+      ]
+    }
+  ],
+  "schema_version": "esrm.v0.1"
+}

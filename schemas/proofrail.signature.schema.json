@@ -1,0 +1,66 @@
+{
+  "$id": "https://proofrail.local/schemas/proofrail.signature.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "const": "proofrail.signature"
+    },
+    "domain": {
+      "const": "proofrail.esrm.signature"
+    },
+    "notes": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "public_key_fingerprint": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "raw_input_digest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "esrm.v0.1"
+    },
+    "signature_algorithm": {
+      "enum": [
+        "ed25519.detached",
+        "ecdsa-p256-sha256.detached",
+        "rsa-pss-sha256.detached"
+      ]
+    },
+    "signature_bytes_b64": {
+      "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+      "type": "string"
+    },
+    "signature_id": {
+      "pattern": "^sig-[A-Za-z0-9._-]{8,96}$",
+      "type": "string"
+    },
+    "subject_digest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "trust_root_digest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "domain",
+    "signature_id",
+    "subject_digest",
+    "signature_algorithm",
+    "public_key_fingerprint",
+    "signature_bytes_b64",
+    "raw_input_digest"
+  ],
+  "title": "proofrail.signature",
+  "type": "object"
+}

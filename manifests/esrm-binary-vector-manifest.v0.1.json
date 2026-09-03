@@ -1,0 +1,658 @@
+{
+  "claim_boundary": "no_conformance_claim",
+  "kind": "proofrail.esrm.binary-vector-manifest.v0.1",
+  "schema_version": "esrm.v0.1",
+  "vector_set_id": "esrm-vectors-raw-byte-lab-v0.1",
+  "vectors": [
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-23-MUST-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-001"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-23-MUST-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-002"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-23-MUST-NOT-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-003"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-23-MUST-NOT-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-004"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-24-MUST-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-005"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-24-MUST-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-006"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-24-MUST-NOT-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-007"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-24-MUST-NOT-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-008"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-25-MUST-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-009"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-25-MUST-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-010"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-25-MUST-003"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-011"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-25-MUST-NOT-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-012"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-25-MUST-NOT-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-013"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.transition",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-26-MUST-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-014"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.transition",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-26-MUST-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-015"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.transition",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-26-MUST-003"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-016"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.transition",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-26-MUST-NOT-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-017"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.transition",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-26-MUST-NOT-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-018"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.signature",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-27-MUST-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-019"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.signature",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-27-MUST-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-020"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.signature",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-27-MUST-003"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-021"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.signature",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-27-MUST-NOT-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-022"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.signature",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-27-MUST-NOT-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-023"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-28-MUST-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-024"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-28-MUST-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-025"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-28-MUST-NOT-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-026"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-28-MUST-NOT-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-027"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-29-MUST-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-028"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-29-MUST-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-029"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-29-MUST-NOT-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-030"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-29-MUST-NOT-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-031"
+    },
+    {
+      "ambiguity_ids": [
+        "AMB-001"
+      ],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "unresolved_spec_ambiguity",
+      "expected_stage": "canonicalization",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-30-MUST-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "stopped_by_ambiguity",
+      "vector_id": "ESRM-VEC-032"
+    },
+    {
+      "ambiguity_ids": [
+        "AMB-001"
+      ],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "unresolved_spec_ambiguity",
+      "expected_stage": "canonicalization",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-30-MUST-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "stopped_by_ambiguity",
+      "vector_id": "ESRM-VEC-033"
+    },
+    {
+      "ambiguity_ids": [
+        "AMB-001"
+      ],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "unresolved_spec_ambiguity",
+      "expected_stage": "canonicalization",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-30-MUST-NOT-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "stopped_by_ambiguity",
+      "vector_id": "ESRM-VEC-034"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-41-MUST-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-035"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-41-MUST-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-036"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-41-MUST-NOT-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-037"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-42-MUST-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-038"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-42-MUST-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-039"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-42-MUST-NOT-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-040"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-43-MUST-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-041"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-43-MUST-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-042"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-43-MUST-NOT-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-043"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-44-MUST-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-044"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-44-MUST-002"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-045"
+    },
+    {
+      "ambiguity_ids": [],
+      "artifact_type": "proofrail.binary_vector_manifest",
+      "domain": "proofrail.esrm.raw_byte_lab",
+      "expected_reason_code": "schema_required_missing",
+      "expected_stage": "schema_validation",
+      "raw_byte_length": 0,
+      "requirement_ids": [
+        "ESRM-LP-44-MUST-NOT-001"
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "planned",
+      "vector_id": "ESRM-VEC-046"
+    }
+  ]
+}

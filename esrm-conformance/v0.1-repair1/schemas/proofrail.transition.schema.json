@@ -1,0 +1,91 @@
+{
+  "$id": "https://proofrail.local/esrm/v0.1-repair1/schemas/proofrail.transition.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "const": "proofrail.transition"
+    },
+    "canonical_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "critical_extensions": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "critical": {
+            "const": true
+          },
+          "extension_id": {
+            "pattern": "^esrm\\.[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "type": "string"
+          },
+          "extension_version": {
+            "pattern": "^v[0-9]+$",
+            "type": "string"
+          },
+          "payload": {}
+        },
+        "required": [
+          "extension_id",
+          "extension_version",
+          "critical",
+          "payload"
+        ],
+        "type": "object"
+      },
+      "maxItems": 16,
+      "type": "array"
+    },
+    "domain": {
+      "const": "proofrail.esrm.transition"
+    },
+    "input_commitments": {
+      "items": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "maxItems": 1024,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "operation_label": {
+      "pattern": "^esrm\\.[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "type": "string"
+    },
+    "output_commitments": {
+      "items": {
+        "pattern": "^[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "maxItems": 1024,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "raw_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "esrm.v0.1"
+    },
+    "transition_id": {
+      "pattern": "^trn-[A-Za-z0-9._-]{8,96}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "domain",
+    "transition_id",
+    "operation_label",
+    "input_commitments",
+    "output_commitments",
+    "raw_sha256",
+    "canonical_sha256"
+  ],
+  "title": "proofrail.transition ESRM v0.1 repair1",
+  "type": "object"
+}

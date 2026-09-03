@@ -1,0 +1,94 @@
+{
+  "$id": "https://proofrail.local/esrm/v0.1-repair1/schemas/proofrail.signature.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "const": "proofrail.signature"
+    },
+    "canonical_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "critical_extensions": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "critical": {
+            "const": true
+          },
+          "extension_id": {
+            "pattern": "^esrm\\.[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "type": "string"
+          },
+          "extension_version": {
+            "pattern": "^v[0-9]+$",
+            "type": "string"
+          },
+          "payload": {}
+        },
+        "required": [
+          "extension_id",
+          "extension_version",
+          "critical",
+          "payload"
+        ],
+        "type": "object"
+      },
+      "maxItems": 16,
+      "type": "array"
+    },
+    "crypto_suite": {
+      "const": "PR-ESRM-JCS-SHA256-ED25519-v1"
+    },
+    "domain": {
+      "const": "proofrail.esrm.signature"
+    },
+    "public_key_b64u": {
+      "maxLength": 43,
+      "minLength": 43,
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "type": "string"
+    },
+    "public_key_fingerprint": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "raw_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "esrm.v0.1"
+    },
+    "signature_b64u": {
+      "maxLength": 86,
+      "minLength": 86,
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "type": "string"
+    },
+    "signature_id": {
+      "pattern": "^sig-[A-Za-z0-9._-]{8,96}$",
+      "type": "string"
+    },
+    "subject_canonical_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "domain",
+    "signature_id",
+    "crypto_suite",
+    "subject_canonical_sha256",
+    "public_key_b64u",
+    "public_key_fingerprint",
+    "signature_b64u",
+    "raw_sha256",
+    "canonical_sha256"
+  ],
+  "title": "proofrail.signature ESRM v0.1 repair1",
+  "type": "object"
+}

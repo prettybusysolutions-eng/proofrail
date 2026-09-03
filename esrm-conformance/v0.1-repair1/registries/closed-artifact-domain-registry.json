@@ -1,0 +1,30 @@
+{
+  "artifact_types": [
+    {
+      "artifact_type": "proofrail.transition",
+      "domain": "proofrail.esrm.transition",
+      "schema_id": "https://proofrail.local/esrm/v0.1-repair1/schemas/proofrail.transition.schema.json"
+    },
+    {
+      "artifact_type": "proofrail.signature",
+      "domain": "proofrail.esrm.signature",
+      "schema_id": "https://proofrail.local/esrm/v0.1-repair1/schemas/proofrail.signature.schema.json"
+    }
+  ],
+  "base64_profile": "RFC4648 base64url without padding; permissive decoding forbidden",
+  "closed": true,
+  "commitment_encoding": "lowercase_hex_64",
+  "crypto_suite": "PR-ESRM-JCS-SHA256-ED25519-v1",
+  "domains": [
+    "proofrail.esrm.transition",
+    "proofrail.esrm.signature",
+    "proofrail.esrm.conformance_manifest",
+    "proofrail.esrm.risk_register",
+    "proofrail.esrm.test_inventory"
+  ],
+  "hash": "SHA-256",
+  "kind": "proofrail.esrm.registry.repair1.v0.1",
+  "public_key_encoding": "base64url_unpadded_32_decoded_bytes",
+  "schema_version": "esrm.v0.1",
+  "signature_encoding": "base64url_unpadded_64_decoded_bytes"
+}

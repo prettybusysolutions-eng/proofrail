@@ -1,0 +1,1821 @@
+{
+  "claim_boundary": "NO_CLAIM_OF_CONFORMANCE",
+  "kind": "proofrail.esrm.test-inventory.repair1.v0.1",
+  "requirements": [
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-22-MUST-001-NEG"
+      ],
+      "normative_sentence": "A conformance artifact pack MUST identify this document as the repository-authoritative ESRM v0.1 baseline for Sections 22 through 48.",
+      "positive_vector_ids": [
+        "ESRM-22-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-22-MUST-001",
+      "section": 22
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-22-MUST-002-NEG"
+      ],
+      "normative_sentence": "A conformance artifact pack MUST distinguish NORMATIVE text from NON-NORMATIVE text.",
+      "positive_vector_ids": [
+        "ESRM-22-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-22-MUST-002",
+      "section": 22
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-22-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "A conformance artifact pack MUST NOT treat examples, rationale, or implementation notes as normative requirements.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-22-MUST-NOT-001",
+      "section": 22
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-22-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "A conformance artifact pack MUST NOT claim ESRM conformance before independent audit and before both Rust and Go implementations pass the finalized corpus.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-22-MUST-NOT-002",
+      "section": 22
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "raw_byte_intake",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-23-MUST-001-NEG"
+      ],
+      "normative_sentence": "An implementation MUST accept each artifact as an exact finite byte sequence before any decoding.",
+      "positive_vector_ids": [
+        "ESRM-23-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-23-MUST-001",
+      "section": 23
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "raw_byte_intake",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-23-MUST-002-NEG"
+      ],
+      "normative_sentence": "An implementation MUST record raw_byte_length before JSON parsing.",
+      "positive_vector_ids": [
+        "ESRM-23-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-23-MUST-002",
+      "section": 23
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "raw_byte_intake",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-23-MUST-003-NEG"
+      ],
+      "normative_sentence": "An implementation MUST record raw_sha256 as SHA-256 over the exact finite byte sequence.",
+      "positive_vector_ids": [
+        "ESRM-23-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-23-MUST-003",
+      "section": 23
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "raw_byte_intake",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-23-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "An implementation MUST NOT normalize Unicode before raw_sha256 is recorded.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-23-MUST-NOT-001",
+      "section": 23
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "raw_byte_intake",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-23-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "An implementation MUST NOT translate CRLF, CR, or LF before raw_sha256 is recorded.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-23-MUST-NOT-002",
+      "section": 23
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "raw_byte_intake",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-23-MUST-NOT-003-NEG"
+      ],
+      "normative_sentence": "An implementation MUST NOT infer a character encoding other than UTF-8.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-23-MUST-NOT-003",
+      "section": 23
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "json_parse",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-24-MUST-001-NEG"
+      ],
+      "normative_sentence": "After raw_sha256 is recorded, JSON artifacts MUST decode as valid UTF-8.",
+      "positive_vector_ids": [
+        "ESRM-24-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-24-MUST-001",
+      "section": 24
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "json_parse",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-24-MUST-002-NEG"
+      ],
+      "normative_sentence": "JSON artifacts MUST contain exactly one top-level JSON object.",
+      "positive_vector_ids": [
+        "ESRM-24-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-24-MUST-002",
+      "section": 24
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "json_parse",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-24-MUST-003-NEG"
+      ],
+      "normative_sentence": "JSON artifacts MUST reject duplicate object member names at every object depth.",
+      "positive_vector_ids": [
+        "ESRM-24-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-24-MUST-003",
+      "section": 24
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "json_parse",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-24-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "JSON artifacts MUST NOT contain a UTF-8 BOM.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-24-MUST-NOT-001",
+      "section": 24
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "json_parse",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-24-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "JSON artifacts MUST NOT contain leading whitespace before the top-level object.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-24-MUST-NOT-002",
+      "section": 24
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "json_parse",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-24-MUST-NOT-003-NEG"
+      ],
+      "normative_sentence": "JSON artifacts MUST NOT contain trailing bytes or trailing whitespace after the top-level object.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-24-MUST-NOT-003",
+      "section": 24
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "json_parse",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-24-MUST-NOT-004-NEG"
+      ],
+      "normative_sentence": "JSON artifacts MUST NOT use comments, trailing commas, NaN, Infinity, or implementation-specific JSON extensions.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-24-MUST-NOT-004",
+      "section": 24
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-25-MUST-001-NEG"
+      ],
+      "normative_sentence": "JSON values MUST satisfy I-JSON constraints before JCS canonicalization.",
+      "positive_vector_ids": [
+        "ESRM-25-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-25-MUST-001",
+      "section": 25
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-25-MUST-002-NEG"
+      ],
+      "normative_sentence": "Numeric values MUST be integers in the inclusive range 0 through 9007199254740991 unless a schema field explicitly forbids numbers entirely.",
+      "positive_vector_ids": [
+        "ESRM-25-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-25-MUST-002",
+      "section": 25
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-25-MUST-003-NEG"
+      ],
+      "normative_sentence": "Numeric-profile enforcement MUST apply recursively inside extension containers.",
+      "positive_vector_ids": [
+        "ESRM-25-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-25-MUST-003",
+      "section": 25
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-25-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "JSON numbers MUST NOT be negative, fractional, exponential, NaN, or Infinity.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-25-MUST-NOT-001",
+      "section": 25
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-25-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "JSON strings MUST NOT contain unpaired surrogate code points.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-25-MUST-NOT-002",
+      "section": 25
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "canonicalization",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-26-MUST-001-NEG"
+      ],
+      "normative_sentence": "Canonicalization MUST use RFC 8785 JSON Canonicalization Scheme after strict intake, I-JSON, schema, semantic, and numeric-profile checks.",
+      "positive_vector_ids": [
+        "ESRM-26-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-26-MUST-001",
+      "section": 26
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "canonicalization",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-26-MUST-002-NEG"
+      ],
+      "normative_sentence": "Canonical bytes MUST be UTF-8 encoded RFC 8785 JCS output.",
+      "positive_vector_ids": [
+        "ESRM-26-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-26-MUST-002",
+      "section": 26
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "canonicalization",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-26-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "An implementation MUST NOT canonicalize invalid JSON or schema-invalid artifacts.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-26-MUST-NOT-001",
+      "section": 26
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "canonicalization",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-26-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "An implementation MUST NOT substitute local member-ordering, whitespace, or number-rendering behavior for RFC 8785 JCS.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-26-MUST-NOT-002",
+      "section": 26
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-27-MUST-001-NEG"
+      ],
+      "normative_sentence": "Every governed artifact MUST declare artifact_type using the closed artifact-type registry.",
+      "positive_vector_ids": [
+        "ESRM-27-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-27-MUST-001",
+      "section": 27
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-27-MUST-002-NEG"
+      ],
+      "normative_sentence": "Every governed artifact MUST declare domain using the closed domain registry.",
+      "positive_vector_ids": [
+        "ESRM-27-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-27-MUST-002",
+      "section": 27
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-27-MUST-003-NEG"
+      ],
+      "normative_sentence": "Every governed artifact MUST include raw_sha256 and canonical_sha256 when the artifact is JSON-governed.",
+      "positive_vector_ids": [
+        "ESRM-27-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-27-MUST-003",
+      "section": 27
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-27-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "Registry values MUST NOT accept aliases, case variants, prefixes, or suffixes.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-27-MUST-NOT-001",
+      "section": 27
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-27-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "A domain commitment MUST NOT be inferred from file path, branch name, repository name, or caller identity.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-27-MUST-NOT-002",
+      "section": 27
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-28-MUST-001-NEG"
+      ],
+      "normative_sentence": "The artifact-type registry MUST be closed for ESRM v0.1.",
+      "positive_vector_ids": [
+        "ESRM-28-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-28-MUST-001",
+      "section": 28
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-28-MUST-002-NEG"
+      ],
+      "normative_sentence": "The domain registry MUST be closed for ESRM v0.1.",
+      "positive_vector_ids": [
+        "ESRM-28-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-28-MUST-002",
+      "section": 28
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-28-MUST-003-NEG"
+      ],
+      "normative_sentence": "The registry MUST define a bijection check between schema-governed artifact types and schema identifiers.",
+      "positive_vector_ids": [
+        "ESRM-28-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-28-MUST-003",
+      "section": 28
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-28-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "Implementations MUST NOT dynamically add artifact types or domains during conformance execution.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-28-MUST-NOT-001",
+      "section": 28
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-29-MUST-001-NEG"
+      ],
+      "normative_sentence": "`critical_extensions` MUST be an array when present.",
+      "positive_vector_ids": [
+        "ESRM-29-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-29-MUST-001",
+      "section": 29
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-29-MUST-002-NEG"
+      ],
+      "normative_sentence": "Each critical extension entry MUST contain `extension_id`, `extension_version`, `critical`, and `payload`.",
+      "positive_vector_ids": [
+        "ESRM-29-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-29-MUST-002",
+      "section": 29
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-29-MUST-003-NEG"
+      ],
+      "normative_sentence": "`critical` MUST be true for every critical extension entry.",
+      "positive_vector_ids": [
+        "ESRM-29-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-29-MUST-003",
+      "section": 29
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-29-MUST-004-NEG"
+      ],
+      "normative_sentence": "`extension_id` MUST match `^esrm\\.[a-z0-9]+(?:[._-][a-z0-9]+)*$`.",
+      "positive_vector_ids": [
+        "ESRM-29-MUST-004-POS"
+      ],
+      "requirement_id": "ESRM-29-MUST-004",
+      "section": 29
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-29-MUST-005-NEG"
+      ],
+      "normative_sentence": "An artifact MUST contain no more than 16 critical extension entries.",
+      "positive_vector_ids": [
+        "ESRM-29-MUST-005-POS"
+      ],
+      "requirement_id": "ESRM-29-MUST-005",
+      "section": 29
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-29-MUST-006-NEG"
+      ],
+      "normative_sentence": "Each serialized critical extension payload MUST be no larger than 8192 bytes.",
+      "positive_vector_ids": [
+        "ESRM-29-MUST-006-POS"
+      ],
+      "requirement_id": "ESRM-29-MUST-006",
+      "section": 29
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-29-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "Unknown critical extension identifiers MUST NOT be ignored.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-29-MUST-NOT-001",
+      "section": 29
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "semantic_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-29-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "Extension containers MUST NOT bypass recursive numeric-profile enforcement.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-29-MUST-NOT-002",
+      "section": 29
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "resource_limit",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-30-MUST-001-NEG"
+      ],
+      "normative_sentence": "A raw artifact MUST be no larger than 1048576 bytes.",
+      "positive_vector_ids": [
+        "ESRM-30-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-30-MUST-001",
+      "section": 30
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "resource_limit",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-30-MUST-002-NEG"
+      ],
+      "normative_sentence": "A parsed JSON artifact MUST have maximum nesting depth no greater than 32.",
+      "positive_vector_ids": [
+        "ESRM-30-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-30-MUST-002",
+      "section": 30
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "resource_limit",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-30-MUST-003-NEG"
+      ],
+      "normative_sentence": "A parsed JSON artifact MUST have no more than 4096 object members total.",
+      "positive_vector_ids": [
+        "ESRM-30-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-30-MUST-003",
+      "section": 30
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "resource_limit",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-30-MUST-004-NEG"
+      ],
+      "normative_sentence": "A parsed JSON artifact MUST have no array longer than 1024 elements.",
+      "positive_vector_ids": [
+        "ESRM-30-MUST-004-POS"
+      ],
+      "requirement_id": "ESRM-30-MUST-004",
+      "section": 30
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "resource_limit",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-30-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "Implementations MUST NOT continue parsing after a resource limit is exceeded.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-30-MUST-NOT-001",
+      "section": 30
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-31-MUST-001-NEG"
+      ],
+      "normative_sentence": "A `proofrail.transition` artifact MUST contain `transition_id`, `artifact_type`, `domain`, `schema_version`, `input_commitments`, `output_commitments`, `operation_label`, `raw_sha256`, and `canonical_sha256`.",
+      "positive_vector_ids": [
+        "ESRM-31-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-31-MUST-001",
+      "section": 31
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-31-MUST-002-NEG"
+      ],
+      "normative_sentence": "`input_commitments` and `output_commitments` MUST contain unique commitment strings sorted by bytewise ASCII order.",
+      "positive_vector_ids": [
+        "ESRM-31-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-31-MUST-002",
+      "section": 31
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-31-MUST-003-NEG"
+      ],
+      "normative_sentence": "`operation_label` MUST match `^esrm\\.[a-z0-9]+(?:[._-][a-z0-9]+)*$`.",
+      "positive_vector_ids": [
+        "ESRM-31-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-31-MUST-003",
+      "section": 31
+    },
+    {
+      "ambiguity_ids": [
+        "AMB-004"
+      ],
+      "coverage_status": "deferred_out_of_scope",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-31-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "A transition artifact MUST NOT contain lifecycle-state fields in ESRM v0.1 canonical raw-byte conformance.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-31-MUST-NOT-001",
+      "section": 31
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-31-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "A transition artifact MUST NOT imply mutation of an input artifact.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-31-MUST-NOT-002",
+      "section": 31
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-32-MUST-001-NEG"
+      ],
+      "normative_sentence": "A `proofrail.signature` artifact MUST bind exactly one `subject_canonical_sha256`.",
+      "positive_vector_ids": [
+        "ESRM-32-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-32-MUST-001",
+      "section": 32
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-32-MUST-002-NEG"
+      ],
+      "normative_sentence": "The crypto suite MUST be `PR-ESRM-JCS-SHA256-ED25519-v1`.",
+      "positive_vector_ids": [
+        "ESRM-32-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-32-MUST-002",
+      "section": 32
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-32-MUST-003-NEG"
+      ],
+      "normative_sentence": "Hash commitments MUST use SHA-256 encoded as exactly 64 lowercase hexadecimal characters.",
+      "positive_vector_ids": [
+        "ESRM-32-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-32-MUST-003",
+      "section": 32
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-32-MUST-004-NEG"
+      ],
+      "normative_sentence": "Signature mode MUST be pure Ed25519 per RFC 8032.",
+      "positive_vector_ids": [
+        "ESRM-32-MUST-004-POS"
+      ],
+      "requirement_id": "ESRM-32-MUST-004",
+      "section": 32
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-32-MUST-005-NEG"
+      ],
+      "normative_sentence": "`signature_b64u` MUST decode to exactly 64 bytes using unpadded base64url.",
+      "positive_vector_ids": [
+        "ESRM-32-MUST-005-POS"
+      ],
+      "requirement_id": "ESRM-32-MUST-005",
+      "section": 32
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-32-MUST-006-NEG"
+      ],
+      "normative_sentence": "`public_key_b64u` MUST decode to exactly 32 bytes using unpadded base64url.",
+      "positive_vector_ids": [
+        "ESRM-32-MUST-006-POS"
+      ],
+      "requirement_id": "ESRM-32-MUST-006",
+      "section": 32
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-32-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "Permissive Base64 decoding MUST NOT be used.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-32-MUST-NOT-001",
+      "section": 32
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-32-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "Invalid point encodings and noncanonical signature scalars MUST be rejected.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-32-MUST-NOT-002",
+      "section": 32
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-32-MUST-NOT-003-NEG"
+      ],
+      "normative_sentence": "Signature artifacts MUST NOT contain private keys, bearer tokens, cookies, or secret headers.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-32-MUST-NOT-003",
+      "section": 32
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-33-MUST-001-NEG"
+      ],
+      "normative_sentence": "A signature artifact MUST prove only that the subject commitment was signed by the declared public key.",
+      "positive_vector_ids": [
+        "ESRM-33-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-33-MUST-001",
+      "section": 33
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-33-MUST-002-NEG"
+      ],
+      "normative_sentence": "Authority to produce an external effect MUST require a separate authority artifact outside this raw-byte conformance phase.",
+      "positive_vector_ids": [
+        "ESRM-33-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-33-MUST-002",
+      "section": 33
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-33-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "A valid signature MUST NOT be treated as permission to execute an action.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-33-MUST-NOT-001",
+      "section": 33
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-33-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "A signature verifier MUST NOT choose an implicit trust root.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-33-MUST-NOT-002",
+      "section": 33
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-34-MUST-001-NEG"
+      ],
+      "normative_sentence": "Reconciliation claims MUST be represented as deterministic relations between input commitments and output commitments.",
+      "positive_vector_ids": [
+        "ESRM-34-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-34-MUST-001",
+      "section": 34
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-34-MUST-002-NEG"
+      ],
+      "normative_sentence": "A reconciliation relation MUST preserve all input commitments.",
+      "positive_vector_ids": [
+        "ESRM-34-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-34-MUST-002",
+      "section": 34
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-34-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "Reconciliation MUST NOT erase, rewrite, or mutate a prior commitment.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-34-MUST-NOT-001",
+      "section": 34
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-34-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "Inconclusive reconciliation MUST NOT be reported as success.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-34-MUST-NOT-002",
+      "section": 34
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-35-MUST-001-NEG"
+      ],
+      "normative_sentence": "Consumption records MUST be append-only commitment records.",
+      "positive_vector_ids": [
+        "ESRM-35-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-35-MUST-001",
+      "section": 35
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-35-MUST-002-NEG"
+      ],
+      "normative_sentence": "A consumed authority commitment MUST remain visible to later verification.",
+      "positive_vector_ids": [
+        "ESRM-35-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-35-MUST-002",
+      "section": 35
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-35-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "A consumed authority commitment MUST NOT be returned to an unconsumed state.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-35-MUST-NOT-001",
+      "section": 35
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-35-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "Replay of a consumed commitment MUST NOT be accepted as fresh authority.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-35-MUST-NOT-002",
+      "section": 35
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-36-MUST-001-NEG"
+      ],
+      "normative_sentence": "External-effect claims MUST identify the exact boundary where local verification ends and external provider state begins.",
+      "positive_vector_ids": [
+        "ESRM-36-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-36-MUST-001",
+      "section": 36
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-36-MUST-002-NEG"
+      ],
+      "normative_sentence": "Ambiguous external-effect outcomes MUST be recorded as ambiguous.",
+      "positive_vector_ids": [
+        "ESRM-36-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-36-MUST-002",
+      "section": 36
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-36-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "An implementation MUST NOT convert an ambiguous external outcome into success without independent observation.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-36-MUST-NOT-001",
+      "section": 36
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-36-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "Raw-byte conformance MUST NOT claim production exactly-once external execution.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-36-MUST-NOT-002",
+      "section": 36
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-37-MUST-001-NEG"
+      ],
+      "normative_sentence": "A conformance implementation MUST expose independent parse, schema, semantic, canonicalization, signature, and commitment checks.",
+      "positive_vector_ids": [
+        "ESRM-37-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-37-MUST-001",
+      "section": 37
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-37-MUST-002-NEG"
+      ],
+      "normative_sentence": "A conformance result MUST include rejection_stage and reason_code for every negative vector.",
+      "positive_vector_ids": [
+        "ESRM-37-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-37-MUST-002",
+      "section": 37
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-37-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "A conformance implementation MUST NOT hide parser failures behind a generic failure code.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-37-MUST-NOT-001",
+      "section": 37
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-38-MUST-001-NEG"
+      ],
+      "normative_sentence": "Rejection precedence MUST be deterministic.",
+      "positive_vector_ids": [
+        "ESRM-38-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-38-MUST-001",
+      "section": 38
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-38-MUST-002-NEG"
+      ],
+      "normative_sentence": "Rejection precedence MUST be raw_byte_intake, resource_limit, utf8_decode, json_parse, duplicate_member, schema_validation, registry_lookup, semantic_validation, canonicalization, commitment_validation, signature_validation, claim_boundary.",
+      "positive_vector_ids": [
+        "ESRM-38-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-38-MUST-002",
+      "section": 38
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-38-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "Implementations MUST NOT report a later-stage rejection when an earlier-stage rejection applies.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-38-MUST-NOT-001",
+      "section": 38
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "commitment_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-39-MUST-001-NEG"
+      ],
+      "normative_sentence": "The corpus manifest MUST enumerate every vector file by relative path, raw byte length, and SHA-256.",
+      "positive_vector_ids": [
+        "ESRM-39-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-39-MUST-001",
+      "section": 39
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "commitment_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-39-MUST-002-NEG"
+      ],
+      "normative_sentence": "Every vector MUST list the normative requirement IDs it covers.",
+      "positive_vector_ids": [
+        "ESRM-39-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-39-MUST-002",
+      "section": 39
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "commitment_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-39-MUST-003-NEG"
+      ],
+      "normative_sentence": "Every negative vector MUST list expected rejection_stage and reason_code.",
+      "positive_vector_ids": [
+        "ESRM-39-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-39-MUST-003",
+      "section": 39
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "commitment_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-39-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "Vector files MUST NOT depend on absolute host paths, local usernames, environment variables, or wall-clock time.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-39-MUST-NOT-001",
+      "section": 39
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "commitment_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-40-MUST-001-NEG"
+      ],
+      "normative_sentence": "Generated corpus families MUST declare generator_id, generator_version, PRNG algorithm, seed, case ordering, and reproduction command.",
+      "positive_vector_ids": [
+        "ESRM-40-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-40-MUST-001",
+      "section": 40
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "commitment_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-40-MUST-002-NEG"
+      ],
+      "normative_sentence": "The PRNG algorithm for generated ESRM v0.1 vectors MUST be ChaCha20 with a 256-bit seed encoded as 64 lowercase hex characters.",
+      "positive_vector_ids": [
+        "ESRM-40-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-40-MUST-002",
+      "section": 40
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "commitment_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-40-MUST-003-NEG"
+      ],
+      "normative_sentence": "Case ordering MUST be lexicographic by vector_id after generation.",
+      "positive_vector_ids": [
+        "ESRM-40-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-40-MUST-003",
+      "section": 40
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "commitment_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-40-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "Corpus generation MUST NOT read host time, network state, process ID, or random device state after the declared seed is set.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-40-MUST-NOT-001",
+      "section": 40
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "commitment_validation",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-41-MUST-001-NEG"
+      ],
+      "normative_sentence": "The file-hash manifest MUST enumerate every governed file except itself.",
+      "positive_vector_ids": [
+        "ESRM-41-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-41-MUST-001",
+      "section": 41
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "commitment_validation",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-41-MUST-002-NEG"
+      ],
+      "normative_sentence": "The file-hash manifest exclusion MUST be explicit.",
+      "positive_vector_ids": [
+        "ESRM-41-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-41-MUST-002",
+      "section": 41
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "commitment_validation",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-41-MUST-003-NEG"
+      ],
+      "normative_sentence": "The file-hash manifest SHA-256 MUST be recorded in a separate release-root record or immutable git commit.",
+      "positive_vector_ids": [
+        "ESRM-41-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-41-MUST-003",
+      "section": 41
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "commitment_validation",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-41-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "A file-hash manifest MUST NOT claim to contain its own hash unless a separate self-reference construction is specified.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-41-MUST-NOT-001",
+      "section": 41
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-42-MUST-001-NEG"
+      ],
+      "normative_sentence": "JSON Schemas MUST use Draft 2020-12.",
+      "positive_vector_ids": [
+        "ESRM-42-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-42-MUST-001",
+      "section": 42
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-42-MUST-002-NEG"
+      ],
+      "normative_sentence": "JSON Schemas MUST contain explicit `$schema` and stable `$id` fields.",
+      "positive_vector_ids": [
+        "ESRM-42-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-42-MUST-002",
+      "section": 42
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-42-MUST-003-NEG"
+      ],
+      "normative_sentence": "JSON Schemas MUST set `additionalProperties` to false for governed artifacts.",
+      "positive_vector_ids": [
+        "ESRM-42-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-42-MUST-003",
+      "section": 42
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-42-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "JSON Schema `format` assertions MUST NOT be normative for ESRM v0.1 conformance.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-42-MUST-NOT-001",
+      "section": 42
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "schema_validation",
+      "implementation_track": "rust_and_go",
+      "negative_vector_ids": [
+        "ESRM-42-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "Implementations MUST NOT rely on validator-specific `format` behavior for pass/fail decisions.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-42-MUST-NOT-002",
+      "section": 42
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "dependency_independence",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-43-MUST-001-NEG"
+      ],
+      "normative_sentence": "Rust and Go tracks MUST use separate parsing implementations.",
+      "positive_vector_ids": [
+        "ESRM-43-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-43-MUST-001",
+      "section": 43
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "dependency_independence",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-43-MUST-002-NEG"
+      ],
+      "normative_sentence": "Rust and Go tracks MUST use separate JCS canonicalization implementations.",
+      "positive_vector_ids": [
+        "ESRM-43-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-43-MUST-002",
+      "section": 43
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "dependency_independence",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-43-MUST-003-NEG"
+      ],
+      "normative_sentence": "Rust and Go tracks MUST use separate base64url implementations.",
+      "positive_vector_ids": [
+        "ESRM-43-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-43-MUST-003",
+      "section": 43
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "dependency_independence",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-43-MUST-004-NEG"
+      ],
+      "normative_sentence": "Rust and Go tracks MUST use separate Ed25519 verification implementations.",
+      "positive_vector_ids": [
+        "ESRM-43-MUST-004-POS"
+      ],
+      "requirement_id": "ESRM-43-MUST-004",
+      "section": 43
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "dependency_independence",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-43-MUST-005-NEG"
+      ],
+      "normative_sentence": "Rust and Go tracks MUST use separate JSON Schema validation implementations.",
+      "positive_vector_ids": [
+        "ESRM-43-MUST-005-POS"
+      ],
+      "requirement_id": "ESRM-43-MUST-005",
+      "section": 43
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "dependency_independence",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-43-MUST-006-NEG"
+      ],
+      "normative_sentence": "Rust and Go tracks MUST use separate SHA-256 or commitment implementations.",
+      "positive_vector_ids": [
+        "ESRM-43-MUST-006-POS"
+      ],
+      "requirement_id": "ESRM-43-MUST-006",
+      "section": 43
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "dependency_independence",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-43-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "A Rust track MUST NOT call a Go validator.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-43-MUST-NOT-001",
+      "section": 43
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "dependency_independence",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-43-MUST-NOT-002-NEG"
+      ],
+      "normative_sentence": "A Go track MUST NOT call a Rust validator.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-43-MUST-NOT-002",
+      "section": 43
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "dependency_independence",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-43-MUST-NOT-003-NEG"
+      ],
+      "normative_sentence": "Either track MUST NOT shell out to the other track for conformance decisions.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-43-MUST-NOT-003",
+      "section": 43
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-44-MUST-001-NEG"
+      ],
+      "normative_sentence": "Validation output MUST distinguish parse validation, schema validation, semantic validation, canonicalization validation, signature validation, commitment validation, and end-to-end conformance.",
+      "positive_vector_ids": [
+        "ESRM-44-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-44-MUST-001",
+      "section": 44
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-44-MUST-002-NEG"
+      ],
+      "normative_sentence": "Validation output MUST report uncovered requirements.",
+      "positive_vector_ids": [
+        "ESRM-44-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-44-MUST-002",
+      "section": 44
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-44-MUST-003-NEG"
+      ],
+      "normative_sentence": "Validation output MUST report unresolved ambiguities.",
+      "positive_vector_ids": [
+        "ESRM-44-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-44-MUST-003",
+      "section": 44
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-44-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "Validation output MUST NOT claim conformance from artifact parse success alone.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-44-MUST-NOT-001",
+      "section": 44
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-45-MUST-001-NEG"
+      ],
+      "normative_sentence": "Implementation work MUST NOT begin until this artifact pack has been independently audited.",
+      "positive_vector_ids": [
+        "ESRM-45-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-45-MUST-001",
+      "section": 45
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-45-MUST-002-NEG"
+      ],
+      "normative_sentence": "A release candidate MUST include normative source, registries, schemas, coverage inventory, dependency report, risk register, validation results, file-hash manifest, and release-root record.",
+      "positive_vector_ids": [
+        "ESRM-45-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-45-MUST-002",
+      "section": 45
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-45-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "A release candidate MUST NOT merge without explicit operator direction.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-45-MUST-NOT-001",
+      "section": 45
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-46-MUST-001-NEG"
+      ],
+      "normative_sentence": "The artifact pack MUST record deviations from supplied ESRM language.",
+      "positive_vector_ids": [
+        "ESRM-46-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-46-MUST-001",
+      "section": 46
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-46-MUST-002-NEG"
+      ],
+      "normative_sentence": "Missing source language MUST be reported as an unresolved evidence gap.",
+      "positive_vector_ids": [
+        "ESRM-46-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-46-MUST-002",
+      "section": 46
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-46-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "An implementation MUST NOT silently resolve a contradiction by local choice.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-46-MUST-NOT-001",
+      "section": 46
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-47-MUST-001-NEG"
+      ],
+      "normative_sentence": "Every unresolved ambiguity MUST have a stable ambiguity ID.",
+      "positive_vector_ids": [
+        "ESRM-47-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-47-MUST-001",
+      "section": 47
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-47-MUST-002-NEG"
+      ],
+      "normative_sentence": "Every ambiguity record MUST list affected vector families.",
+      "positive_vector_ids": [
+        "ESRM-47-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-47-MUST-002",
+      "section": 47
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-47-MUST-003-NEG"
+      ],
+      "normative_sentence": "Affected vector families MUST be stopped when implementation would require inventing protocol semantics.",
+      "positive_vector_ids": [
+        "ESRM-47-MUST-003-POS"
+      ],
+      "requirement_id": "ESRM-47-MUST-003",
+      "section": 47
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-47-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "A stopped vector family MUST NOT be counted as passed conformance.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-47-MUST-NOT-001",
+      "section": 47
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-48-MUST-001-NEG"
+      ],
+      "normative_sentence": "This phase MUST state `NO CLAIM OF CONFORMANCE` in its validation summary.",
+      "positive_vector_ids": [
+        "ESRM-48-MUST-001-POS"
+      ],
+      "requirement_id": "ESRM-48-MUST-001",
+      "section": 48
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-48-MUST-002-NEG"
+      ],
+      "normative_sentence": "This phase MUST state that Rust and Go implementations have not begun.",
+      "positive_vector_ids": [
+        "ESRM-48-MUST-002-POS"
+      ],
+      "requirement_id": "ESRM-48-MUST-002",
+      "section": 48
+    },
+    {
+      "ambiguity_ids": [],
+      "coverage_status": "mapped_planned",
+      "enforcement_stage": "claim_boundary",
+      "implementation_track": "artifact_only",
+      "negative_vector_ids": [
+        "ESRM-48-MUST-NOT-001-NEG"
+      ],
+      "normative_sentence": "This phase MUST NOT claim lifecycle, dispatch, reconciliation, settlement, or recovery engine behavior.",
+      "positive_vector_ids": [],
+      "requirement_id": "ESRM-48-MUST-NOT-001",
+      "section": 48
+    }
+  ],
+  "schema_version": "esrm.v0.1",
+  "source_document": "ESRM_CANONICAL_BASELINE_SECTIONS_22_48.md"
+}

@@ -1,0 +1,36 @@
+{
+  "artifact_types": [
+    "proofrail.transition",
+    "proofrail.signature",
+    "proofrail.binary_vector_manifest",
+    "proofrail.test_inventory",
+    "proofrail.risk_register",
+    "proofrail.dependency_independence_report"
+  ],
+  "base64_profiles": [
+    {
+      "alphabet": "RFC4648 standard",
+      "id": "base64.standard.padded",
+      "padding": "required",
+      "whitespace": "forbidden"
+    }
+  ],
+  "closed": true,
+  "domains": [
+    "proofrail.esrm.raw_byte_lab",
+    "proofrail.esrm.transition",
+    "proofrail.esrm.signature",
+    "proofrail.esrm.vector_manifest",
+    "proofrail.esrm.conformance_inventory"
+  ],
+  "kind": "proofrail.esrm.closed-artifact-domain-registry.v0.1",
+  "notes": [
+    "No aliases, case variants, or provider-specific prefixes are registered in v0.1."
+  ],
+  "schema_version": "esrm.v0.1",
+  "signature_algorithms": [
+    "ed25519.detached",
+    "ecdsa-p256-sha256.detached",
+    "rsa-pss-sha256.detached"
+  ]
+}

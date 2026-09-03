@@ -1,0 +1,15 @@
+{
+  "claim_boundary": "NO_CLAIM_OF_CONFORMANCE",
+  "file_hash_manifest": "esrm-conformance/v0.1-repair1/manifests/file-hashes.sha256",
+  "file_hash_manifest_sha256": "667c8f9e3d38112674b75333950fb98cfb4610409e4c54d2d23834604ca5d620",
+  "hash_algorithm": "SHA-256",
+  "kind": "proofrail.esrm.release-root.repair1.v0.1",
+  "manifest_exclusion": [
+    "file-hashes.sha256 excludes itself",
+    "release-root.json is the separate root record and is not included in the governed file manifest to avoid circular anchoring"
+  ],
+  "manifest_self_hash_claim": false,
+  "mapped_requirement_count": 127,
+  "normative_requirement_count": 127,
+  "schema_version": "esrm.v0.1"
+}

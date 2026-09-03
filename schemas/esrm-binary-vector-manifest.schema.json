@@ -1,0 +1,93 @@
+{
+  "$id": "https://proofrail.local/schemas/esrm-binary-vector-manifest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "claim_boundary": {
+      "const": "no_conformance_claim"
+    },
+    "kind": {
+      "const": "proofrail.esrm.binary-vector-manifest.v0.1"
+    },
+    "schema_version": {
+      "const": "esrm.v0.1"
+    },
+    "vector_set_id": {
+      "pattern": "^esrm-vectors-[A-Za-z0-9._-]+$",
+      "type": "string"
+    },
+    "vectors": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "ambiguity_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "artifact_type": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "expected_reason_code": {
+            "type": "string"
+          },
+          "expected_stage": {
+            "type": "string"
+          },
+          "raw_byte_length": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "requirement_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "stopped_by_ambiguity"
+            ]
+          },
+          "vector_id": {
+            "pattern": "^ESRM-[A-Z0-9-]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vector_id",
+          "requirement_ids",
+          "artifact_type",
+          "domain",
+          "raw_byte_length",
+          "sha256",
+          "expected_stage",
+          "expected_reason_code",
+          "status"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "kind",
+    "schema_version",
+    "vector_set_id",
+    "claim_boundary",
+    "vectors"
+  ],
+  "title": "ESRM binary vector manifest",
+  "type": "object"
+}

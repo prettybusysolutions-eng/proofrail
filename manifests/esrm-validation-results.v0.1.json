@@ -1,0 +1,137 @@
+{
+  "claim_boundary": "no_conformance_claim",
+  "file_hashes": [
+    {
+      "bytes": 1691,
+      "file": "docs/esrm-conformance-v0.1/DEPENDENCY_INDEPENDENCE_REPORT.md",
+      "sha256": "d9fc26b2301ef267ae84f6e23c6d1db39c1b7c4fa9018de33819bd788ab6a22d"
+    },
+    {
+      "bytes": 6200,
+      "file": "docs/esrm-conformance-v0.1/LEXICAL_PROFILE_SECTIONS_23_30_41_44.md",
+      "sha256": "63c607cb789d4265311469af8710d712c152f17925f2526820f5c4fa7be436e8"
+    },
+    {
+      "bytes": 504,
+      "file": "docs/esrm-conformance-v0.1/TEST_INVENTORY.md",
+      "sha256": "84f4fdfe38bf0c0cede5d6e6a4b7c0bfcfdcc2292baa6b60ed291bcccea7dafe"
+    },
+    {
+      "bytes": 22678,
+      "file": "manifests/esrm-binary-vector-manifest.v0.1.json",
+      "sha256": "b470c2ebf96af59c6df19cf2328a84aafcdd12b0adb4d65f75a9109b3f351535"
+    },
+    {
+      "bytes": 1562,
+      "file": "manifests/esrm-risk-register.v0.1.json",
+      "sha256": "f0f1cc919735dbce828512e829c8a5eac2f17b5ea140dfed889fd31c31b9a44f"
+    },
+    {
+      "bytes": 6799,
+      "file": "manifests/esrm-test-inventory.v0.1.json",
+      "sha256": "35be9ebca82b8b09be38fdaabaef3678b7339fbb66eb371ccc0ec646aa18e5ea"
+    },
+    {
+      "bytes": 955,
+      "file": "registries/esrm-artifact-domain-registry.v0.1.json",
+      "sha256": "5f99957a0fd12cc1a929fff3b9a748409eb3482d6df3d1b6fe15c240f5196aca"
+    },
+    {
+      "bytes": 1280,
+      "file": "registries/esrm-rejection-stage-reason-registry.v0.1.json",
+      "sha256": "c97abfb18df57ecd4ef455e879fe5f8804fda2843495bf6a7b1fe801b355ca70"
+    },
+    {
+      "bytes": 2195,
+      "file": "schemas/esrm-binary-vector-manifest.schema.json",
+      "sha256": "d72288773d813539e45ca58e743c17e02f9dafa3e0783847625795100f8050eb"
+    },
+    {
+      "bytes": 1491,
+      "file": "schemas/proofrail.signature.schema.json",
+      "sha256": "8f6ecd2c072b4d2505c177bb87bdf6a9696ef782b36c1900aa7d9a9447faa631"
+    },
+    {
+      "bytes": 1637,
+      "file": "schemas/proofrail.transition.schema.json",
+      "sha256": "e5cd70996e37a604daf7d32100a15cfe661073b54d7a69edfc2923f93eb6198e"
+    }
+  ],
+  "json_parse_results": [
+    {
+      "file": "docs/esrm-conformance-v0.1/DEPENDENCY_INDEPENDENCE_REPORT.md",
+      "text_read": "PASS"
+    },
+    {
+      "file": "docs/esrm-conformance-v0.1/LEXICAL_PROFILE_SECTIONS_23_30_41_44.md",
+      "text_read": "PASS"
+    },
+    {
+      "file": "docs/esrm-conformance-v0.1/TEST_INVENTORY.md",
+      "text_read": "PASS"
+    },
+    {
+      "file": "manifests/esrm-binary-vector-manifest.v0.1.json",
+      "json_parse": "PASS"
+    },
+    {
+      "file": "manifests/esrm-risk-register.v0.1.json",
+      "json_parse": "PASS"
+    },
+    {
+      "file": "manifests/esrm-test-inventory.v0.1.json",
+      "json_parse": "PASS"
+    },
+    {
+      "file": "registries/esrm-artifact-domain-registry.v0.1.json",
+      "json_parse": "PASS"
+    },
+    {
+      "file": "registries/esrm-rejection-stage-reason-registry.v0.1.json",
+      "json_parse": "PASS"
+    },
+    {
+      "file": "schemas/esrm-binary-vector-manifest.schema.json",
+      "json_parse": "PASS"
+    },
+    {
+      "file": "schemas/proofrail.signature.schema.json",
+      "json_parse": "PASS"
+    },
+    {
+      "file": "schemas/proofrail.transition.schema.json",
+      "json_parse": "PASS"
+    }
+  ],
+  "kind": "proofrail.esrm.validation-results.v0.1",
+  "notes": [
+    "Validation covers artifact JSON parse, JSON Schema schema checks, and binary-vector manifest instance validation. It is not Rust/Go conformance and not ESRM conformance."
+  ],
+  "schema_validation_results": [
+    {
+      "result": "PASS_SCHEMA_CHECK",
+      "schema": "schemas/proofrail.transition.schema.json"
+    },
+    {
+      "result": "PASS_SCHEMA_CHECK",
+      "schema": "schemas/proofrail.signature.schema.json"
+    },
+    {
+      "result": "PASS_SCHEMA_CHECK",
+      "schema": "schemas/esrm-binary-vector-manifest.schema.json"
+    },
+    {
+      "instance": "manifests/esrm-binary-vector-manifest.v0.1.json",
+      "result": "PASS_INSTANCE_VALIDATION",
+      "schema": "schemas/esrm-binary-vector-manifest.schema.json"
+    }
+  ],
+  "schema_version": "esrm.v0.1",
+  "uncovered_normative_requirements": [],
+  "unresolved_ambiguities": [
+    "AMB-001",
+    "AMB-002",
+    "AMB-003",
+    "AMB-004"
+  ]
+}

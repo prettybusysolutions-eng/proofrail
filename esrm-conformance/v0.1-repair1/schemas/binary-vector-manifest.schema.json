@@ -1,0 +1,134 @@
+{
+  "$id": "https://proofrail.local/esrm/v0.1-repair1/schemas/binary-vector-manifest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "claim_boundary": {
+      "const": "NO_CLAIM_OF_CONFORMANCE"
+    },
+    "generator": {
+      "additionalProperties": false,
+      "properties": {
+        "generator_id": {
+          "type": "string"
+        },
+        "generator_version": {
+          "type": "string"
+        },
+        "ordering": {
+          "const": "lexicographic_by_vector_id"
+        },
+        "prng": {
+          "const": "ChaCha20"
+        },
+        "reproduction_command": {
+          "type": "string"
+        },
+        "seed_hex": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "generator_id",
+        "generator_version",
+        "prng",
+        "seed_hex",
+        "ordering",
+        "reproduction_command"
+      ],
+      "type": "object"
+    },
+    "kind": {
+      "const": "proofrail.esrm.binary-vector-manifest.repair1.v0.1"
+    },
+    "schema_version": {
+      "const": "esrm.v0.1"
+    },
+    "vectors": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "ambiguity_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "coverage_status": {
+            "enum": [
+              "mapped_planned",
+              "deferred_out_of_scope",
+              "stopped_by_ambiguity"
+            ]
+          },
+          "enforcement_stage": {
+            "type": "string"
+          },
+          "implementation_track": {
+            "enum": [
+              "rust",
+              "go",
+              "rust_and_go",
+              "artifact_only",
+              "deferred"
+            ]
+          },
+          "negative_vector_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "normative_sentence": {
+            "type": "string"
+          },
+          "positive_vector_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "requirement_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "section": {
+            "maximum": 48,
+            "minimum": 22,
+            "type": "integer"
+          },
+          "vector_id": {
+            "pattern": "^ESRM-R1-[0-9]{4}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vector_id",
+          "requirement_ids",
+          "section",
+          "normative_sentence",
+          "enforcement_stage",
+          "positive_vector_ids",
+          "negative_vector_ids",
+          "implementation_track",
+          "coverage_status"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "kind",
+    "schema_version",
+    "generator",
+    "claim_boundary",
+    "vectors"
+  ],
+  "title": "ESRM repair1 binary vector manifest",
+  "type": "object"
+}

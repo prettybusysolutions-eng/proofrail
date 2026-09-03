@@ -1,0 +1,95 @@
+{
+  "claim_boundary": "NO_CLAIM_OF_CONFORMANCE",
+  "deferred_out_of_scope": [
+    "AMB-004 transition lifecycle-state vocabulary"
+  ],
+  "deviations": [
+    "No externally supplied ESRM Sections 22-48 source file existed before Repair 1; repository-authoritative baseline created for audit."
+  ],
+  "hash_manifest_verification": {
+    "excludes_self": true,
+    "note": "The manifest hash is recorded only in release-root.json to avoid validation-results.json becoming a self-reference input.",
+    "release_root_records_manifest_hash": true,
+    "result": "PASS"
+  },
+  "json_parse_results": [
+    {
+      "file": "esrm-conformance/v0.1-repair1/manifests/binary-vector-manifest.json",
+      "result": "PASS"
+    },
+    {
+      "file": "esrm-conformance/v0.1-repair1/manifests/risk-register.json",
+      "result": "PASS"
+    },
+    {
+      "file": "esrm-conformance/v0.1-repair1/manifests/test-inventory.json",
+      "result": "PASS"
+    },
+    {
+      "file": "esrm-conformance/v0.1-repair1/registries/closed-artifact-domain-registry.json",
+      "result": "PASS"
+    },
+    {
+      "file": "esrm-conformance/v0.1-repair1/registries/rejection-stage-reason-registry.json",
+      "result": "PASS"
+    },
+    {
+      "file": "esrm-conformance/v0.1-repair1/schemas/binary-vector-manifest.schema.json",
+      "result": "PASS"
+    },
+    {
+      "file": "esrm-conformance/v0.1-repair1/schemas/proofrail.signature.schema.json",
+      "result": "PASS"
+    },
+    {
+      "file": "esrm-conformance/v0.1-repair1/schemas/proofrail.transition.schema.json",
+      "result": "PASS"
+    }
+  ],
+  "kind": "proofrail.esrm.validation-results.repair1.v0.1",
+  "notes": [
+    "No implementation code was written."
+  ],
+  "registry_consistency": {
+    "artifact_type_schema_bijection": "PASS",
+    "registered_schema_ids": [
+      "https://proofrail.local/esrm/v0.1-repair1/schemas/proofrail.signature.schema.json",
+      "https://proofrail.local/esrm/v0.1-repair1/schemas/proofrail.transition.schema.json"
+    ],
+    "schema_file_ids": [
+      "https://proofrail.local/esrm/v0.1-repair1/schemas/proofrail.signature.schema.json",
+      "https://proofrail.local/esrm/v0.1-repair1/schemas/proofrail.transition.schema.json"
+    ]
+  },
+  "requirement_coverage": {
+    "extra": [],
+    "mapped_count": 127,
+    "missing": [],
+    "normative_requirement_count": 127,
+    "result": "PASS",
+    "source": "ESRM_CANONICAL_BASELINE_SECTIONS_22_48.md"
+  },
+  "schema_validation_results": [
+    {
+      "result": "PASS_SCHEMA_CHECK",
+      "schema": "esrm-conformance/v0.1-repair1/schemas/binary-vector-manifest.schema.json"
+    },
+    {
+      "result": "PASS_SCHEMA_CHECK",
+      "schema": "esrm-conformance/v0.1-repair1/schemas/proofrail.signature.schema.json"
+    },
+    {
+      "result": "PASS_SCHEMA_CHECK",
+      "schema": "esrm-conformance/v0.1-repair1/schemas/proofrail.transition.schema.json"
+    },
+    {
+      "instance": "esrm-conformance/v0.1-repair1/manifests/binary-vector-manifest.json",
+      "result": "PASS_INSTANCE_VALIDATION",
+      "schema": "esrm-conformance/v0.1-repair1/schemas/binary-vector-manifest.schema.json"
+    }
+  ],
+  "schema_version": "esrm.v0.1",
+  "unresolved_ambiguities": [
+    "AMB-005"
+  ]
+}

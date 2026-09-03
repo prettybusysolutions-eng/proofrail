@@ -1,0 +1,45 @@
+{
+  "claim_boundary": "no_conformance_claim",
+  "kind": "proofrail.esrm.risk-register.v0.1",
+  "risks": [
+    {
+      "affected_vector_families": [
+        "canonicalization",
+        "section-exact-negative-vectors"
+      ],
+      "ambiguity_id": "AMB-001",
+      "decision": "Do not resolve by implementation choice; stop affected vector families.",
+      "status": "open",
+      "title": "Authoritative ESRM Sections 23-30 and 41-44 not present in repository"
+    },
+    {
+      "affected_vector_families": [
+        "canonical-json-equivalence",
+        "signature-subject-canonicalization"
+      ],
+      "ambiguity_id": "AMB-002",
+      "decision": "Record raw-byte digest requirements; stop canonical-equivalence vectors.",
+      "status": "open",
+      "title": "Canonical JSON algorithm unspecified in available materials"
+    },
+    {
+      "affected_vector_families": [
+        "signature-positive-validation"
+      ],
+      "ambiguity_id": "AMB-003",
+      "decision": "Register provisional closed algorithms for schema shape only; do not claim cryptographic conformance.",
+      "status": "open",
+      "title": "Exact signature algorithms and key encodings may differ from final ESRM text"
+    },
+    {
+      "affected_vector_families": [
+        "transition-positive-state-machine"
+      ],
+      "ambiguity_id": "AMB-004",
+      "decision": "Schema accepts bounded strings; engine/state-machine vectors stopped.",
+      "status": "open",
+      "title": "Transition state vocabulary not authoritative"
+    }
+  ],
+  "schema_version": "esrm.v0.1"
+}

@@ -1,0 +1,37 @@
+{
+  "claim_boundary": "NO_CLAIM_OF_CONFORMANCE",
+  "kind": "proofrail.esrm.risk-register.repair1.v0.1",
+  "risks": [
+    {
+      "ambiguity_id": "AMB-001",
+      "decision": "Repository-authoritative baseline added in this revision; independent audit still required.",
+      "status": "mitigated_for_artifact_phase",
+      "title": "No externally supplied ESRM Sections 22-48 source text was present before this repair"
+    },
+    {
+      "ambiguity_id": "AMB-002",
+      "decision": "Freeze RFC 8785 JCS after strict intake, I-JSON, schema, semantic, and numeric-profile checks.",
+      "status": "resolved_by_repair1",
+      "title": "Canonical JSON was previously unspecified"
+    },
+    {
+      "ambiguity_id": "AMB-003",
+      "decision": "Freeze PR-ESRM-JCS-SHA256-ED25519-v1, SHA-256, pure Ed25519, lowercase hex commitments, unpadded base64url signatures/public keys, strict Ed25519 rejection semantics.",
+      "status": "resolved_by_repair1",
+      "title": "Algorithms and key encodings were previously unresolved"
+    },
+    {
+      "ambiguity_id": "AMB-004",
+      "decision": "Canonical transition schema contains no lifecycle-state field; lifecycle-state vocabulary is deferred and no values are invented.",
+      "status": "deferred_out_of_scope",
+      "title": "Transition lifecycle-state vocabulary unavailable"
+    },
+    {
+      "ambiguity_id": "AMB-005",
+      "decision": "Do not begin Rust or Go implementation until independent audit completes.",
+      "status": "open",
+      "title": "No ChatGPT independent file-by-file audit has occurred yet"
+    }
+  ],
+  "schema_version": "esrm.v0.1"
+}
