@@ -1,0 +1,66 @@
+{
+  "ascii_source_path": "docs/ESRM_PROTOCOL_SECTIONS_22_40_SOURCE_LOCKED_ASCII.md",
+  "ascii_source_semantic_lock": "PENDING_INDEPENDENT_AUDIT",
+  "ascii_source_sha256": "9a5300ecf355095186a1683b12871b2aa7f06ef824db3389c8e4422a62b32cef",
+  "exact_section_titles": [
+    "Signature Does Not Confer Authority",
+    "Exact Commitment Encoding",
+    "Registered Artifact Domains",
+    "Signature Envelope",
+    "Strict JSON Intake Pipeline",
+    "Unicode Profile",
+    "ProofRail Numeric Profile",
+    "Timestamp Profile",
+    "Mandatory Artifact Header",
+    "Precise Reconciliation Result Algebra",
+    "Closed-World Absence Rule",
+    "Consumption Irreversibility",
+    "Crash-Safe Dispatch Boundary",
+    "Dispatch Intent Artifact",
+    "Boundary-Crossing Artifact",
+    "External Target Capability Evidence",
+    "Recovery Function",
+    "Transport Attempt Versus Semantic Transition",
+    "Canonical Baseline Safety Claim"
+  ],
+  "ordered_section_numbers": [
+    "22",
+    "23",
+    "24",
+    "25",
+    "26",
+    "27",
+    "28",
+    "29",
+    "30",
+    "31",
+    "32",
+    "33",
+    "34",
+    "35",
+    "36",
+    "37",
+    "38",
+    "39",
+    "40"
+  ],
+  "required_ascii_formula_blocks": "PASS",
+  "schema_to_source_mapping": {
+    "proofrail.signature.schema.json": [
+      "25. Signature Envelope",
+      "30. Mandatory Artifact Header"
+    ],
+    "proofrail.transition.schema.json": [
+      "ESRM_CANONICAL_TRANSITION_PACKAGE_SOURCE.md",
+      "30. Mandatory Artifact Header",
+      "29. Timestamp Profile"
+    ],
+    "protocol-domain-registry.json": [
+      "24. Registered Artifact Domains"
+    ]
+  },
+  "schema_version": "0.1-transport-safe-source-repair4",
+  "section_title_order_validation": "PASS",
+  "transition_source_path": "docs/ESRM_CANONICAL_TRANSITION_PACKAGE_SOURCE.md",
+  "transition_source_sha256": "6b0060b07c481540c67c8588e50565d5b6bc6adf5ba0e802da06a5f6269b6412"
+}

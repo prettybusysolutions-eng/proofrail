@@ -1,0 +1,11 @@
+{
+  "file_manifest": "esrm-conformance/v0.1-repair4/manifests/file-hashes.sha256",
+  "file_manifest_excludes": [
+    "esrm-conformance/v0.1-repair4/manifests/file-hashes.sha256",
+    "esrm-conformance/v0.1-repair4/manifests/release-root.json"
+  ],
+  "file_manifest_sha256": "f9b615575a88ff2dc8ec278510f25b12e283c4adfd6f26ff7fa45095af1d9237",
+  "git_commit": "RECORDED_EXTERNALLY_BY_IMMUTABLE_GIT_COMMIT",
+  "no_claim_of_conformance": true,
+  "schema_version": "0.1-transport-safe-source-repair4"
+}

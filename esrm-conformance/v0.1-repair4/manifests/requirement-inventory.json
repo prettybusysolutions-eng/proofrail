@@ -1,0 +1,8 @@
+{
+  "coverage_status": "mapped_plan_only_no_vectors",
+  "harness_mapped_count": 21,
+  "harness_requirement_count": 21,
+  "protocol_mapped_count": 124,
+  "protocol_requirement_count": 124,
+  "schema_version": "0.1-transport-safe-source-repair4"
+}

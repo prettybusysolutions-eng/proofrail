@@ -1,0 +1,42 @@
+{
+  "artifact_type_to_domain": {
+    "proofrail.admission": "PROOFRAIL:ADMISSION:V1",
+    "proofrail.authority": "PROOFRAIL:AUTHORITY:V1",
+    "proofrail.consumption": "PROOFRAIL:CONSUMPTION:V1",
+    "proofrail.dispatch_crossing": "PROOFRAIL:DISPATCH-CROSSING:V1",
+    "proofrail.dispatch_intent": "PROOFRAIL:DISPATCH-INTENT:V1",
+    "proofrail.key_status": "PROOFRAIL:KEY-STATUS:V1",
+    "proofrail.observation": "PROOFRAIL:OBSERVATION:V1",
+    "proofrail.reconciliation": "PROOFRAIL:RECONCILIATION:V1",
+    "proofrail.recovery": "PROOFRAIL:RECOVERY:V1",
+    "proofrail.revocation": "PROOFRAIL:REVOCATION:V1",
+    "proofrail.ruleset": "PROOFRAIL:RULESET:V1",
+    "proofrail.settlement": "PROOFRAIL:SETTLEMENT:V1",
+    "proofrail.signature": "PROOFRAIL:SIGNATURE:V1",
+    "proofrail.state": "PROOFRAIL:STATE:V1",
+    "proofrail.transition": "PROOFRAIL:TRANSITION:V1"
+  },
+  "closed": true,
+  "domains": [
+    "PROOFRAIL:STATE:V1",
+    "PROOFRAIL:RULESET:V1",
+    "PROOFRAIL:AUTHORITY:V1",
+    "PROOFRAIL:ADMISSION:V1",
+    "PROOFRAIL:CONSUMPTION:V1",
+    "PROOFRAIL:TRANSITION:V1",
+    "PROOFRAIL:DISPATCH-INTENT:V1",
+    "PROOFRAIL:DISPATCH-CROSSING:V1",
+    "PROOFRAIL:OBSERVATION:V1",
+    "PROOFRAIL:RECONCILIATION:V1",
+    "PROOFRAIL:SETTLEMENT:V1",
+    "PROOFRAIL:RECOVERY:V1",
+    "PROOFRAIL:REVOCATION:V1",
+    "PROOFRAIL:KEY-STATUS:V1",
+    "PROOFRAIL:SIGNATURE:V1"
+  ],
+  "schema_version": "0.1-transport-safe-source-repair4",
+  "schemas_in_phase": {
+    "proofrail.signature": "schemas/proofrail.signature.schema.json",
+    "proofrail.transition": "schemas/proofrail.transition.schema.json"
+  }
+}

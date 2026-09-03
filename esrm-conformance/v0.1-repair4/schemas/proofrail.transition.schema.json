@@ -1,0 +1,199 @@
+{
+  "$id": "https://proofrail.dev/esrm/v0.1/transport-safe-source-repair4/schemas/proofrail.transition.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "const": "proofrail.transition"
+    },
+    "authority": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "issuer_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "lineage_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "subject_id": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "authority_commitment",
+        "issuer_id",
+        "subject_id",
+        "lineage_commitment"
+      ],
+      "type": "object"
+    },
+    "critical_extensions": {
+      "maxItems": 0,
+      "type": "array"
+    },
+    "crypto_suite": {
+      "const": "PR-ESRM-JCS-SHA256-ED25519-v1"
+    },
+    "epoch": {
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "execution": {
+      "additionalProperties": false,
+      "properties": {
+        "executor_identity_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "idempotency_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "precondition_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "target_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "executor_identity_commitment",
+        "target_commitment",
+        "precondition_commitment",
+        "idempotency_commitment"
+      ],
+      "type": "object"
+    },
+    "nonce": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "noncritical_extensions": {
+      "additionalProperties": false,
+      "maxProperties": 0,
+      "type": "object"
+    },
+    "pre_state": {
+      "additionalProperties": false,
+      "properties": {
+        "commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "freshness_policy_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "source_set_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "commitment",
+        "source_set_commitment",
+        "freshness_policy_commitment"
+      ],
+      "type": "object"
+    },
+    "protocol_version": {
+      "const": "0.1"
+    },
+    "rules": {
+      "additionalProperties": false,
+      "properties": {
+        "ruleset_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "semantics_version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "ruleset_commitment",
+        "semantics_version"
+      ],
+      "type": "object"
+    },
+    "settlement": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_deadline": {
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+          "type": "string"
+        },
+        "observer_policy_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "predicate_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "predicate_commitment",
+        "observer_policy_commitment",
+        "evidence_deadline"
+      ],
+      "type": "object"
+    },
+    "transition": {
+      "additionalProperties": false,
+      "properties": {
+        "effect_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "expected_post_state_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "operation_commitment": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation_commitment",
+        "effect_commitment",
+        "expected_post_state_commitment"
+      ],
+      "type": "object"
+    },
+    "transition_id": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "artifact_type",
+    "protocol_version",
+    "crypto_suite",
+    "transition_id",
+    "nonce",
+    "epoch",
+    "pre_state",
+    "rules",
+    "authority",
+    "transition",
+    "execution",
+    "settlement",
+    "critical_extensions",
+    "noncritical_extensions"
+  ],
+  "title": "proofrail.transition Repair 4 structural subset schema",
+  "type": "object"
+}

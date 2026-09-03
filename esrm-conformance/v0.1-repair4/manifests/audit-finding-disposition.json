@@ -1,0 +1,40 @@
+{
+  "findings": [
+    {
+      "disposition": "Corrupted Repair 3 source is preserved; Repair 4 uses ASCII source lock and control-byte scan.",
+      "id": "AUD-018",
+      "status": "CORRECTED_IN_REPAIR_4"
+    },
+    {
+      "disposition": "pre_state.commitment is hex64 string.",
+      "id": "AUD-019",
+      "status": "CORRECTED_IN_REPAIR_4"
+    },
+    {
+      "disposition": "evidence_deadline is timestamp string with lexical and semantic calendar validation.",
+      "id": "AUD-020",
+      "status": "CORRECTED_IN_REPAIR_4"
+    },
+    {
+      "disposition": "Extensions fail closed: critical_extensions maxItems=0 and noncritical_extensions maxProperties=0.",
+      "id": "AUD-021",
+      "status": "CORRECTED_IN_REPAIR_4"
+    },
+    {
+      "disposition": "Validator tests every mismatched signed_artifact_type/signed_artifact_domain pair.",
+      "id": "AUD-022",
+      "status": "CORRECTED_IN_REPAIR_4"
+    },
+    {
+      "disposition": "Canonical transition package source appendix maps nested fields to source.",
+      "id": "AUD-023",
+      "status": "CORRECTED_IN_REPAIR_4"
+    },
+    {
+      "disposition": "Strict Base64url decode/reencode canonicality is specified for signatures and future public keys.",
+      "id": "AUD-024",
+      "status": "CORRECTED_IN_REPAIR_4"
+    }
+  ],
+  "schema_version": "0.1-transport-safe-source-repair4"
+}

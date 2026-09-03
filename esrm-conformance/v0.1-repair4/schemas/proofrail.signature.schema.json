@@ -1,0 +1,96 @@
+{
+  "$id": "https://proofrail.dev/esrm/v0.1/transport-safe-source-repair4/schemas/proofrail.signature.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "const": "proofrail.signature"
+    },
+    "critical_extensions": {
+      "maxItems": 0,
+      "type": "array"
+    },
+    "crypto_suite": {
+      "const": "PR-ESRM-JCS-SHA256-ED25519-v1"
+    },
+    "key_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "noncritical_extensions": {
+      "additionalProperties": false,
+      "maxProperties": 0,
+      "type": "object"
+    },
+    "protocol_version": {
+      "const": "0.1"
+    },
+    "signature": {
+      "pattern": "^[A-Za-z0-9_-]{86}$",
+      "type": "string"
+    },
+    "signed_artifact_domain": {
+      "enum": [
+        "PROOFRAIL:STATE:V1",
+        "PROOFRAIL:RULESET:V1",
+        "PROOFRAIL:AUTHORITY:V1",
+        "PROOFRAIL:ADMISSION:V1",
+        "PROOFRAIL:CONSUMPTION:V1",
+        "PROOFRAIL:TRANSITION:V1",
+        "PROOFRAIL:DISPATCH-INTENT:V1",
+        "PROOFRAIL:DISPATCH-CROSSING:V1",
+        "PROOFRAIL:OBSERVATION:V1",
+        "PROOFRAIL:RECONCILIATION:V1",
+        "PROOFRAIL:SETTLEMENT:V1",
+        "PROOFRAIL:RECOVERY:V1",
+        "PROOFRAIL:REVOCATION:V1",
+        "PROOFRAIL:KEY-STATUS:V1",
+        "PROOFRAIL:SIGNATURE:V1"
+      ],
+      "type": "string"
+    },
+    "signed_artifact_type": {
+      "enum": [
+        "proofrail.state",
+        "proofrail.ruleset",
+        "proofrail.authority",
+        "proofrail.admission",
+        "proofrail.consumption",
+        "proofrail.transition",
+        "proofrail.dispatch_intent",
+        "proofrail.dispatch_crossing",
+        "proofrail.observation",
+        "proofrail.reconciliation",
+        "proofrail.settlement",
+        "proofrail.recovery",
+        "proofrail.revocation",
+        "proofrail.key_status",
+        "proofrail.signature"
+      ],
+      "type": "string"
+    },
+    "signed_commitment": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "signer_id": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "artifact_type",
+    "protocol_version",
+    "crypto_suite",
+    "signed_artifact_type",
+    "signed_artifact_domain",
+    "signed_commitment",
+    "signer_id",
+    "key_id",
+    "critical_extensions",
+    "noncritical_extensions",
+    "signature"
+  ],
+  "title": "proofrail.signature Repair 4 structural subset schema",
+  "type": "object"
+}

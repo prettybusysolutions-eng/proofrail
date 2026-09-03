@@ -1,0 +1,17 @@
+{
+  "control_byte_scan": "PASS",
+  "harness_mapped_count": 21,
+  "harness_requirement_count": 21,
+  "json_parse": "PASS",
+  "no_claim_of_conformance": true,
+  "protocol_mapped_count": 124,
+  "protocol_requirement_count": 124,
+  "schema_instance_validation": "STRUCTURAL_SUBSET_ONLY",
+  "schema_meta_validation": "STRUCTURAL_SUBSET_ONLY",
+  "schema_negative_tests": "PASS",
+  "schema_version": "0.1-transport-safe-source-repair4",
+  "section_title_order_validation": "PASS",
+  "timestamp_semantic_test_result": "PASS",
+  "type_domain_cartesian_mismatch_result": "PASS",
+  "type_domain_cartesian_mismatch_test_count": 210
+}

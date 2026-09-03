@@ -1,0 +1,15 @@
+{
+  "ambiguities": [
+    {
+      "description": "Repair 3 source-lock document contained transport-corrupted control/escape sequences.",
+      "id": "AMB-007",
+      "status": "CONFIRMED_SOURCE_TRANSPORT_FAILURE"
+    },
+    {
+      "description": "ASCII source semantic comparison pending independent audit.",
+      "id": "AMB-008",
+      "status": "OPEN"
+    }
+  ],
+  "schema_version": "0.1-transport-safe-source-repair4"
+}
