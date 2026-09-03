@@ -1,0 +1,15 @@
+{
+  "ambiguities": [
+    {
+      "description": "Independent byte-for-byte comparison against the operator-provided Telegram source has not yet occurred outside this run.",
+      "id": "AMB-007",
+      "status": "OPEN"
+    },
+    {
+      "description": "No lifecycle-state field exists in proofrail.transition schema; vocabulary not invented.",
+      "id": "AMB-004",
+      "status": "DEFERRED_OUT_OF_SCOPE"
+    }
+  ],
+  "schema_version": "0.1-source-lock-repair3"
+}

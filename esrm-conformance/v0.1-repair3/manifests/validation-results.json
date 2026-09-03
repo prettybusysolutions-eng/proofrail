@@ -1,0 +1,14 @@
+{
+  "domain_registry_validation": "PASS",
+  "harness_mapped_count": 25,
+  "harness_requirement_count": 25,
+  "json_parse": "PASS",
+  "negative_schema_tests": "PASS",
+  "no_claim_of_conformance": true,
+  "protocol_mapped_count": 83,
+  "protocol_requirement_count": 83,
+  "schema_instance_validation": "STRUCTURAL_SUBSET_ONLY",
+  "schema_meta_validation": "STRUCTURAL_SUBSET_ONLY",
+  "schema_version": "0.1-source-lock-repair3",
+  "section_title_order_validation": "PASS"
+}

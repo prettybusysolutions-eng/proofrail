@@ -1,0 +1,45 @@
+{
+  "findings": [
+    {
+      "disposition": "Repair 3 source-locks supplied Sections 22-40 text in a verbatim document; remains partial until independent comparison against the operator source passes.",
+      "id": "AUD-001",
+      "status": "PARTIALLY_CORRECTED"
+    },
+    {
+      "disposition": "Sections 23-40 are now preserved in the verbatim source document rather than replaced by generated protocol text.",
+      "id": "AUD-011",
+      "status": "CORRECTED_IN_REPAIR_3"
+    },
+    {
+      "disposition": "Transition nested objects are constrained with required members and additionalProperties=false.",
+      "id": "AUD-012",
+      "status": "CORRECTED_IN_REPAIR_3"
+    },
+    {
+      "disposition": "Schemas require protocol_version exactly 0.1.",
+      "id": "AUD-013",
+      "status": "CORRECTED_IN_REPAIR_3"
+    },
+    {
+      "disposition": "critical_extensions is an array and noncritical_extensions is an object.",
+      "id": "AUD-014",
+      "status": "CORRECTED_IN_REPAIR_3"
+    },
+    {
+      "disposition": "Complete uppercase protocol domain registry is restored.",
+      "id": "AUD-015",
+      "status": "CORRECTED_IN_REPAIR_3"
+    },
+    {
+      "disposition": "Authority predicate is preserved in the verbatim source; signature alone is ATTESTED only.",
+      "id": "AUD-016",
+      "status": "CORRECTED_IN_REPAIR_3"
+    },
+    {
+      "disposition": "Validation labels report STRUCTURAL_SUBSET_ONLY, not complete Draft 2020-12 PASS.",
+      "id": "AUD-017",
+      "status": "CORRECTED_IN_REPAIR_3"
+    }
+  ],
+  "schema_version": "0.1-source-lock-repair3"
+}

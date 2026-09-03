@@ -1,0 +1,740 @@
+{
+  "harness_requirement_count": 25,
+  "harness_requirements": [
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Harness validation MUST treat `docs/ESRM_PROTOCOL_SECTIONS_22_40_VERBATIM.md` as the source-locked protocol document.",
+      "requirement_id": "ESRM-CP-A-MUST-001",
+      "section": "Profile A - Raw Intake and Resource Limits"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Harness validation MUST keep raw-byte diagnostic hashes outside subject artifacts.",
+      "requirement_id": "ESRM-CP-A-MUST-002",
+      "section": "Profile A - Raw Intake and Resource Limits"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Harness validation MUST enforce resource-limit checks recursively where structural validation is implemented.",
+      "requirement_id": "ESRM-CP-A-MUST-003",
+      "section": "Profile A - Raw Intake and Resource Limits"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Harness validation MUST NOT rewrite or normalize the verbatim protocol source.",
+      "requirement_id": "ESRM-CP-A-MUST-NOT-001",
+      "section": "Profile A - Raw Intake and Resource Limits"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Repair 3 MUST provide closed schemas only for `proofrail.transition` and `proofrail.signature`.",
+      "requirement_id": "ESRM-CP-B-MUST-001",
+      "section": "Profile B - Schema Scope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Schema validation labels MUST say `STRUCTURAL_SUBSET_ONLY` until a complete Draft 2020-12 validator is used.",
+      "requirement_id": "ESRM-CP-B-MUST-002",
+      "section": "Profile B - Schema Scope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Structural validation MUST reject `protocol_version` values other than `0.1`.",
+      "requirement_id": "ESRM-CP-B-MUST-003",
+      "section": "Profile B - Schema Scope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Structural validation MUST reject empty transition nested objects for `pre_state`, `rules`, `authority`, `transition`, `execution`, and `settlement`.",
+      "requirement_id": "ESRM-CP-B-MUST-004",
+      "section": "Profile B - Schema Scope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Structural validation MUST reject `noncritical_extensions` when it is an array.",
+      "requirement_id": "ESRM-CP-B-MUST-005",
+      "section": "Profile B - Schema Scope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Structural validation MUST reject unknown nested transition members.",
+      "requirement_id": "ESRM-CP-B-MUST-006",
+      "section": "Profile B - Schema Scope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Structural validation MUST reject a missing registered domain.",
+      "requirement_id": "ESRM-CP-B-MUST-007",
+      "section": "Profile B - Schema Scope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Structural validation MUST reject lowercase domain substitutes.",
+      "requirement_id": "ESRM-CP-B-MUST-008",
+      "section": "Profile B - Schema Scope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Repair 3 MUST NOT generate binary vectors.",
+      "requirement_id": "ESRM-CP-C-MUST-001",
+      "section": "Profile C - Corpus and Vectors"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Repair 3 MUST keep requirement inventory separate from any future binary-vector manifest.",
+      "requirement_id": "ESRM-CP-C-MUST-002",
+      "section": "Profile C - Corpus and Vectors"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Planned vector mappings MUST remain plan-only until implementation is explicitly authorized.",
+      "requirement_id": "ESRM-CP-C-MUST-003",
+      "section": "Profile C - Corpus and Vectors"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Future Rust and Go tracks MUST share no parsing implementation.",
+      "requirement_id": "ESRM-CP-D-MUST-001",
+      "section": "Profile D - Independence"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Future Rust and Go tracks MUST share no canonicalization implementation.",
+      "requirement_id": "ESRM-CP-D-MUST-002",
+      "section": "Profile D - Independence"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Future Rust and Go tracks MUST share no Base64 implementation.",
+      "requirement_id": "ESRM-CP-D-MUST-003",
+      "section": "Profile D - Independence"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Future Rust and Go tracks MUST share no Ed25519 implementation.",
+      "requirement_id": "ESRM-CP-D-MUST-004",
+      "section": "Profile D - Independence"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Future Rust and Go tracks MUST share no schema-validation implementation.",
+      "requirement_id": "ESRM-CP-D-MUST-005",
+      "section": "Profile D - Independence"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Future Rust and Go tracks MUST share no commitment implementation.",
+      "requirement_id": "ESRM-CP-D-MUST-006",
+      "section": "Profile D - Independence"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "The file manifest MUST enumerate governed Repair 3 files except the file manifest itself and release-root record.",
+      "requirement_id": "ESRM-CP-E-MUST-001",
+      "section": "Profile E - Manifest and Release Root"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "`file_manifest_hash` and `release_root_record_hash` MUST be reported as separate values.",
+      "requirement_id": "ESRM-CP-E-MUST-002",
+      "section": "Profile E - Manifest and Release Root"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "The validator command MUST be committed and runnable from a clean checkout using Python standard library only.",
+      "requirement_id": "ESRM-CP-E-MUST-003",
+      "section": "Profile E - Manifest and Release Root"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "normative_sentence": "Repair 3 MUST NOT claim conformance.",
+      "requirement_id": "ESRM-CP-E-MUST-NOT-001",
+      "section": "Profile E - Manifest and Release Root"
+    }
+  ],
+  "protocol_requirement_count": 83,
+  "protocol_requirements": [
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "It MUST NOT by itself establish:",
+      "requirement_id": "ESRM-SRC-001",
+      "section": "22. Signature Does Not Confer Authority"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "A valid signature from an unauthorized signer MUST produce a valid attestation to an unauthorized claim, not an authorized transition.",
+      "requirement_id": "ESRM-SRC-002",
+      "section": "22. Signature Does Not Confer Authority"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "(D_x) MUST consist only of bytes in ASCII range `0x21` through `0x7E`.",
+      "requirement_id": "ESRM-SRC-003",
+      "section": "23. Exact Commitment Encoding"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "`0x00` MUST NOT occur inside a registered domain string.",
+      "requirement_id": "ESRM-SRC-004",
+      "section": "23. Exact Commitment Encoding"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The domain string MUST be protocol-registered.",
+      "requirement_id": "ESRM-SRC-005",
+      "section": "23. Exact Commitment Encoding"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Domains MUST be version-specific.",
+      "requirement_id": "ESRM-SRC-006",
+      "section": "23. Exact Commitment Encoding"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Hash output MUST be lowercase hexadecimal.",
+      "requirement_id": "ESRM-SRC-007",
+      "section": "23. Exact Commitment Encoding"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "SHA-256 commitments MUST contain exactly 64 lowercase hexadecimal characters.",
+      "requirement_id": "ESRM-SRC-008",
+      "section": "23. Exact Commitment Encoding"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Uppercase hexadecimal MUST be rejected rather than normalized.",
+      "requirement_id": "ESRM-SRC-009",
+      "section": "23. Exact Commitment Encoding"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Leading or trailing whitespace MUST be rejected.",
+      "requirement_id": "ESRM-SRC-010",
+      "section": "23. Exact Commitment Encoding"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Commitment strings MUST NOT contain a `0x` prefix.",
+      "requirement_id": "ESRM-SRC-011",
+      "section": "23. Exact Commitment Encoding"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Unknown domains MUST fail closed.",
+      "requirement_id": "ESRM-SRC-012",
+      "section": "24. Registered Artifact Domains"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The verifier MUST derive the expected domain from the closed protocol registry. An artifact-supplied domain value MUST NOT determine the domain used to calculate a commitment.",
+      "requirement_id": "ESRM-SRC-013",
+      "section": "24. Registered Artifact Domains"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The signed object SHALL exclude the signature bytes themselves.",
+      "requirement_id": "ESRM-SRC-014",
+      "section": "25. Signature Envelope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The signature SHALL use RFC 4648 URL-safe Base64 without padding.",
+      "requirement_id": "ESRM-SRC-015",
+      "section": "25. Signature Envelope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The lexical profile SHALL permit only:",
+      "requirement_id": "ESRM-SRC-016",
+      "section": "25. Signature Envelope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "`=` padding MUST be rejected.",
+      "requirement_id": "ESRM-SRC-017",
+      "section": "25. Signature Envelope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Whitespace MUST be rejected.",
+      "requirement_id": "ESRM-SRC-018",
+      "section": "25. Signature Envelope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Alternate Base64 alphabets MUST be rejected.",
+      "requirement_id": "ESRM-SRC-019",
+      "section": "25. Signature Envelope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The decoded Ed25519 signature MUST contain exactly 64 bytes.",
+      "requirement_id": "ESRM-SRC-020",
+      "section": "25. Signature Envelope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The public key resolved through the key registry MUST contain exactly 32 raw Ed25519 public-key bytes and SHALL use unpadded RFC 4648 Base64url when represented textually.",
+      "requirement_id": "ESRM-SRC-021",
+      "section": "25. Signature Envelope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "A verifier MUST reconstruct (E_\tau) by removing only the `signature` member from a transmitted signature object that has already passed its closed schema.",
+      "requirement_id": "ESRM-SRC-022",
+      "section": "25. Signature Envelope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The transmitted signature object MUST contain no additional top-level members.",
+      "requirement_id": "ESRM-SRC-023",
+      "section": "25. Signature Envelope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "A verifier MUST NOT reconstruct signed metadata from external context.",
+      "requirement_id": "ESRM-SRC-024",
+      "section": "25. Signature Envelope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The verifier MUST independently confirm:",
+      "requirement_id": "ESRM-SRC-025",
+      "section": "25. Signature Envelope"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Security artifacts SHALL enter ProofRail through the following pipeline:",
+      "requirement_id": "ESRM-SRC-026",
+      "section": "26. Strict JSON Intake Pipeline"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Duplicate property names MUST be detected before conversion into a language-native dictionary, map, object, or equivalent structure.",
+      "requirement_id": "ESRM-SRC-027",
+      "section": "26. Strict JSON Intake Pipeline"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "For duplicate-name detection, escaped names SHALL be compared after JSON escape processing.",
+      "requirement_id": "ESRM-SRC-028",
+      "section": "26. Strict JSON Intake Pipeline"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The top-level JSON value MUST be an object.",
+      "requirement_id": "ESRM-SRC-029",
+      "section": "26. Strict JSON Intake Pipeline"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "A UTF-8 BOM MUST be rejected.",
+      "requirement_id": "ESRM-SRC-030",
+      "section": "26. Strict JSON Intake Pipeline"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "A security artifact MUST contain exactly one top-level JSON value.",
+      "requirement_id": "ESRM-SRC-031",
+      "section": "26. Strict JSON Intake Pipeline"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Any non-whitespace data after that value MUST be rejected.",
+      "requirement_id": "ESRM-SRC-032",
+      "section": "26. Strict JSON Intake Pipeline"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The protocol SHALL explicitly define whether leading and trailing JSON whitespace is accepted. For ESRM v0.1 raw security artifacts, leading and trailing whitespace SHALL be rejected so the admitted wire profile has one exact framing rule.",
+      "requirement_id": "ESRM-SRC-033",
+      "section": "26. Strict JSON Intake Pipeline"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "A parser MUST reject:",
+      "requirement_id": "ESRM-SRC-034",
+      "section": "26. Strict JSON Intake Pipeline"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "A rejected artifact MUST NOT produce canonical bytes, a domain commitment, or a positive signature result.",
+      "requirement_id": "ESRM-SRC-035",
+      "section": "26. Strict JSON Intake Pipeline"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The canonicalization layer SHALL NOT perform:",
+      "requirement_id": "ESRM-SRC-036",
+      "section": "27. Unicode Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Canonical property ordering SHALL follow RFC 8785 UTF-16 code-unit ordering, not:",
+      "requirement_id": "ESRM-SRC-037",
+      "section": "27. Unicode Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Invalid Unicode data, including lone surrogate values, MUST fail closed.",
+      "requirement_id": "ESRM-SRC-038",
+      "section": "27. Unicode Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "ESRM SHALL use a stricter numeric subset than ordinary JCS.",
+      "requirement_id": "ESRM-SRC-039",
+      "section": "28. ProofRail Numeric Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Security-critical JSON numeric tokens MUST:",
+      "requirement_id": "ESRM-SRC-040",
+      "section": "28. ProofRail Numeric Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "These restrictions MUST be enforced against the original numeric token before conversion into a host-language numeric type.",
+      "requirement_id": "ESRM-SRC-041",
+      "section": "28. ProofRail Numeric Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Quantities requiring signed values, larger integers, decimal precision, money, timestamps, hashes, cryptographic quantities, or arbitrary precision SHALL use strings with explicitly registered grammars.",
+      "requirement_id": "ESRM-SRC-042",
+      "section": "28. ProofRail Numeric Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The numeric profile MUST apply recursively inside critical and noncritical extension values.",
+      "requirement_id": "ESRM-SRC-043",
+      "section": "28. ProofRail Numeric Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "RFC 3339 permits multiple textual representations of the same instant. ProofRail SHALL use a narrower signed-artifact profile.",
+      "requirement_id": "ESRM-SRC-044",
+      "section": "29. Timestamp Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "leap-second value `60` MUST be rejected by ESRM v0.1;",
+      "requirement_id": "ESRM-SRC-045",
+      "section": "29. Timestamp Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "calendar validity MUST be checked;",
+      "requirement_id": "ESRM-SRC-046",
+      "section": "29. Timestamp Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "invalid dates and times MUST be rejected rather than normalized.",
+      "requirement_id": "ESRM-SRC-047",
+      "section": "29. Timestamp Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "```Protocol ordering MUST use `logical_epoch` or another explicitly defined logical sequence value where deterministic order matters.",
+      "requirement_id": "ESRM-SRC-048",
+      "section": "29. Timestamp Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Wall-clock timestamps MUST NOT implicitly establish transaction ordering.",
+      "requirement_id": "ESRM-SRC-049",
+      "section": "29. Timestamp Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "ProofRail SHALL distinguish:",
+      "requirement_id": "ESRM-SRC-050",
+      "section": "29. Timestamp Profile"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Every security-relevant signed ESRM artifact SHALL require:",
+      "requirement_id": "ESRM-SRC-051",
+      "section": "30. Mandatory Artifact Header"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "An implementation MUST NOT reorder arrays unless the protocol schema explicitly declares an array to be represented canonically as a sorted set before artifact construction.",
+      "requirement_id": "ESRM-SRC-052",
+      "section": "30. Mandatory Artifact Header"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Unknown critical extensions MUST cause deterministic rejection.",
+      "requirement_id": "ESRM-SRC-053",
+      "section": "30. Mandatory Artifact Header"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Security-relevant meaning MUST NEVER be introduced through an uncommitted extension.",
+      "requirement_id": "ESRM-SRC-054",
+      "section": "30. Mandatory Artifact Header"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The reconciliation result set SHALL be:",
+      "requirement_id": "ESRM-SRC-055",
+      "section": "31. Precise Reconciliation Result Algebra"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "These states MUST NOT be collapsed.",
+      "requirement_id": "ESRM-SRC-056",
+      "section": "31. Precise Reconciliation Result Algebra"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Expiration of an observation deadline MUST NOT itself establish divergence:",
+      "requirement_id": "ESRM-SRC-057",
+      "section": "31. Precise Reconciliation Result Algebra"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "A later observation MUST NOT mutate an existing reconciliation.",
+      "requirement_id": "ESRM-SRC-058",
+      "section": "31. Precise Reconciliation Result Algebra"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "It SHALL create a new reconciliation artifact and, when applicable, a new reconciliation epoch.",
+      "requirement_id": "ESRM-SRC-059",
+      "section": "31. Precise Reconciliation Result Algebra"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Absence of observed evidence MUST NOT establish evidence of absence.",
+      "requirement_id": "ESRM-SRC-060",
+      "section": "32. Closed-World Absence Rule"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "]Without closed-world evidence, the result MUST be `UNRESOLVED`, rather than `DIVERGED` or `MATCH`.",
+      "requirement_id": "ESRM-SRC-061",
+      "section": "32. Closed-World Absence Rule"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Evidence used to establish closed-world coverage MUST itself be retained and cryptographically committed.",
+      "requirement_id": "ESRM-SRC-062",
+      "section": "32. Closed-World Absence Rule"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Reusing a consumed authority, consumed transition identifier, or consumed nonce MUST cause deterministic rejection.",
+      "requirement_id": "ESRM-SRC-063",
+      "section": "33. Consumption Irreversibility"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "ProofRail SHALL NOT claim universal atomic equivalence between authority consumption and external effect:",
+      "requirement_id": "ESRM-SRC-064",
+      "section": "34. Crash-Safe Dispatch Boundary"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The dispatch lifecycle SHALL contain:",
+      "requirement_id": "ESRM-SRC-065",
+      "section": "34. Crash-Safe Dispatch Boundary"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Before releasing the first externally visible instruction or byte capable of creating the protected effect, ProofRail MUST durably record:",
+      "requirement_id": "ESRM-SRC-066",
+      "section": "34. Crash-Safe Dispatch Boundary"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "It MUST NOT be repaired by silently restoring authority.",
+      "requirement_id": "ESRM-SRC-067",
+      "section": "34. Crash-Safe Dispatch Boundary"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Unknown effect status MUST NOT be converted into success, failure, or reusable authority.",
+      "requirement_id": "ESRM-SRC-068",
+      "section": "34. Crash-Safe Dispatch Boundary"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "A dispatch-intent artifact SHALL contain:",
+      "requirement_id": "ESRM-SRC-069",
+      "section": "35. Dispatch Intent Artifact"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The dispatch intent MUST be immutable and domain-committed under:",
+      "requirement_id": "ESRM-SRC-070",
+      "section": "35. Dispatch Intent Artifact"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Immediately before dispatch, ProofRail SHALL durably append:",
+      "requirement_id": "ESRM-SRC-071",
+      "section": "36. Boundary-Crossing Artifact"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "A target adapter MUST NOT acquire a recovery class merely by self-declaration.",
+      "requirement_id": "ESRM-SRC-072",
+      "section": "37. External Target Capability Evidence"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The target capability class SHALL itself be supported by a committed capability-evidence artifact.",
+      "requirement_id": "ESRM-SRC-073",
+      "section": "37. External Target Capability Evidence"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The recovery engine MUST rely on the committed target-capability evidence that existed for the transition, not whatever capability the adapter claims after a crash.",
+      "requirement_id": "ESRM-SRC-074",
+      "section": "37. External Target Capability Evidence"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "For `DURABLE_IDEMPOTENCY`, the evidence MUST establish:",
+      "requirement_id": "ESRM-SRC-075",
+      "section": "37. External Target Capability Evidence"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "For `QUERYABLE_EFFECT`, the evidence MUST define whether a negative query result proves non-occurrence or merely lack of current knowledge.",
+      "requirement_id": "ESRM-SRC-076",
+      "section": "37. External Target Capability Evidence"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "For `OBSERVABLE_ONLY` and `OPAQUE_TARGET`, ambiguous dispatch MUST forbid automatic retry.",
+      "requirement_id": "ESRM-SRC-077",
+      "section": "37. External Target Capability Evidence"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The retransmission MUST use:",
+      "requirement_id": "ESRM-SRC-078",
+      "section": "38. Recovery Function"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "ProofRail SHALL distinguish:",
+      "requirement_id": "ESRM-SRC-079",
+      "section": "39. Transport Attempt Versus Semantic Transition"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "and automatic retry MUST be rejected.",
+      "requirement_id": "ESRM-SRC-080",
+      "section": "39. Transport Attempt Versus Semantic Transition"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "Transport-attempt records MUST remain independently distinguishable from transition, observation, reconciliation, and settlement artifacts.",
+      "requirement_id": "ESRM-SRC-081",
+      "section": "39. Transport Attempt Versus Semantic Transition"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "ESRM v0.1 MUST NOT claim universal exactly-once execution.",
+      "requirement_id": "ESRM-SRC-082",
+      "section": "40. Canonical Baseline Safety Claim"
+    },
+    {
+      "coverage_status": "mapped_plan_only",
+      "mapped_schema_or_profile": "source_locked_protocol_or_future_vector_plan",
+      "normative_sentence": "The protocol MUST preserve:",
+      "requirement_id": "ESRM-SRC-083",
+      "section": "40. Canonical Baseline Safety Claim"
+    }
+  ],
+  "schema_version": "0.1-source-lock-repair3"
+}
