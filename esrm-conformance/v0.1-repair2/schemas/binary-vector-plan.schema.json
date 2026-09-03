@@ -1,0 +1,53 @@
+{
+  "$id": "https://proofrail.dev/schemas/esrm/v0.1-repair2/binary-vector-plan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_kind": {
+      "const": "binary-vector-plan"
+    },
+    "populated_binary_vectors": {
+      "const": false
+    },
+    "requirements": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "planned_vector_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "requirement_id": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "stopped_by_ambiguity"
+            ]
+          }
+        },
+        "required": [
+          "requirement_id",
+          "planned_vector_ids",
+          "status"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "0.1-repair2"
+    }
+  },
+  "required": [
+    "artifact_kind",
+    "schema_version",
+    "populated_binary_vectors",
+    "requirements"
+  ],
+  "title": "ESRM binary vector plan, not a populated manifest",
+  "type": "object"
+}

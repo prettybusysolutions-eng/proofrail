@@ -1,0 +1,16 @@
+{
+  "closed": true,
+  "entries": [
+    {
+      "artifact_type": "proofrail.transition",
+      "registered_domain": "PROOFRAIL:TRANSITION:V1",
+      "schema": "schemas/proofrail.transition.schema.json"
+    },
+    {
+      "artifact_type": "proofrail.signature",
+      "registered_domain": "PROOFRAIL:SIGNATURE:V1",
+      "schema": "schemas/proofrail.signature.schema.json"
+    }
+  ],
+  "schema_version": "0.1-repair2"
+}

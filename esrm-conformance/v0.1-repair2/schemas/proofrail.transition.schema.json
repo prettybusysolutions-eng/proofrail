@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "b64uEd25519Pub": {
+      "pattern": "^[A-Za-z0-9_-]{43}$",
+      "type": "string"
+    },
+    "b64uEd25519Sig": {
+      "pattern": "^[A-Za-z0-9_-]{86}$",
+      "type": "string"
+    },
+    "extensionArrayCritical": {
+      "items": {
+        "$ref": "#/$defs/extensionEntry"
+      },
+      "maxItems": 16,
+      "type": "array"
+    },
+    "extensionArrayNoncritical": {
+      "items": {
+        "$ref": "#/$defs/extensionEntry"
+      },
+      "maxItems": 64,
+      "type": "array"
+    },
+    "extensionEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "extension_id": {
+          "pattern": "^[A-Z][A-Z0-9]*(?::[A-Z][A-Z0-9]*)*:V[0-9]+$",
+          "type": "string"
+        },
+        "value": {}
+      },
+      "required": [
+        "extension_id",
+        "value"
+      ],
+      "type": "object"
+    },
+    "hex64": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "uintSafe": {
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "$id": "https://proofrail.dev/schemas/esrm/v0.1-repair2/proofrail.transition.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "const": "proofrail.transition"
+    },
+    "authority": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "critical_extensions": {
+      "$ref": "#/$defs/extensionArrayCritical"
+    },
+    "crypto_suite": {
+      "const": "PR-ESRM-JCS-SHA256-ED25519-v1"
+    },
+    "epoch": {
+      "$ref": "#/$defs/uintSafe"
+    },
+    "execution": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "nonce": {
+      "pattern": "^[A-Za-z0-9_-]{16,128}$",
+      "type": "string"
+    },
+    "noncritical_extensions": {
+      "$ref": "#/$defs/extensionArrayNoncritical"
+    },
+    "pre_state": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "protocol_version": {
+      "const": "ESRM-v0.1"
+    },
+    "rules": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "settlement": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "transition": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "transition_id": {
+      "pattern": "^[A-Z0-9][A-Z0-9:_-]{0,127}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "artifact_type",
+    "protocol_version",
+    "crypto_suite",
+    "transition_id",
+    "nonce",
+    "epoch",
+    "pre_state",
+    "rules",
+    "authority",
+    "transition",
+    "execution",
+    "settlement",
+    "critical_extensions",
+    "noncritical_extensions"
+  ],
+  "title": "proofrail.transition ESRM v0.1 canonical transition package",
+  "type": "object"
+}

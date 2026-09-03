@@ -1,0 +1,113 @@
+{
+  "$defs": {
+    "b64uEd25519Pub": {
+      "pattern": "^[A-Za-z0-9_-]{43}$",
+      "type": "string"
+    },
+    "b64uEd25519Sig": {
+      "pattern": "^[A-Za-z0-9_-]{86}$",
+      "type": "string"
+    },
+    "extensionArrayCritical": {
+      "items": {
+        "$ref": "#/$defs/extensionEntry"
+      },
+      "maxItems": 16,
+      "type": "array"
+    },
+    "extensionArrayNoncritical": {
+      "items": {
+        "$ref": "#/$defs/extensionEntry"
+      },
+      "maxItems": 64,
+      "type": "array"
+    },
+    "extensionEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "extension_id": {
+          "pattern": "^[A-Z][A-Z0-9]*(?::[A-Z][A-Z0-9]*)*:V[0-9]+$",
+          "type": "string"
+        },
+        "value": {}
+      },
+      "required": [
+        "extension_id",
+        "value"
+      ],
+      "type": "object"
+    },
+    "hex64": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "uintSafe": {
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "$id": "https://proofrail.dev/schemas/esrm/v0.1-repair2/proofrail.signature.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "const": "proofrail.signature"
+    },
+    "critical_extensions": {
+      "$ref": "#/$defs/extensionArrayCritical"
+    },
+    "crypto_suite": {
+      "const": "PR-ESRM-JCS-SHA256-ED25519-v1"
+    },
+    "key_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9:_@.-]{0,127}$",
+      "type": "string"
+    },
+    "noncritical_extensions": {
+      "$ref": "#/$defs/extensionArrayNoncritical"
+    },
+    "protocol_version": {
+      "const": "ESRM-v0.1"
+    },
+    "signature": {
+      "$ref": "#/$defs/b64uEd25519Sig"
+    },
+    "signed_artifact_domain": {
+      "enum": [
+        "PROOFRAIL:TRANSITION:V1",
+        "PROOFRAIL:SIGNATURE:V1"
+      ],
+      "type": "string"
+    },
+    "signed_artifact_type": {
+      "enum": [
+        "proofrail.transition",
+        "proofrail.signature"
+      ],
+      "type": "string"
+    },
+    "signed_commitment": {
+      "$ref": "#/$defs/hex64"
+    },
+    "signer_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9:_@.-]{0,127}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "artifact_type",
+    "protocol_version",
+    "crypto_suite",
+    "signed_artifact_type",
+    "signed_artifact_domain",
+    "signed_commitment",
+    "signer_id",
+    "key_id",
+    "critical_extensions",
+    "noncritical_extensions",
+    "signature"
+  ],
+  "title": "proofrail.signature ESRM v0.1 attestation envelope",
+  "type": "object"
+}

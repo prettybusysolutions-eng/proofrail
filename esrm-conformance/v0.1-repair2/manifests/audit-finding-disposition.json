@@ -1,0 +1,65 @@
+{
+  "findings": [
+    {
+      "disposition": "Protocol Sections 22-40 and harness requirements are now separate; Section 22 title restored.",
+      "finding": "authoritative ESRM numbering replaced",
+      "id": "AUD-001",
+      "status": "CORRECTED_IN_REPAIR_2"
+    },
+    {
+      "disposition": "Subject schemas contain no raw_sha256 or canonical_sha256.",
+      "finding": "recursive raw/canonical hashes",
+      "id": "AUD-002",
+      "status": "CORRECTED_IN_REPAIR_2"
+    },
+    {
+      "disposition": "C_x = SHA256(ASCII(RegisteredDomain(artifact_type)) || 0x00 || B_x) is normative.",
+      "finding": "domain commitment formula absent",
+      "id": "AUD-003",
+      "status": "CORRECTED_IN_REPAIR_2"
+    },
+    {
+      "disposition": "Transition schema restores supplied canonical package fields.",
+      "finding": "transition schema semantically replaced",
+      "id": "AUD-004",
+      "status": "CORRECTED_IN_REPAIR_2"
+    },
+    {
+      "disposition": "Signature schema restores E_tau plus signature; public key omitted.",
+      "finding": "signature envelope semantically replaced",
+      "id": "AUD-005",
+      "status": "CORRECTED_IN_REPAIR_2"
+    },
+    {
+      "disposition": "Uppercase domains restored.",
+      "finding": "registered domains changed",
+      "id": "AUD-006",
+      "status": "CORRECTED_IN_REPAIR_2"
+    },
+    {
+      "disposition": "Mandatory header fields required in both governed schemas.",
+      "finding": "mandatory headers incomplete",
+      "id": "AUD-007",
+      "status": "CORRECTED_IN_REPAIR_2"
+    },
+    {
+      "disposition": "Artifact is renamed binary-vector-plan.json and does not claim populated vectors.",
+      "finding": "binary manifest contains no binary vectors",
+      "id": "AUD-008",
+      "status": "CORRECTED_IN_REPAIR_2"
+    },
+    {
+      "disposition": "Generation and validation scripts are committed.",
+      "finding": "reproduction script absent",
+      "id": "AUD-009",
+      "status": "CORRECTED_IN_REPAIR_2"
+    },
+    {
+      "disposition": "file_hash_manifest_sha256 and release_root_record_sha256 are distinct.",
+      "finding": "release-root hash mislabeled",
+      "id": "AUD-010",
+      "status": "CORRECTED_IN_REPAIR_2"
+    }
+  ],
+  "schema_version": "0.1-repair2"
+}

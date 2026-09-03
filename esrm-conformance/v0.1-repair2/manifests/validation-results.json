@@ -1,0 +1,15 @@
+{
+  "harness_mapped_count": 58,
+  "harness_requirement_count": 58,
+  "hash_manifest_verification": "PASS",
+  "hash_values_recorded_in": "manifests/release-root.json",
+  "json_parse": "PASS",
+  "no_claim_of_conformance": true,
+  "protocol_mapped_count": 115,
+  "protocol_requirement_count": 115,
+  "registry_consistency": "PASS",
+  "requirement_coverage": "PASS",
+  "schema_instance_validation": "PASS",
+  "schema_meta_validation": "PASS_STDLIB_STRUCTURAL_DRAFT_2020_12_CHECKS",
+  "schema_version": "0.1-repair2"
+}

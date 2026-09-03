@@ -1,0 +1,23 @@
+{
+  "records": [
+    {
+      "disposition": "Repair 1 preserved as failed evidence; Repair 2 created without rewriting commit d405ca4dd5e0a766bbb1e9c1280742c51ebd3bd3.",
+      "id": "AMB-005",
+      "status": "AUDIT_COMPLETED_FAILED",
+      "title": "Repair 1 failed independent audit"
+    },
+    {
+      "disposition": "Known supplied protocol shape and audit corrections are preserved; any missing supplied sentence remains an audit blocker until independently confirmed.",
+      "id": "AMB-006",
+      "status": "OPEN",
+      "title": "Full supplied Sections 22-40 source text not present as an external verbatim file"
+    },
+    {
+      "disposition": "Canonical transition schema has no lifecycle-state field. No vocabulary invented.",
+      "id": "AMB-004",
+      "status": "DEFERRED_OUT_OF_SCOPE",
+      "title": "Transition lifecycle-state vocabulary"
+    }
+  ],
+  "schema_version": "0.1-repair2"
+}
