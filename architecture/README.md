@@ -47,9 +47,12 @@ ESRM is the durable interoperability asset. ProofRail Runtime is the first imple
 ## Documents
 
 - `SETTLEMENT_KERNEL_INVARIANTS.md` — non-negotiable invariants and epistemic roles.
-- `SYSTEM_ARCHITECTURE_V1.md` — components, planes, data flow, interfaces, deployment topology, and scaling model.
+- `SYSTEM_ARCHITECTURE_V1.md` — components, planes, data flow, interfaces, deployment topology, scaling, and CRL/TMM/SSCE/OpenClaw integration.
 - `CLEARING_NETWORK_AND_ECONOMICS.md` — cross-trust-domain settlement, transparency, adoption flywheel, and monetization architecture.
 - `VALIDATION_AND_BUILD_GATES.md` — evidence-gated implementation sequence and failure criteria.
+- `LEGACY_CONFLICT_REGISTER.md` — non-destructive register of older ProofRail semantics that differ from Repair 4 and require explicit migration.
+- `SOURCE_TRACEABILITY.md` — section-by-section mapping from Repair 4 to architecture invariants, test families, and migration conflicts.
+- `ESRM_ARTIFACT_INDEX.json` — machine-readable, explicitly non-normative index of registered domains, reconciliation values, capability classes, dispatch terms, and global safety properties extracted from Repair 4.
 
 ## Design Rule
 
