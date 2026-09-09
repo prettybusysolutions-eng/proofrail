@@ -1,0 +1,112 @@
+{
+  "status": "NON_NORMATIVE_TRACEABILITY_INDEX",
+  "source": "esrm-conformance/v0.1-repair4/docs/ESRM_PROTOCOL_SECTIONS_22_40_SOURCE_LOCKED_ASCII.md",
+  "source_protocol_version": "0.1",
+  "purpose": "Machine-readable index of Repair 4 registered domains and architectural roles. This file does not define new ESRM wire semantics.",
+  "registered_domains": [
+    {"name": "PROOFRAIL:STATE:V1", "role": "state", "source_sections": [24, 40]},
+    {"name": "PROOFRAIL:RULESET:V1", "role": "ruleset", "source_sections": [24, 30]},
+    {"name": "PROOFRAIL:AUTHORITY:V1", "role": "authority", "source_sections": [24, 30, 33]},
+    {"name": "PROOFRAIL:ADMISSION:V1", "role": "admission", "source_sections": [24, 30, 40]},
+    {"name": "PROOFRAIL:CONSUMPTION:V1", "role": "consumption", "source_sections": [24, 30, 33, 40]},
+    {"name": "PROOFRAIL:TRANSITION:V1", "role": "transition", "source_sections": [23, 24, 25, 30]},
+    {"name": "PROOFRAIL:DISPATCH-INTENT:V1", "role": "dispatch_intent", "source_sections": [24, 30, 35]},
+    {"name": "PROOFRAIL:DISPATCH-CROSSING:V1", "role": "dispatch_crossing", "source_sections": [24, 30, 36]},
+    {"name": "PROOFRAIL:OBSERVATION:V1", "role": "observation", "source_sections": [24, 30, 31, 32, 40]},
+    {"name": "PROOFRAIL:RECONCILIATION:V1", "role": "reconciliation", "source_sections": [24, 30, 31, 40]},
+    {"name": "PROOFRAIL:SETTLEMENT:V1", "role": "settlement", "source_sections": [24, 30, 40]},
+    {"name": "PROOFRAIL:RECOVERY:V1", "role": "recovery", "source_sections": [24, 30, 38]},
+    {"name": "PROOFRAIL:REVOCATION:V1", "role": "revocation", "source_sections": [24, 30]},
+    {"name": "PROOFRAIL:KEY-STATUS:V1", "role": "key_status", "source_sections": [24, 25, 30]},
+    {"name": "PROOFRAIL:SIGNATURE:V1", "role": "signature", "source_sections": [24, 25, 30]}
+  ],
+  "reconciliation_algebra": {
+    "values": ["MATCH", "DIVERGED", "INSUFFICIENT", "UNRESOLVED"],
+    "source_sections": [31, 40],
+    "notes": "Mutually exclusive ESRM reconciliation meanings; this index does not add wire encoding."
+  },
+  "target_capability_classes": {
+    "values": [
+      "ATOMIC_PARTICIPANT",
+      "DURABLE_IDEMPOTENCY",
+      "CONDITIONAL_MUTATION",
+      "QUERYABLE_EFFECT",
+      "OBSERVABLE_ONLY",
+      "OPAQUE_TARGET"
+    ],
+    "source_sections": [37, 38],
+    "notes": "Recovery class must be supported by committed target-capability evidence and cannot be acquired by adapter self-declaration."
+  },
+  "dispatch_lifecycle_terms": {
+    "values": [
+      "UNDISPATCHED",
+      "DISPATCH_INTENT_RECORDED",
+      "AUTHORITY_CONSUMED",
+      "CROSSING_POSSIBLE",
+      "DISPATCH_ACKNOWLEDGED",
+      "EFFECT_CONFIRMED",
+      "EFFECT_REJECTED",
+      "EFFECT_UNRESOLVED"
+    ],
+    "source_sections": [34, 35, 36],
+    "notes": "Lifecycle terminology extracted for architecture/test traceability; this file does not define a replacement state-machine schema."
+  },
+  "global_safety_properties": [
+    {
+      "id": "IDX-SAFE-001",
+      "statement": "Cryptographic validity is not authority validity and authority validity is not empirical validity.",
+      "source_sections": [22, 40]
+    },
+    {
+      "id": "IDX-SAFE-002",
+      "statement": "Consumed authority remains consumed even when the external effect did not occur or cannot be established.",
+      "source_sections": [33, 34, 40]
+    },
+    {
+      "id": "IDX-SAFE-003",
+      "statement": "Unknown external effect status must not be converted by inference into success, failure, or restored authority.",
+      "source_sections": [34, 36, 40]
+    },
+    {
+      "id": "IDX-SAFE-004",
+      "statement": "Automatic same-effect retransmission requires verified durable idempotency for the same effect identity and canonical payload; otherwise recovery requires a new transition/new authority or remains unresolved.",
+      "source_sections": [37, 38, 39, 40]
+    },
+    {
+      "id": "IDX-SAFE-005",
+      "statement": "Absence of observed evidence does not establish evidence of absence without authoritative closed-world coverage.",
+      "source_sections": [32]
+    },
+    {
+      "id": "IDX-SAFE-006",
+      "statement": "Settlement requires independently distinguishable committed evidence roles and may not be established by executor claim alone.",
+      "source_sections": [31, 39, 40]
+    }
+  ],
+  "non_normative_role_classes": [
+    {
+      "name": "SPECULATIVE",
+      "architecture_only": true,
+      "basis": "Repair 4 preserves SPECULATIVE != EMPIRICAL != ADJUDICATED in section 40; this architecture label groups proposal/derived material without creating new wire semantics."
+    },
+    {
+      "name": "EMPIRICAL",
+      "architecture_only": true,
+      "basis": "Repair 4 section 40 distinguishes empirical validity and section 31 says reconciliation conclusions are adjudicated, not empirical evidence."
+    },
+    {
+      "name": "ADJUDICATED",
+      "architecture_only": true,
+      "basis": "Repair 4 section 31 assigns reconciliation conclusions to the ADJUDICATED domain."
+    },
+    {
+      "name": "SETTLED",
+      "architecture_only": true,
+      "basis": "Repair 4 section 40 defines the evidence conditions required for SETTLED(tau)."
+    }
+  ],
+  "change_control": {
+    "normative": false,
+    "rule": "Any future field, schema, domain, artifact type, or invariant not frozen in Repair 4 must be classified as an implementation requirement, deployment profile requirement, commercial product requirement, or proposed future ESRM extension before use."
+  }
+}
