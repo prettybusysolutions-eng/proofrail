@@ -48,10 +48,28 @@ def main():
             require(rid.startswith(f"ESRM-R{section}-"),
                     f"{rid}: ID/section mismatch", failures)
 
+    # These rule IDs are the minimum explicit obligations added after the
+    # internal fidelity red-team. Their presence does not prove semantic
+    # correctness; it prevents later edits from silently dropping known
+    # source obligations before independent review.
+    required_rule_ids = {
+        "ESRM-R23-003", "ESRM-R24-003", "ESRM-R26-004", "ESRM-R28-003",
+        "ESRM-R29-003", "ESRM-R30-003", "ESRM-R30-004", "ESRM-R31-004",
+        "ESRM-R32-002", "ESRM-R33-003", "ESRM-R33-004", "ESRM-R34-003",
+        "ESRM-R34-004", "ESRM-R35-002", "ESRM-R36-002", "ESRM-R37-003",
+        "ESRM-R37-004", "ESRM-R37-005", "ESRM-R37-006", "ESRM-R38-003",
+        "ESRM-R39-003", "ESRM-R40-005"
+    }
+    missing_rule_ids = sorted(required_rule_ids.difference(ids))
+    require(not missing_rule_ids,
+            f"known source obligations missing from rule registry: {missing_rule_ids}", failures)
+
     domains = roles_doc.get("registered_domains", [])
     domain_names = [d.get("domain") for d in domains]
-    require(len(domain_names) == 15, f"expected 15 registered domains, got {len(domain_names)}", failures)
-    require(len(domain_names) == len(set(domain_names)), "duplicate registered domains", failures)
+    require(len(domain_names) == 15,
+            f"expected 15 registered domains, got {len(domain_names)}", failures)
+    require(len(domain_names) == len(set(domain_names)),
+            "duplicate registered domains", failures)
 
     required_settlement_roles = {
         "STATE", "DERIVATION", "AUTHORITY", "ADMISSION", "CONSUMPTION",
@@ -63,10 +81,15 @@ def main():
 
     families = corpus_doc.get("families", [])
     family_ids = [f.get("id") for f in families]
-    require(len(family_ids) == len(set(family_ids)), "duplicate corpus family IDs", failures)
+    require(len(family_ids) == len(set(family_ids)),
+            "duplicate corpus family IDs", failures)
+
     corpus_sections = set()
+    by_name = {}
     for family in families:
         fid = family.get("id", "<missing>")
+        name = family.get("name")
+        by_name[name] = family
         src = family.get("source_sections", [])
         corpus_sections.update(src)
         require(family.get("must_cover"), f"{fid}: empty must_cover", failures)
@@ -77,21 +100,30 @@ def main():
     require(corpus_sections == expected_sections,
             f"corpus source coverage mismatch: got {sorted(corpus_sections)}", failures)
 
-    four_way = next((f for f in families if f.get("name") == "four-way-reconciliation"), None)
-    require(four_way is not None, "missing four-way-reconciliation family", failures)
-    if four_way:
-        cover = set(four_way.get("must_cover", []))
-        require({"match", "diverged", "insufficient-window-open", "unresolved-window-closed"}.issubset(cover),
-                "four-way reconciliation coverage incomplete", failures)
+    required_family_tokens = {
+        "raw-byte-framing": {"exactly-one-top-level-object", "reject-top-level-array-or-scalar"},
+        "numeric-lexical-profile": {"special-quantities-use-profiled-strings"},
+        "timestamp-profile": {"distinct-timestamp-roles", "temporal-validity-requires-committed-clock-policy"},
+        "mandatory-header-and-extensions": {"preserve-array-order-unless-explicit-sorted-set", "all-extension-material-committed"},
+        "domain-separated-commitment": {"domain-ascii-0x21-through-0x7e", "reject-nul-inside-domain", "domain-version-specific", "reject-dynamic-domain-construction"},
+        "four-way-reconciliation": {"match", "diverged", "insufficient-window-open", "unresolved-window-closed", "reconciliation-is-adjudicated-not-empirical"},
+        "closed-world-absence": {"coverage-evidence-retained", "coverage-evidence-committed"},
+        "irreversible-consumption": {"reservation-cancel-before-consumption", "reject-reservation-cancel-after-consumption", "reject-reused-transition-id"},
+        "crash-safe-dispatch-boundary": {"dispatch-lifecycle-distinct-states", "dispatch-intent-required-fields", "dispatch-crossing-required-fields", "crossing-recorded-immediately-before-dispatch"},
+        "target-capability-evidence": {"capability-evidence-bound-to-transition-time", "reject-post-crash-reclassification", "queryable-negative-proves-noneffect-only-if-evidence-says-so", "observable-only-ambiguous-dispatch-forbids-auto-retry", "opaque-target-ambiguous-dispatch-forbids-auto-retry"},
+        "recovery-function": {"durable-idempotency-same-effect-retransmission", "otherwise-unresolved", "noneffect-never-restores-original-authority"},
+        "transport-attempt-versus-semantic-effect": {"attempt-record-distinct-from-transition-observation-reconciliation-settlement"},
+        "global-safety-properties": {"byte-level-boundary-order-preserved", "external-execution-boundary-order-preserved"}
+    }
 
-    recovery = next((f for f in families if f.get("name") == "recovery-function"), None)
-    require(recovery is not None, "missing recovery-function family", failures)
-    if recovery:
-        cover = set(recovery.get("must_cover", []))
-        require("durable-idempotency-same-effect-retransmission" in cover,
-                "recovery missing durable-idempotency retransmission branch", failures)
-        require("otherwise-unresolved" in cover,
-                "recovery missing unresolved fallback", failures)
+    for family_name, tokens in required_family_tokens.items():
+        family = by_name.get(family_name)
+        require(family is not None, f"missing corpus family {family_name}", failures)
+        if family:
+            cover = set(family.get("must_cover", []))
+            missing = sorted(tokens.difference(cover))
+            require(not missing,
+                    f"{family_name}: missing required coverage {missing}", failures)
 
     vector_policy = corpus_doc.get("vector_policy", {})
     require(vector_policy.get("binary_vectors_present") is False,
@@ -117,7 +149,10 @@ def main():
         return 1
 
     print("GATE1_STRUCTURE: PASS")
-    print(f"rules={len(rules)} sections={min(rule_sections)}-{max(rule_sections)} corpus_families={len(families)} domains={len(domain_names)}")
+    print(
+        f"rules={len(rules)} sections={min(rule_sections)}-{max(rule_sections)} "
+        f"corpus_families={len(families)} domains={len(domain_names)}"
+    )
     return 0
 
 
