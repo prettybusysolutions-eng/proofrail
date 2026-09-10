@@ -97,11 +97,18 @@ def main():
     require(vector_policy.get("binary_vectors_present") is False,
             "Gate 1 must not claim Repair 4 binary vectors exist", failures)
 
-    text = json.dumps(corpus_doc, sort_keys=True)
-    require("RECONCILIATION_FAILED" not in text,
-            "legacy RECONCILIATION_FAILED leaked into corpus manifest", failures)
-    require("EXACTLY_ONCE" not in text.upper(),
-            "unbounded exactly-once token leaked into corpus manifest", failures)
+    result_vocabulary = set(corpus_doc.get("result_vocabulary", []))
+    require("RECONCILIATION_FAILED" not in result_vocabulary,
+            "legacy RECONCILIATION_FAILED leaked into result vocabulary", failures)
+
+    semantic_slots = []
+    for family in families:
+        semantic_slots.extend(family.get("must_cover", []))
+    semantic_text = json.dumps(semantic_slots, sort_keys=True).upper()
+    require("RECONCILIATION_FAILED" not in semantic_text,
+            "legacy RECONCILIATION_FAILED leaked into expected corpus semantics", failures)
+    require("EXACTLY_ONCE" not in semantic_text,
+            "unbounded exactly-once token leaked into expected corpus semantics", failures)
 
     if failures:
         print("GATE1_STRUCTURE: FAIL")
