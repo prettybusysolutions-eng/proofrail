@@ -14,6 +14,17 @@ This directory converts Repair 4 semantics into traceable implementation inputs 
 - `conformance-corpus-manifest.json` — deterministic positive/negative/ambiguity corpus families required before verifier implementation claims.
 - `INDEPENDENT_IMPLEMENTATION_CONTRACT.md` — separation rules for future Rust and Go verifier tracks.
 - `LEGACY_ISOLATION.md` — legacy semantics explicitly forbidden from entering the Gate 1 corpus.
+- `tools/validate_gate1.py` — standard-library structural validator for registry/corpus coverage and selected legacy leakage.
+
+## Structural validation
+
+Run:
+
+```bash
+python3 gate1/tools/validate_gate1.py
+```
+
+A structural PASS means only that the derived package satisfies its machine-checkable Gate 1 shape and coverage assertions. It is not protocol conformance or independent semantic review.
 
 ## Gate discipline
 
