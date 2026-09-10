@@ -1,0 +1,26 @@
+name: Gate 1 Structure
+
+on:
+  push:
+    branches:
+      - esrm-gate1-source-extraction-v1
+  pull_request:
+    paths:
+      - 'gate1/**'
+      - '.github/workflows/gate1-structure.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-gate1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate Gate 1 source extraction
+        run: python gate1/tools/validate_gate1.py
