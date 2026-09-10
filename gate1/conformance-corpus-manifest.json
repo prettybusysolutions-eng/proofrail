@@ -1,0 +1,53 @@
+{
+  "manifest_version": "0.1-gate1",
+  "status": "DESIGN_ONLY_NO_CONFORMANCE_CLAIM",
+  "authoritative_source": "esrm-conformance/v0.1-repair4/docs/ESRM_PROTOCOL_SECTIONS_22_40_SOURCE_LOCKED_ASCII.md",
+  "case_classes": ["POSITIVE", "NEGATIVE", "AMBIGUITY", "CLAIM_BOUNDARY"],
+  "result_vocabulary": [
+    "ACCEPT",
+    "REJECT",
+    "ATTESTED_NOT_AUTHORIZED",
+    "MATCH",
+    "DIVERGED",
+    "INSUFFICIENT",
+    "UNRESOLVED",
+    "UNKNOWN_EFFECT",
+    "NEW_TRANSITION_REQUIRED",
+    "SAME_EFFECT_RETRANSMISSION_PERMITTED",
+    "NOT_SETTLED",
+    "CLAIM_REJECTED"
+  ],
+  "families": [
+    {"id":"C01","name":"raw-byte-framing","source_sections":[26],"classes":["POSITIVE","NEGATIVE"],"must_cover":["exactly-one-top-level-object","reject-leading-trailing-whitespace","reject-bom","reject-comments","reject-trailing-comma","reject-multiple-top-level-values","reject-invalid-utf8"]},
+    {"id":"C02","name":"duplicate-property-detection","source_sections":[26],"classes":["POSITIVE","NEGATIVE"],"must_cover":["literal-duplicate","escaped-name-equivalence-duplicate","detection-before-map-conversion"]},
+    {"id":"C03","name":"unicode-profile","source_sections":[27],"classes":["POSITIVE","NEGATIVE"],"must_cover":["no-normalization","precomposed-vs-decomposed-distinct","utf16-jcs-order","reject-lone-surrogate"]},
+    {"id":"C04","name":"numeric-lexical-profile","source_sections":[28],"classes":["POSITIVE","NEGATIVE"],"must_cover":["zero","max-safe-integer","reject-negative","reject-negative-zero","reject-leading-plus","reject-leading-zero","reject-decimal","reject-exponent","reject-over-2pow53-minus1","validate-original-token"]},
+    {"id":"C05","name":"timestamp-profile","source_sections":[29],"classes":["POSITIVE","NEGATIVE"],"must_cover":["canonical-utc-second","reject-offset","reject-fraction","reject-lowercase-t-z","reject-invalid-month","reject-invalid-day","reject-invalid-hour-minute-second","reject-leap-second-60","leap-year-calendar-check"]},
+    {"id":"C06","name":"mandatory-header-and-extensions","source_sections":[30],"classes":["POSITIVE","NEGATIVE"],"must_cover":["required-header","protocol-version","crypto-suite","critical-extensions-empty","noncritical-extensions-empty","reject-unknown-critical-extension"]},
+    {"id":"C07","name":"domain-separated-commitment","source_sections":[23,24],"classes":["POSITIVE","NEGATIVE"],"must_cover":["registered-domain","nul-separator","rfc8785-canonical-bytes","lowercase-hex64","reject-uppercase-digest","reject-prefix","reject-whitespace","reject-unknown-domain","reject-artifact-selected-domain"]},
+    {"id":"C08","name":"signature-envelope-and-base64url","source_sections":[25],"classes":["POSITIVE","NEGATIVE"],"must_cover":["remove-only-signature-member-after-schema","reject-extra-top-level-member","reject-external-context-reconstruction","unpadded-base64url","reject-padding","reject-alt-alphabet","reject-whitespace","decode-reencode-equality","signature-64-bytes","future-public-key-32-bytes"]},
+    {"id":"C09","name":"signature-versus-authority","source_sections":[22,25],"classes":["POSITIVE","NEGATIVE"],"must_cover":["valid-signature-valid-authority","valid-signature-invalid-key-status","valid-signature-invalid-lineage","valid-signature-out-of-scope","valid-signature-invalid-state","result-attested-not-authorized"]},
+    {"id":"C10","name":"four-way-reconciliation","source_sections":[31],"classes":["POSITIVE","NEGATIVE","AMBIGUITY"],"must_cover":["match","diverged","insufficient-window-open","unresolved-window-closed","timeout-does-not-imply-diverged","later-evidence-creates-new-reconciliation"]},
+    {"id":"C11","name":"closed-world-absence","source_sections":[32],"classes":["POSITIVE","NEGATIVE","AMBIGUITY"],"must_cover":["absence-with-authoritative-coverage","silence-without-closed-world-coverage","deadline-alone-does-not-prove-absence","coverage-evidence-committed"]},
+    {"id":"C12","name":"irreversible-consumption","source_sections":[33],"classes":["POSITIVE","NEGATIVE"],"must_cover":["consumption-append-only","rejection-after-consumption-does-not-restore","noneffect-does-not-restore","crash-does-not-restore","timeout-does-not-restore","regrant-uses-distinct-authority","reject-reused-nonce"]},
+    {"id":"C13","name":"crash-safe-dispatch-boundary","source_sections":[34,35,36],"classes":["POSITIVE","NEGATIVE","AMBIGUITY"],"must_cover":["intent-before-crossing","consumption-before-crossing","crossing-before-effect-capable-dispatch","crash-before-crossing","crash-after-crossing-before-send","crash-after-send-before-response","crossing-without-external-evidence-is-unknown-effect","no-automatic-authority-restoration"]},
+    {"id":"C14","name":"target-capability-evidence","source_sections":[37],"classes":["POSITIVE","NEGATIVE"],"must_cover":["atomic-participant","durable-idempotency","conditional-mutation","queryable-effect","observable-only","opaque-target","reject-self-declared-class","same-effect-plus-same-payload-implies-at-most-one-semantic-effect"]},
+    {"id":"C15","name":"recovery-function","source_sections":[38],"classes":["POSITIVE","NEGATIVE","AMBIGUITY"],"must_cover":["occurred-observe-as-match","proven-noneffect-new-transition","durable-idempotency-same-effect-retransmission","otherwise-unresolved","mutated-retransmission-requires-new-transition","observable-only-ambiguous-dispatch-forbids-auto-retry","opaque-target-ambiguous-dispatch-forbids-auto-retry"]},
+    {"id":"C16","name":"transport-attempt-versus-semantic-effect","source_sections":[39],"classes":["POSITIVE","NEGATIVE"],"must_cover":["attempt-ids-distinct","same-effect-identity-only-with-dedup-evidence","new-attempt-potential-new-effect-without-dedup","transport-ack-not-semantic-effect","executor-response-not-independent-observation"]},
+    {"id":"C17","name":"global-safety-properties","source_sections":[40],"classes":["POSITIVE","NEGATIVE","AMBIGUITY","CLAIM_BOUNDARY"],"must_cover":["no-universal-exactly-once-claim","unknown-effect-not-settled","unknown-effect-not-failed-by-inference","unknown-effect-authority-consumed","retry-requires-durable-idempotency-or-new-transition","crypto-authority-empirical-validity-distinct","speculative-empirical-adjudicated-distinct","settlement-role-chain-complete"]}
+  ],
+  "cross_family_invariants": [
+    "No accepted case may rely on a legacy RECONCILIATION_FAILED value as the ESRM reconciliation algebra.",
+    "No accepted case may treat idempotency_required=true as evidence of durable idempotency.",
+    "No accepted case may use generic JSON Schema date-time acceptance as sufficient timestamp conformance.",
+    "No accepted case may infer semantic effect from executor response or transport acknowledgement alone.",
+    "No recovery case may make a consumed authority unconsumed.",
+    "Every AMBIGUITY case after CROSSING_POSSIBLE without conclusive evidence must preserve UNKNOWN_EFFECT/UNRESOLVED semantics.",
+    "Expected results must be implementation-independent and shared identically by future Rust and Go verifier tracks."
+  ],
+  "vector_policy": {
+    "binary_vectors_present": false,
+    "reason": "Repair 4 explicitly prohibited vector generation; Gate 1 defines families and expected-result contracts only. Concrete audited vectors belong to a later branch after review.",
+    "future_vector_requirements": ["immutable-input-bytes","case-id","source-rule-ids","expected-stage","expected-result","expected-reason-code-if-frozen","content-hash"]
+  }
+}
