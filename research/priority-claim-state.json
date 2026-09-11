@@ -7,44 +7,83 @@
     "june_14_2026_public_priority_anchor": "VERIFIED",
     "broad_world_first": "REJECTED",
     "first_pre_execution_governance": "REJECTED",
+    "first_execution_rail": "REJECTED",
     "first_single_use_agent_authorization": "REJECTED",
     "first_exact_action_binding": "REJECTED",
     "first_post_execution_verification": "REJECTED",
-    "first_permit_plus_closure_architecture": "REJECTED",
-    "narrow_irreversible_consumption_ambiguity_composition_priority": "UNRESOLVED",
+    "first_permit_plus_execution_receipt": "REJECTED",
+    "first_permit_plus_signed_closure_architecture": "REJECTED",
+    "narrow_consume_observe_ambiguity_composition_priority": "UNRESOLVED",
     "patentability_or_legal_priority": "NOT_ESTABLISHED"
   },
   "proofrail_anchors": {
     "earliest_dated_outreach_local_date": "2026-06-09",
     "single_use_consumption_provider_verification_outreach_date": "2026-06-12",
+    "june_12_referenced_frozen_commit": "02097bc798817f96b06aef9116a20ebe710096a5",
+    "june_12_frozen_commit_repository_recovery": "NOT_RECOVERED_FROM_CONNECTED_GITHUB",
     "public_root_commit_date": "2026-06-14",
     "public_root_commit": "f127dea9df95850f27356e5b68f49d2bb4a55b5f"
   },
-  "strongest_pre_public_root_overlap_found": {
-    "name": "Keel Permit",
-    "initial_public_spec_date": "2026-05-10",
-    "initial_public_commit": "824e414bd242115fee886d7c98aee4d1fa8c9d1f",
-    "overlap": [
-      "pre_execution_permit",
-      "exact_dispatch_request_binding",
-      "idempotency_key",
-      "signed_closure_record",
-      "provider_response_digest",
-      "client_response_digest",
-      "timeout_and_dispatch_error_closure_states",
-      "missing_closure_reconciliation_state"
-    ],
-    "not_yet_established_in_historical_material_reviewed": [
-      "atomic_irreversible_authority_consumption_before_side_effect",
-      "consumed_authority_never_restored_after_ambiguous_effect",
-      "same_authority_non_retry_after_ambiguous_provider_outcome"
-    ]
-  },
+  "material_pre_public_root_predecessors": [
+    {
+      "name": "IntentChain",
+      "documented_date": "2026-04-14_to_2026-04-20",
+      "overlap": [
+        "exclusive_execution_rail",
+        "deterministic_pre_execution_policy",
+        "ed25519_signed_permit",
+        "exact_action_target_payload_binding",
+        "single_use_permit_consumption",
+        "replay_rejection",
+        "gateway_verification_before_forwarding",
+        "forward_time_credential_retrieval",
+        "exact_forwarding",
+        "structured_execution_receipt"
+      ],
+      "not_yet_established_in_historical_material_reviewed": [
+        "atomic_irreversible_authority_consumption_before_side_effect",
+        "external_observation_required_before_accepted_success",
+        "consumed_authority_never_restored_after_ambiguous_effect",
+        "same_authority_non_retry_after_ambiguous_provider_outcome"
+      ]
+    },
+    {
+      "name": "Keel Permit",
+      "initial_public_spec_date": "2026-05-10",
+      "initial_public_commit": "824e414bd242115fee886d7c98aee4d1fa8c9d1f",
+      "overlap": [
+        "pre_execution_permit",
+        "exact_dispatch_request_binding",
+        "idempotency_key",
+        "signed_closure_record",
+        "provider_response_digest",
+        "client_response_digest",
+        "timeout_and_dispatch_error_closure_states",
+        "missing_closure_reconciliation_state"
+      ],
+      "not_yet_established_in_historical_material_reviewed": [
+        "atomic_irreversible_authority_consumption_before_side_effect",
+        "consumed_authority_never_restored_after_ambiguous_effect",
+        "same_authority_non_retry_after_ambiguous_provider_outcome"
+      ]
+    }
+  ],
+  "non_ai_conceptual_precursors": [
+    {
+      "name": "payment_order_management_authorization_consumption",
+      "example": "IBM Sterling Order Management",
+      "relevance": "consumed payment authorization may remain non-reusable after failed downstream charge; uncertain gateway state can be retained for later validation",
+      "date_priority": "NOT_ESTABLISHED_IN_THIS_RECONSTRUCTION"
+    }
+  ],
   "prohibited_current_claims": [
     "PROOFRAIL_WAS_FIRST_AI_AUTHORIZATION_SYSTEM",
+    "PROOFRAIL_INVENTED_EXECUTION_RAILS",
     "PROOFRAIL_INVENTED_SINGLE_USE_AGENT_PERMITS",
     "PROOFRAIL_INVENTED_PRE_EXECUTION_GOVERNANCE",
+    "PROOFRAIL_INVENTED_EXACT_ACTION_BINDING",
     "PROOFRAIL_INVENTED_POST_EXECUTION_VERIFICATION",
+    "PROOFRAIL_INVENTED_PERMIT_PLUS_RECEIPT_OR_CLOSURE",
     "PROOFRAIL_PROVEN_WORLD_FIRST_FULL_ARCHITECTURE"
   ],
   "next_search_families": [
