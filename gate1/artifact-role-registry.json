@@ -1,0 +1,52 @@
+{
+  "registry_version": "0.2-gate1",
+  "status": "NON_NORMATIVE_DERIVATION",
+  "authoritative_source_sections": [24, 30, 31, 35, 36, 39, 40],
+  "registered_domains": [
+    {"artifact_role":"STATE","domain":"PROOFRAIL:STATE:V1"},
+    {"artifact_role":"RULESET","domain":"PROOFRAIL:RULESET:V1"},
+    {"artifact_role":"AUTHORITY","domain":"PROOFRAIL:AUTHORITY:V1"},
+    {"artifact_role":"ADMISSION","domain":"PROOFRAIL:ADMISSION:V1"},
+    {"artifact_role":"CONSUMPTION","domain":"PROOFRAIL:CONSUMPTION:V1"},
+    {"artifact_role":"TRANSITION","domain":"PROOFRAIL:TRANSITION:V1"},
+    {"artifact_role":"DISPATCH_INTENT","domain":"PROOFRAIL:DISPATCH-INTENT:V1"},
+    {"artifact_role":"DISPATCH_CROSSING","domain":"PROOFRAIL:DISPATCH-CROSSING:V1"},
+    {"artifact_role":"OBSERVATION","domain":"PROOFRAIL:OBSERVATION:V1"},
+    {"artifact_role":"RECONCILIATION","domain":"PROOFRAIL:RECONCILIATION:V1"},
+    {"artifact_role":"SETTLEMENT","domain":"PROOFRAIL:SETTLEMENT:V1"},
+    {"artifact_role":"RECOVERY","domain":"PROOFRAIL:RECOVERY:V1"},
+    {"artifact_role":"REVOCATION","domain":"PROOFRAIL:REVOCATION:V1"},
+    {"artifact_role":"KEY_STATUS","domain":"PROOFRAIL:KEY-STATUS:V1"},
+    {"artifact_role":"SIGNATURE","domain":"PROOFRAIL:SIGNATURE:V1"}
+  ],
+  "epistemic_roles": [
+    {"role":"SPECULATIVE","meaning":"Proposal, prediction, plan, inferred intent, or candidate mutation. Cannot establish empirical or adjudicated truth."},
+    {"role":"ATTESTED","meaning":"A cryptographically attributable statement. Does not by itself establish authorization or empirical truth."},
+    {"role":"AUTHORIZED","meaning":"A transition whose authority derivation, key status, scope, state, and protocol predicates validate. Does not establish external effect."},
+    {"role":"EMPIRICAL","meaning":"Evidence produced by an admissible observation source about external state. Does not by itself establish adjudication or settlement."},
+    {"role":"ADJUDICATED","meaning":"A deterministic reconciliation conclusion over committed empirical evidence under a committed policy/window. Is not itself empirical evidence."},
+    {"role":"SETTLED","meaning":"A protocol settlement conclusion requiring independently distinguishable committed state, derivation, authority, admission, consumption, dispatch, observation, reconciliation, and settlement facts. This registry does not add a stronger global-finality meaning beyond Repair 4."}
+  ],
+  "non_impersonation_constraints": [
+    "SIGNATURE cannot impersonate AUTHORITY",
+    "AUTHORITY cannot impersonate EXTERNAL_EFFECT",
+    "DISPATCH_INTENT cannot impersonate TRANSPORT",
+    "DISPATCH_CROSSING cannot impersonate TRANSPORT or SEMANTIC_EFFECT",
+    "EXECUTOR_RESPONSE cannot impersonate OBSERVATION merely by describing an outcome",
+    "OBSERVATION cannot impersonate RECONCILIATION",
+    "RECONCILIATION cannot impersonate EMPIRICAL evidence",
+    "SPECULATIVE output cannot impersonate AUTHORIZED, EMPIRICAL, ADJUDICATED, or SETTLED state"
+  ],
+  "settlement_required_distinguishable_roles": [
+    "STATE",
+    "DERIVATION",
+    "AUTHORITY",
+    "ADMISSION",
+    "CONSUMPTION",
+    "DISPATCH",
+    "OBSERVATION",
+    "RECONCILIATION",
+    "SETTLEMENT"
+  ],
+  "wire_schema_caution": "A registered domain or required distinguishable role does not imply that Repair 4 has frozen a complete standalone wire schema for that role. Gate 1 must not invent missing normative wire schemas."
+}

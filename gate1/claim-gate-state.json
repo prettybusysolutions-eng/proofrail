@@ -1,0 +1,37 @@
+{
+  "policy": "governance/EPISTEMIC_CLAIM_GATE.md",
+  "scope": "ESRM Gate 1 semantic derivation",
+  "authoritative_source_commit": "651f34bb9768dfafd53ede612ef01c9a01bd534d",
+  "candidate_target_commit": "f81f0ca55b065d60e8c8439eb85d6358c608a45b",
+  "claim_state": "INTERNALLY_CHECKED",
+  "known_internal_blockers": [],
+  "known_internal_major_defects": [],
+  "bidirectional_traceability": {
+    "complete": false,
+    "unmapped_source_obligations": ["NOT_YET_ENUMERATED"],
+    "unsupported_or_overreaching_derived_rules": ["NOT_YET_ENUMERATED"]
+  },
+  "independent_semantic_review": {
+    "complete": false,
+    "recommendation": null,
+    "unresolved_blockers": null,
+    "unresolved_major_defects": null
+  },
+  "vectors": {
+    "authorized": false,
+    "present": false
+  },
+  "independent_verifiers": {
+    "authorized": false,
+    "present": false
+  },
+  "next_stage": "BIDIRECTIONAL_TRACEABILITY",
+  "prohibited_current_claims": [
+    "SEMANTICALLY_CORRECT",
+    "INDEPENDENTLY_VALIDATED",
+    "READY_FOR_VECTOR_DESIGN",
+    "CONFORMANT",
+    "PRODUCTION_READY",
+    "FORMALLY_PROVEN"
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/gate1/independent-review-result.schema.json",
+  "title": "ESRM Gate 1 Independent Semantic Review Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reviewer_identity_or_pseudonym",
+    "review_date",
+    "source_commit",
+    "gate1_head_commit",
+    "section_results",
+    "defects",
+    "missing_rules",
+    "overreaching_rules",
+    "ambiguous_source_points",
+    "legacy_leakage_findings",
+    "recommendation"
+  ],
+  "properties": {
+    "reviewer_identity_or_pseudonym": {"type":"string","minLength":1},
+    "review_date": {"type":"string","pattern":"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "source_commit": {"const":"651f34bb9768dfafd53ede612ef01c9a01bd534d"},
+    "gate1_head_commit": {"type":"string","pattern":"^[0-9a-f]{40}$"},
+    "section_results": {
+      "type":"array",
+      "minItems":19,
+      "maxItems":19,
+      "items": {
+        "type":"object",
+        "additionalProperties":false,
+        "required":["section","classification","mapped_rule_ids","notes"],
+        "properties": {
+          "section":{"type":"integer","minimum":22,"maximum":40},
+          "classification":{"enum":["MATCH","PARTIAL","MISSING","OVERREACH"]},
+          "mapped_rule_ids":{"type":"array","items":{"type":"string","pattern":"^ESRM-R[0-9]+-[0-9]{3}$"},"uniqueItems":true},
+          "notes":{"type":"string"}
+        }
+      }
+    },
+    "defects": {
+      "type":"array",
+      "items": {
+        "type":"object",
+        "additionalProperties":false,
+        "required":["id","severity","source_section","description","affected_gate1_artifacts","required_disposition"],
+        "properties": {
+          "id":{"type":"string","minLength":1},
+          "severity":{"enum":["BLOCKER","MAJOR","MINOR","EDITORIAL"]},
+          "source_section":{"type":"integer","minimum":22,"maximum":40},
+          "description":{"type":"string","minLength":1},
+          "affected_gate1_artifacts":{"type":"array","items":{"type":"string","minLength":1},"minItems":1,"uniqueItems":true},
+          "required_disposition":{"type":"string","minLength":1}
+        }
+      }
+    },
+    "missing_rules":{"type":"array","items":{"type":"string"}},
+    "overreaching_rules":{"type":"array","items":{"type":"string"}},
+    "ambiguous_source_points":{"type":"array","items":{"type":"string"}},
+    "legacy_leakage_findings":{"type":"array","items":{"type":"string"}},
+    "recommendation":{"enum":["REJECT","REVISE_AND_REVIEW","READY_FOR_VECTOR_DESIGN"]}
+  }
+}
