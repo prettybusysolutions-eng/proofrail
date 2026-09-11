@@ -1,5 +1,5 @@
 {
-  "registry_version": "0.1-gate1",
+  "registry_version": "0.2-gate1",
   "status": "NON_NORMATIVE_DERIVATION",
   "authoritative_source_sections": [24, 30, 31, 35, 36, 39, 40],
   "registered_domains": [
@@ -25,7 +25,7 @@
     {"role":"AUTHORIZED","meaning":"A transition whose authority derivation, key status, scope, state, and protocol predicates validate. Does not establish external effect."},
     {"role":"EMPIRICAL","meaning":"Evidence produced by an admissible observation source about external state. Does not by itself establish adjudication or settlement."},
     {"role":"ADJUDICATED","meaning":"A deterministic reconciliation conclusion over committed empirical evidence under a committed policy/window. Is not itself empirical evidence."},
-    {"role":"SETTLED","meaning":"A final protocol conclusion justified by independently distinguishable committed state, derivation, authority, admission, consumption, dispatch, observation, reconciliation, and settlement facts."}
+    {"role":"SETTLED","meaning":"A protocol settlement conclusion requiring independently distinguishable committed state, derivation, authority, admission, consumption, dispatch, observation, reconciliation, and settlement facts. This registry does not add a stronger global-finality meaning beyond Repair 4."}
   ],
   "non_impersonation_constraints": [
     "SIGNATURE cannot impersonate AUTHORITY",
