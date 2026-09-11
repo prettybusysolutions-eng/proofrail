@@ -48,21 +48,43 @@ def main():
             require(rid.startswith(f"ESRM-R{section}-"),
                     f"{rid}: ID/section mismatch", failures)
 
-    # These rule IDs are the minimum explicit obligations added after the
-    # internal fidelity red-team. Their presence does not prove semantic
-    # correctness; it prevents later edits from silently dropping known
-    # source obligations before independent review.
     required_rule_ids = {
-        "ESRM-R23-003", "ESRM-R24-003", "ESRM-R26-004", "ESRM-R28-003",
-        "ESRM-R29-003", "ESRM-R30-003", "ESRM-R30-004", "ESRM-R31-004",
-        "ESRM-R32-002", "ESRM-R33-003", "ESRM-R33-004", "ESRM-R34-003",
-        "ESRM-R34-004", "ESRM-R35-002", "ESRM-R36-002", "ESRM-R37-003",
-        "ESRM-R37-004", "ESRM-R37-005", "ESRM-R37-006", "ESRM-R38-003",
-        "ESRM-R39-003", "ESRM-R40-005"
+        "ESRM-R23-003", "ESRM-R24-003", "ESRM-R25-005", "ESRM-R26-004",
+        "ESRM-R28-003", "ESRM-R29-003", "ESRM-R30-003", "ESRM-R30-004",
+        "ESRM-R31-004", "ESRM-R32-002", "ESRM-R33-003", "ESRM-R33-004",
+        "ESRM-R34-003", "ESRM-R34-004", "ESRM-R35-002", "ESRM-R36-002",
+        "ESRM-R37-003", "ESRM-R37-004", "ESRM-R37-005", "ESRM-R37-006",
+        "ESRM-R38-003", "ESRM-R38-004", "ESRM-R39-003", "ESRM-R40-005"
     }
     missing_rule_ids = sorted(required_rule_ids.difference(ids))
     require(not missing_rule_ids,
             f"known source obligations missing from rule registry: {missing_rule_ids}", failures)
+
+    by_rule_id = {r.get("id"): r for r in rules}
+    r22 = by_rule_id.get("ESRM-R22-002", {}).get("concern", "")
+    require("committed temporal/state predicates" not in r22,
+            "Section 22 extraction still strengthens temporal/state predicates to committed predicates", failures)
+    require("temporal/state predicates that hold" in r22,
+            "Section 22 extraction does not preserve temporal/state predicate truth requirement", failures)
+
+    r25 = by_rule_id.get("ESRM-R25-005", {}).get("concern", "")
+    require("PROOFRAIL:SIGNATURE:V1" in r25 and "NUL" in r25 and "JCS(E_tau)" in r25,
+            "Section 25 exact signature-input construction is not explicitly preserved", failures)
+
+    r29 = by_rule_id.get("ESRM-R29-001", {}).get("concern", "")
+    require("no whitespace" in r29,
+            "Section 29 timestamp whitespace prohibition missing", failures)
+
+    r35 = by_rule_id.get("ESRM-R35-002", {}).get("concern", "")
+    require("transition_id" in r35,
+            "Section 35 dispatch-intent transition_id missing", failures)
+
+    r38 = by_rule_id.get("ESRM-R38-004", {}).get("concern", "")
+    for token in ("valid durable crossing artifact D", "valid durable-idempotency evidence K",
+                  "admissible authoritative effect-status evidence Q",
+                  "admissible final non-occurrence evidence F"):
+        require(token in r38,
+                f"Section 38 recovery precondition missing: {token}", failures)
 
     domains = roles_doc.get("registered_domains", [])
     domain_names = [d.get("domain") for d in domains]
@@ -78,6 +100,13 @@ def main():
     actual_settlement_roles = set(roles_doc.get("settlement_required_distinguishable_roles", []))
     require(actual_settlement_roles == required_settlement_roles,
             "settlement distinguishable-role set mismatch", failures)
+
+    epistemic = {r.get("role"): r.get("meaning", "") for r in roles_doc.get("epistemic_roles", [])}
+    settled_meaning = epistemic.get("SETTLED", "")
+    require("final protocol conclusion" not in settled_meaning.lower(),
+            "SETTLED role still imports unsupported global-finality wording", failures)
+    require("global-finality" in settled_meaning,
+            "SETTLED role must explicitly disclaim stronger global-finality semantics", failures)
 
     families = corpus_doc.get("families", [])
     family_ids = [f.get("id") for f in families]
@@ -103,15 +132,16 @@ def main():
     required_family_tokens = {
         "raw-byte-framing": {"exactly-one-top-level-object", "reject-top-level-array-or-scalar"},
         "numeric-lexical-profile": {"special-quantities-use-profiled-strings"},
-        "timestamp-profile": {"distinct-timestamp-roles", "temporal-validity-requires-committed-clock-policy"},
+        "timestamp-profile": {"reject-timestamp-whitespace", "distinct-timestamp-roles", "temporal-validity-requires-committed-clock-policy"},
         "mandatory-header-and-extensions": {"preserve-array-order-unless-explicit-sorted-set", "all-extension-material-committed"},
         "domain-separated-commitment": {"domain-ascii-0x21-through-0x7e", "reject-nul-inside-domain", "domain-version-specific", "reject-dynamic-domain-construction"},
+        "signature-envelope-and-base64url": {"signature-input-domain-prefix-nul-jcs-envelope"},
         "four-way-reconciliation": {"match", "diverged", "insufficient-window-open", "unresolved-window-closed", "reconciliation-is-adjudicated-not-empirical"},
         "closed-world-absence": {"coverage-evidence-retained", "coverage-evidence-committed"},
         "irreversible-consumption": {"reservation-cancel-before-consumption", "reject-reservation-cancel-after-consumption", "reject-reused-transition-id"},
-        "crash-safe-dispatch-boundary": {"dispatch-lifecycle-distinct-states", "dispatch-intent-required-fields", "dispatch-crossing-required-fields", "crossing-recorded-immediately-before-dispatch"},
+        "crash-safe-dispatch-boundary": {"dispatch-lifecycle-distinct-states", "dispatch-intent-transition-id", "dispatch-intent-required-fields", "dispatch-crossing-required-fields", "crossing-recorded-immediately-before-dispatch"},
         "target-capability-evidence": {"capability-evidence-bound-to-transition-time", "reject-post-crash-reclassification", "queryable-negative-proves-noneffect-only-if-evidence-says-so", "observable-only-ambiguous-dispatch-forbids-auto-retry", "opaque-target-ambiguous-dispatch-forbids-auto-retry"},
-        "recovery-function": {"durable-idempotency-same-effect-retransmission", "otherwise-unresolved", "noneffect-never-restores-original-authority"},
+        "recovery-function": {"valid-durable-crossing-artifact-input", "valid-durable-idempotency-evidence-input", "admissible-authoritative-effect-status-evidence", "admissible-final-nonoccurrence-evidence", "durable-idempotency-same-effect-retransmission", "otherwise-unresolved", "noneffect-never-restores-original-authority"},
         "transport-attempt-versus-semantic-effect": {"attempt-record-distinct-from-transition-observation-reconciliation-settlement"},
         "global-safety-properties": {"byte-level-boundary-order-preserved", "external-execution-boundary-order-preserved"}
     }
