@@ -1,0 +1,58 @@
+{
+  "status": "RESEARCH_IN_PROGRESS",
+  "as_of": "2026-09-11",
+  "scope": "technical priority reconstruction",
+  "claims": {
+    "independent_development": "SUPPORTED",
+    "june_14_2026_public_priority_anchor": "VERIFIED",
+    "broad_world_first": "REJECTED",
+    "first_pre_execution_governance": "REJECTED",
+    "first_single_use_agent_authorization": "REJECTED",
+    "first_exact_action_binding": "REJECTED",
+    "first_post_execution_verification": "REJECTED",
+    "first_permit_plus_closure_architecture": "REJECTED",
+    "narrow_irreversible_consumption_ambiguity_composition_priority": "UNRESOLVED",
+    "patentability_or_legal_priority": "NOT_ESTABLISHED"
+  },
+  "proofrail_anchors": {
+    "earliest_dated_outreach_local_date": "2026-06-09",
+    "single_use_consumption_provider_verification_outreach_date": "2026-06-12",
+    "public_root_commit_date": "2026-06-14",
+    "public_root_commit": "f127dea9df95850f27356e5b68f49d2bb4a55b5f"
+  },
+  "strongest_pre_public_root_overlap_found": {
+    "name": "Keel Permit",
+    "initial_public_spec_date": "2026-05-10",
+    "initial_public_commit": "824e414bd242115fee886d7c98aee4d1fa8c9d1f",
+    "overlap": [
+      "pre_execution_permit",
+      "exact_dispatch_request_binding",
+      "idempotency_key",
+      "signed_closure_record",
+      "provider_response_digest",
+      "client_response_digest",
+      "timeout_and_dispatch_error_closure_states",
+      "missing_closure_reconciliation_state"
+    ],
+    "not_yet_established_in_historical_material_reviewed": [
+      "atomic_irreversible_authority_consumption_before_side_effect",
+      "consumed_authority_never_restored_after_ambiguous_effect",
+      "same_authority_non_retry_after_ambiguous_provider_outcome"
+    ]
+  },
+  "prohibited_current_claims": [
+    "PROOFRAIL_WAS_FIRST_AI_AUTHORIZATION_SYSTEM",
+    "PROOFRAIL_INVENTED_SINGLE_USE_AGENT_PERMITS",
+    "PROOFRAIL_INVENTED_PRE_EXECUTION_GOVERNANCE",
+    "PROOFRAIL_INVENTED_POST_EXECUTION_VERIFICATION",
+    "PROOFRAIL_PROVEN_WORLD_FIRST_FULL_ARCHITECTURE"
+  ],
+  "next_search_families": [
+    "payments_and_financial_settlement",
+    "distributed_uncertain_outcome_recovery",
+    "capability_security_one_shot_authority",
+    "pre_june_2026_agent_patents",
+    "cloud_iam_approval_bound_execution",
+    "industrial_control_verified_readback"
+  ]
+}
