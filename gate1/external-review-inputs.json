@@ -1,0 +1,73 @@
+{
+  "status": "HANDOFF_ONLY_GATE_1B_OPEN",
+  "source_commit": "651f34bb9768dfafd53ede612ef01c9a01bd534d",
+  "derivation_commit": "f81f0ca55b065d60e8c8439eb85d6358c608a45b",
+  "reviewer_selected": false,
+  "independence_verified": false,
+  "external_report_received": false,
+  "inputs": [
+    {
+      "commit": "651f34bb9768dfafd53ede612ef01c9a01bd534d",
+      "path": "esrm-conformance/v0.1-repair4/docs/ESRM_PROTOCOL_SECTIONS_22_40_SOURCE_LOCKED_ASCII.md",
+      "role": "authoritative_source",
+      "sha256": "9a5300ecf355095186a1683b12871b2aa7f06ef824db3389c8e4422a62b32cef",
+      "size_bytes": 21895
+    },
+    {
+      "commit": "f81f0ca55b065d60e8c8439eb85d6358c608a45b",
+      "path": "gate1/esrm-rule-registry.json",
+      "role": "candidate_input",
+      "sha256": "489cd8a60e6138ea2192eeda5d59df3f48f989846d3f7b6712581427c0a6631f",
+      "size_bytes": 25843
+    },
+    {
+      "commit": "f81f0ca55b065d60e8c8439eb85d6358c608a45b",
+      "path": "gate1/artifact-role-registry.json",
+      "role": "candidate_input",
+      "sha256": "0e459c06b18be61721f4a21f367505336b0c6f989eed86578993f190852e0b61",
+      "size_bytes": 3419
+    },
+    {
+      "commit": "f81f0ca55b065d60e8c8439eb85d6358c608a45b",
+      "path": "gate1/conformance-corpus-manifest.json",
+      "role": "candidate_input",
+      "sha256": "25a25d1a302a3d206bfab8c81df0e968d95e294d4ed9f1ddf02cc93f04dfcf6b",
+      "size_bytes": 9506
+    },
+    {
+      "commit": "f81f0ca55b065d60e8c8439eb85d6358c608a45b",
+      "path": "gate1/INDEPENDENT_IMPLEMENTATION_CONTRACT.md",
+      "role": "candidate_input",
+      "sha256": "5676084f97fbf698bc12e3477f09a2411917be2b046f38be3781edc5364a8303",
+      "size_bytes": 3478
+    },
+    {
+      "commit": "f81f0ca55b065d60e8c8439eb85d6358c608a45b",
+      "path": "gate1/LEGACY_ISOLATION.md",
+      "role": "candidate_input",
+      "sha256": "a1cbbb8c4144280029c685197b8bd814375b6aa53259a06c5af83ad818910ad6",
+      "size_bytes": 3035
+    },
+    {
+      "commit": "f81f0ca55b065d60e8c8439eb85d6358c608a45b",
+      "path": "gate1/tools/validate_gate1.py",
+      "role": "candidate_input",
+      "sha256": "5c8c0aa85fcacc4405078c5351bae4cb97a1a9fafca507b7e6c5621146f3f984",
+      "size_bytes": 9875
+    },
+    {
+      "commit": "f81f0ca55b065d60e8c8439eb85d6358c608a45b",
+      "path": "gate1/INDEPENDENT_REVIEW_PACKET.md",
+      "role": "candidate_input",
+      "sha256": "a0e6db73063a1d0196589805b61010d7497587e49a8d84c84bfa35673fe240d8",
+      "size_bytes": 3817
+    },
+    {
+      "commit": "f81f0ca55b065d60e8c8439eb85d6358c608a45b",
+      "path": "gate1/independent-review-result.schema.json",
+      "role": "candidate_input",
+      "sha256": "c5453fe95caad1c31b048bccd4167f06b02d67b65ebd17c8927a3b5beea749c5",
+      "size_bytes": 2564
+    }
+  ]
+}
