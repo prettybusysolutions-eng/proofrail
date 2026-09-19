@@ -6,7 +6,7 @@ This is not a product endorsement request, novelty review, code audit, or standa
 
 ## Review question
 
-Does the Gate 1 derivation at commit `a0a168e925ca28fc95967980fd99f3116f9f36ec` faithfully represent Repair 4 Sections 22–40 at source commit `651f34bb9768dfafd53ede612ef01c9a01bd534d`, without importing legacy semantics, weakening requirements, or inventing new normative behavior?
+Does the Gate 1 derivation at commit `f81f0ca55b065d60e8c8439eb85d6358c608a45b` faithfully represent Repair 4 Sections 22–40 at source commit `651f34bb9768dfafd53ede612ef01c9a01bd534d`, without importing legacy semantics, weakening requirements, or inventing new normative behavior?
 
 ## Reviewer profile
 
@@ -25,7 +25,7 @@ The reviewer does not need prior ProofRail knowledge.
 Start only with:
 
 1. frozen source at `esrm-conformance/v0.1-repair4/docs/ESRM_PROTOCOL_SECTIONS_22_40_SOURCE_LOCKED_ASCII.md` from source commit `651f34bb9768dfafd53ede612ef01c9a01bd534d`;
-2. Gate 1 derivation at target commit `a0a168e925ca28fc95967980fd99f3116f9f36ec`;
+2. Gate 1 derivation at target commit `f81f0ca55b065d60e8c8439eb85d6358c608a45b`;
 3. `gate1/INDEPENDENT_REVIEW_PACKET.md`;
 4. `gate1/independent-review-result.schema.json`.
 

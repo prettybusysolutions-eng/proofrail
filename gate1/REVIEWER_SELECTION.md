@@ -67,7 +67,7 @@ Compensation does not invalidate independence. Authorship or dependence on the d
 A reviewer result is admissible for Gate 1B only when:
 
 1. it targets source commit `651f34bb9768dfafd53ede612ef01c9a01bd534d`;
-2. it targets derivation commit `a0a168e925ca28fc95967980fd99f3116f9f36ec`;
+2. it targets derivation commit `f81f0ca55b065d60e8c8439eb85d6358c608a45b` (V2; the earlier `a0a168e925ca28fc95967980fd99f3116f9f36ec` is superseded);
 3. all Sections 22–40 are classified;
 4. the required adversarial questions are answered;
 5. defects include severity and disposition;
