@@ -72,6 +72,8 @@ Expected results:
 See [docs/QUICKSTART.md](docs/QUICKSTART.md) for the complete ten-minute
 verification and break-test sequence.
 
+Release status and gates are documented in [RELEASING.md](RELEASING.md).
+
 ## Evidence Included
 
 - `VALIDATION_REPORT.md`: generated adversarial results
