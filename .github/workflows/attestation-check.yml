@@ -7,6 +7,28 @@ on:
   workflow_dispatch:
 
 jobs:
+  installed-artifact:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Build distributable wheel
+        run: python -m pip wheel --no-deps --wheel-dir dist .
+      - name: Install wheel into isolated environment
+        run: |
+          python -m venv "$RUNNER_TEMP/proofrail-wheel"
+          "$RUNNER_TEMP/proofrail-wheel/bin/python" -m pip install dist/*.whl
+      - name: Verify installed artifact and tamper rejection
+        run: |
+          "$RUNNER_TEMP/proofrail-wheel/bin/python" scripts/verify_installed_artifact.py \
+            examples/reproduce_artifact
   attestation-check:
     runs-on: ubuntu-latest
     steps:
