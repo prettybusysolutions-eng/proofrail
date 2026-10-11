@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/pilot-release.yml
+      - pyproject.toml
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,6 +20,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -37,6 +39,13 @@ jobs:
           "$RUNNER_TEMP/release-wheel/bin/python" -m pip install dist/*.whl
           "$RUNNER_TEMP/release-wheel/bin/python" scripts/verify_installed_artifact.py examples/reproduce_artifact
           proofrail reproduce examples/reproduce_artifact
+      - name: Package frozen independent-review inputs
+        run: |
+          python scripts/package_independent_review.py --output "$RUNNER_TEMP/independent-review-inputs"
+          python - <<'PY'
+          import os, shutil
+          shutil.make_archive("dist/independent-review-inputs", "zip", os.environ["RUNNER_TEMP"]+"/independent-review-inputs")
+          PY
       - name: Record source and checksums
         run: |
           python - <<'PY'

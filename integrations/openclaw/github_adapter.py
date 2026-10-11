@@ -99,17 +99,6 @@ class GitHubMergeAdapter:
                 evidence={"phase": "preflight", "http_status": status, "response": before},
             )
 
-        if before.get("merged") is True:
-            merge_sha = before.get("merge_commit_sha")
-            return self._receipt(
-                idempotency_key=idempotency_key,
-                status="success",
-                confirmed=True,
-                retry_safe=True,
-                remote_operation_id=merge_sha,
-                evidence={"phase": "preflight", "already_merged": True, "pull": _pull_evidence(before)},
-            )
-
         actual_head_sha = ((before.get("head") or {}).get("sha"))
         if actual_head_sha != expected_head_sha:
             return self._receipt(
@@ -124,6 +113,17 @@ class GitHubMergeAdapter:
                     "actual_head_sha": actual_head_sha,
                 },
             )
+        if before.get("merged") is True:
+            merge_sha = before.get("merge_commit_sha")
+            return self._receipt(
+                idempotency_key=idempotency_key,
+                status="success",
+                confirmed=True,
+                retry_safe=True,
+                remote_operation_id=merge_sha,
+                evidence={"phase": "preflight", "already_merged": True, "pull": _pull_evidence(before)},
+            )
+
         if before.get("mergeable") is False:
             return self._receipt(
                 idempotency_key=idempotency_key,
