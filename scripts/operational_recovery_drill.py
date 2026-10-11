@@ -1,5 +1,6 @@
 """Two-process/two-runner replay-state restoration with synthetic authority only."""
 import argparse,hashlib,json,os,shutil,sqlite3,subprocess,sys,tempfile,time,uuid
+from contextlib import closing
 from datetime import datetime,timedelta,timezone
 from pathlib import Path
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey,Ed25519PublicKey
@@ -17,8 +18,9 @@ def context(root,registry):
 def trust(checkpoint):
     return dict(replay_root=checkpoint['roots']['replay'],checkpoint_root=checkpoint['record_hash'],observation_root=checkpoint['roots']['observation'],minimum_checkpoint_epoch=checkpoint['epoch'],monotonic_counter=checkpoint['monotonic_counter'])
 def backup(source,destination):
-    with sqlite3.connect(f'file:{source}?mode=ro',uri=True) as src,sqlite3.connect(destination) as dst:
+    with closing(sqlite3.connect(f'file:{source}?mode=ro',uri=True)) as src,closing(sqlite3.connect(destination)) as dst:
         src.backup(dst)
+        dst.execute('PRAGMA journal_mode=DELETE')
         if dst.execute('PRAGMA integrity_check').fetchone()[0]!='ok':raise RuntimeError('backup integrity failed')
 def prepare(bundle):
     bundle.mkdir(parents=True,exist_ok=False)
