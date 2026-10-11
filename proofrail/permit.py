@@ -298,6 +298,15 @@ def consume_permit(
         )
         database.execute("BEGIN IMMEDIATE")
         try:
+            # Recheck while holding the write lock: an earlier read cannot
+            # authorize a second claim after another writer advanced replay state.
+            if permit.get("trust") is not None:
+                locked = verify_trust_checkpoint(
+                    trust_checkpoint, registry_path=registry_path,
+                    public_key=checkpoint_public_key,
+                )
+                if not locked["valid"]:
+                    raise PermitError("replay_root_changed")
             timestamp = _format_time(consumed_at)
             database.execute(
                 """
