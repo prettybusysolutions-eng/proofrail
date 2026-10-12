@@ -231,7 +231,12 @@ class GitHubMergeAdapter:
                     "reconciliation_error": type(exc).__name__,
                 },
             )
-        if status == 200 and current.get("merged") is True and current.get("merge_commit_sha"):
+        # A competing actor may merge a changed head while our request is
+        # in flight. Observing any merge does not confirm our authorized effect.
+        observed_head = (current.get("head") or {}).get("sha")
+        if (status == 200 and current.get("merged") is True
+                and current.get("merge_commit_sha")
+                and observed_head == expected_head_sha):
             return self._receipt(
                 idempotency_key=idempotency_key,
                 status="success",
@@ -254,6 +259,12 @@ class GitHubMergeAdapter:
                 "phase": "reconciliation",
                 "trigger": trigger,
                 "http_status": status,
+                "expected_head_sha": expected_head_sha,
+                "reason": (
+                    "head_sha_mismatch"
+                    if status == 200 and observed_head != expected_head_sha
+                    else "merge_not_confirmed"
+                ),
                 "pull": _pull_evidence(current) if status == 200 else current,
             },
         )

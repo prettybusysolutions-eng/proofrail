@@ -37,3 +37,9 @@
 17. The local database-instance fingerprint is host-specific. In-place content
     replacement that preserves the same path, device, inode, schema, and
     version is outside schema-root reconciliation.
+18. The pilot rechecks role, policy, and identity after acquiring its local
+    execution lock. This rejects changes completed while waiting for that
+    lock, but does not make governance changes and an external provider write
+    atomic. A later revocation cannot cancel an already dispatched request.
+    Multi-process fencing and provider-enforced revocation require additional
+    design and evidence; the local lock is not a distributed revocation barrier.
