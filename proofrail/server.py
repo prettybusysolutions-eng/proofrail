@@ -381,13 +381,18 @@ class PilotControlPlane:
             "evaluation",
             _required_text(constraints, "evaluation_id"),
         )
-        active_policy = self.control.get_active_policy(
-            tenant_id=principal.tenant_id,
-            principal_id=principal.principal_id,
-            policy_name=evaluation["policy_name"],
-        )
-        current_identity_root = self.control.identity_root(principal.tenant_id)
         with self._trust_lock:
+            # Request-time identity and policy can become stale while waiting
+            # for another execution. Recheck after admission to this section.
+            self.control.authorize(
+                principal.tenant_id, principal.principal_id, "action:execute"
+            )
+            active_policy = self.control.get_active_policy(
+                tenant_id=principal.tenant_id,
+                principal_id=principal.principal_id,
+                policy_name=evaluation["policy_name"],
+            )
+            current_identity_root = self.control.identity_root(principal.tenant_id)
             trust_checkpoint = read_trust_checkpoint(self._trust_checkpoint_path())
             result = execute_github_merge(
                 permit,
