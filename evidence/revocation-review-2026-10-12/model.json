@@ -1,0 +1,25 @@
+{
+  "scope": "Finite schedule enumeration, NOT a proof about the production implementation.\n\nTwo actions hold grants for epoch zero. Each checks and attempts an effect once.\nOne revocation increments the authority epoch. Provider fencing, when enabled,\ncompares that epoch atomically with committing the effect. Every operation is\natomic in this model; no crash, rollback, compromised actor, or partition exists.\n",
+  "results": {
+    "local_check_only": {
+      "schedules": 30,
+      "violating_schedules": 16,
+      "total_commits": 40,
+      "counterexample": [
+        "check_a",
+        "effect_a",
+        "check_b",
+        "revoke",
+        "effect_b"
+      ]
+    },
+    "provider_atomic_fence": {
+      "schedules": 30,
+      "violating_schedules": 0,
+      "total_commits": 20,
+      "counterexample": null
+    }
+  },
+  "implementation_verified": false,
+  "independent_review": false
+}

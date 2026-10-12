@@ -1,0 +1,225 @@
+{
+  "scope": "Offline evidence integrity comparison; not a human audit-effort study.\n\nBaseline: Ed25519 signature over a SHA-256 digest of exact JSONL bytes.\nProofRail: exported hash-chain ledger and signed Merkle checkpoint.\nBoth receive the same externally supplied public key and optional latest digest.\nFresh child processes receive public verification material only. No private keys\nare written to disk. This is same-machine replication, not independent review.\n",
+  "source_commit": "ee92e37265a5c97e2b543c0e9b81c40627e19b49",
+  "source_tree": "5cccf546cd3604e1afa99ed7a83612c5deb1852c",
+  "harness_sha256": "f9643b8d1c72b4d919720ceaf3ba94566b84b72a518b65011fcfa29c4a70f644",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "ledger_records": 100,
+  "ledger_bytes": 27625,
+  "manifest_bytes": {
+    "conventional": 183,
+    "proofrail": 765
+  },
+  "cases": [
+    {
+      "case": "authentic",
+      "path": "conventional",
+      "classification": "integrity",
+      "expected_acceptance": true,
+      "integrity_accepted": true,
+      "error": null,
+      "verify_ms": 0.5115400003887771,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "authentic",
+      "path": "proofrail",
+      "classification": "integrity",
+      "expected_acceptance": true,
+      "integrity_accepted": true,
+      "error": null,
+      "verify_ms": 2.0165370001450356,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "altered",
+      "path": "conventional",
+      "classification": "integrity",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": "InvalidSignature",
+      "verify_ms": 0.4294860000300105,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "altered",
+      "path": "proofrail",
+      "classification": "integrity",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": null,
+      "verify_ms": 2.025851000325929,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "tail_deleted",
+      "path": "conventional",
+      "classification": "integrity",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": "InvalidSignature",
+      "verify_ms": 0.4187810000075842,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "tail_deleted",
+      "path": "proofrail",
+      "classification": "integrity",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": null,
+      "verify_ms": 2.0771680001416826,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "reordered",
+      "path": "conventional",
+      "classification": "integrity",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": "InvalidSignature",
+      "verify_ms": 0.4470930002753448,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "reordered",
+      "path": "proofrail",
+      "classification": "integrity",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": null,
+      "verify_ms": 2.166401000067708,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "duplicated",
+      "path": "conventional",
+      "classification": "integrity",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": "InvalidSignature",
+      "verify_ms": 0.4676539997490181,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "duplicated",
+      "path": "proofrail",
+      "classification": "integrity",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": null,
+      "verify_ms": 3.4945620000144118,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "signature_corrupted",
+      "path": "conventional",
+      "classification": "integrity",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": "InvalidSignature",
+      "verify_ms": 0.685240999700909,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "signature_corrupted",
+      "path": "proofrail",
+      "classification": "integrity",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": null,
+      "verify_ms": 2.0192210004097433,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "attacker_signed_replacement",
+      "path": "conventional",
+      "classification": "integrity",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": "InvalidSignature",
+      "verify_ms": 0.5846099998052523,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "attacker_signed_replacement",
+      "path": "proofrail",
+      "classification": "integrity",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": null,
+      "verify_ms": 2.0682250001300417,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "old_valid_bundle_without_freshness",
+      "path": "conventional",
+      "classification": "known_limit",
+      "expected_acceptance": true,
+      "integrity_accepted": true,
+      "error": null,
+      "verify_ms": 0.4177989999334386,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "old_valid_bundle_without_freshness",
+      "path": "proofrail",
+      "classification": "known_limit",
+      "expected_acceptance": true,
+      "integrity_accepted": true,
+      "error": null,
+      "verify_ms": 1.2999379996472271,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "old_bundle_with_retained_latest_digest",
+      "path": "conventional",
+      "classification": "freshness_with_external_pin",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": null,
+      "verify_ms": 0.5446000000119966,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "old_bundle_with_retained_latest_digest",
+      "path": "proofrail",
+      "classification": "freshness_with_external_pin",
+      "expected_acceptance": false,
+      "integrity_accepted": false,
+      "error": null,
+      "verify_ms": 1.9654800003081618,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "signed_false_claim",
+      "path": "conventional",
+      "classification": "known_limit",
+      "expected_acceptance": true,
+      "integrity_accepted": true,
+      "error": null,
+      "verify_ms": 0.44255700004214304,
+      "expected_behavior_observed": true
+    },
+    {
+      "case": "signed_false_claim",
+      "path": "proofrail",
+      "classification": "known_limit",
+      "expected_acceptance": true,
+      "integrity_accepted": true,
+      "error": null,
+      "verify_ms": 2.055214999927557,
+      "expected_behavior_observed": true
+    }
+  ],
+  "valid": true,
+  "human_audit_time_measured": false,
+  "independent_review": false,
+  "timing_note": "One observation per case, excludes interpreter/import startup; not a performance benchmark.",
+  "limits": [
+    "No live provider truth or causal attribution verification",
+    "No whole-product comparison or lifecycle/quorum/anchor verification",
+    "Trusted public key and latest digest supplied by harness, not a deployed trust-distribution service",
+    "Both verifiers and all fixtures authored by the same assistant"
+  ]
+}

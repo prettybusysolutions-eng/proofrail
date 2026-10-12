@@ -1,0 +1,12 @@
+{
+  "review_type": "internal_assistant_authored",
+  "runtime_remote_commit": "ca6dabe312b7975a4c1832a952b9af7251b9c5bd",
+  "runtime_tree": "6b8ee360c5121422f52bec0a2e59ad734d23fae0",
+  "files_sha256": {
+    "tests/test_revocation_boundary_review.py": "faf1c34821e8786dea5926df9676f1e517c191b36a9beac3aacaed11259e15eb",
+    "benchmarks/revocation_model.py": "a32f784d2a7e6f87605c7b173b76c3a1579307724b86f90d3b78e7b642c71311",
+    "evidence/revocation-review-2026-10-12/counterexamples.log": "7efc53e81740e9829eb92a158c89f2154ce01d09e6ea66488521097591528564",
+    "evidence/revocation-review-2026-10-12/model.json": "d23ed6c32bd2b2ca3e1ae151e79b178bd07e27c8a465daa02c1706f2e9cdc0e8",
+    "evidence/revocation-review-2026-10-12/unit-suite.log": "900c5d8016208cdb0035c7753c155274a1dfb9e78a4fc58f11d6a1da94f7b8f6"
+  }
+}

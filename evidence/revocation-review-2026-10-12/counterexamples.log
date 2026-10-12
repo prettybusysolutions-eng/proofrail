@@ -1,0 +1,9 @@
+test_policy_revoked_before_dispatch_still_allows_effect (test_revocation_boundary_review.RevocationBoundaryReviewTests.test_policy_revoked_before_dispatch_still_allows_effect) ... ok
+test_role_revoked_before_dispatch_still_allows_effect (test_revocation_boundary_review.RevocationBoundaryReviewTests.test_role_revoked_before_dispatch_still_allows_effect) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 1.041s
+
+OK
+{"case": "policy", "trace": ["provider_write_ready", "governance_change_committed", "provider_write_dispatched"], "http_status": 200, "provider_effects": 1, "classification": "revocation_counterexample_reproduced"}
+{"case": "role", "trace": ["provider_write_ready", "governance_change_committed", "provider_write_dispatched"], "http_status": 200, "provider_effects": 1, "classification": "revocation_counterexample_reproduced"}
