@@ -1,0 +1,692 @@
+{
+  "schema": 1,
+  "scope": "local HTTP fixture; shared GitHub adapter; base permits without trust checkpoints",
+  "independent_review": false,
+  "environment": {
+    "python": "3.12.14",
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+    "sqlite": "3.53.1",
+    "cpu_count": 9
+  },
+  "source_commit": "93b9b21c2362040edcdaacbe263486c7891c6dd1",
+  "source_tree": "af572d3a423c3b017eecfa12a5843b83db4fc173",
+  "harness_sha256": "d268f2307e0efb3f1d85d1efbef2674592d219658a297dac45c2f904d3b7f223",
+  "seed": 20261013,
+  "warmup_per_path": 5,
+  "cases": {
+    "conventional": [
+      {
+        "case": "normal",
+        "first": {
+          "status": "success"
+        },
+        "retries": [],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          1,
+          1,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "expired",
+        "first": {
+          "status": "error",
+          "type": "ValueError",
+          "reason": "expired"
+        },
+        "retries": [],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          0,
+          0,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "policy_changed",
+        "first": {
+          "status": "error",
+          "type": "ValueError",
+          "reason": "context_changed"
+        },
+        "retries": [],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          0,
+          0,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "identity_changed",
+        "first": {
+          "status": "error",
+          "type": "ValueError",
+          "reason": "context_changed"
+        },
+        "retries": [],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          0,
+          0,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "tampered_signature",
+        "first": {
+          "status": "error",
+          "type": "InvalidSignature",
+          "reason": ""
+        },
+        "retries": [],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          0,
+          0,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "replay",
+        "first": {
+          "status": "success"
+        },
+        "retries": [
+          {
+            "status": "error",
+            "type": "IntegrityError",
+            "reason": "UNIQUE constraint failed: claims.hash"
+          }
+        ],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          1,
+          1,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "provider_head_changed",
+        "first": {
+          "status": "failed"
+        },
+        "retries": [],
+        "provider": [
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          0,
+          0,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "lost_response",
+        "first": {
+          "status": "success"
+        },
+        "retries": [],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          1,
+          1,
+          "lost_response"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "competing_head",
+        "first": {
+          "status": "unknown"
+        },
+        "retries": [],
+        "provider": [
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          1,
+          1,
+          "competing_head"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "interrupted_after_claim",
+        "first": {
+          "status": "error",
+          "type": "RuntimeError",
+          "reason": "injected interruption after durable claim, before provider"
+        },
+        "retries": [
+          {
+            "status": "error",
+            "type": "IntegrityError",
+            "reason": "UNIQUE constraint failed: claims.hash"
+          }
+        ],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          0,
+          0,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "concurrent_replay",
+        "attempts": [
+          {
+            "status": "error",
+            "type": "IntegrityError",
+            "reason": "UNIQUE constraint failed: claims.hash"
+          },
+          {
+            "status": "success"
+          },
+          {
+            "status": "error",
+            "type": "IntegrityError",
+            "reason": "UNIQUE constraint failed: claims.hash"
+          },
+          {
+            "status": "error",
+            "type": "IntegrityError",
+            "reason": "UNIQUE constraint failed: claims.hash"
+          }
+        ],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          1,
+          1,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "late_revocation_boundary",
+        "first": {
+          "status": "success"
+        },
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          1,
+          1,
+          "normal"
+        ],
+        "revocation_occurred_before_http_write": true,
+        "expected_behavior_observed": true,
+        "classification": "known_limit_reproduced"
+      }
+    ],
+    "proofrail": [
+      {
+        "case": "normal",
+        "first": {
+          "status": "success"
+        },
+        "retries": [],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          1,
+          1,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "expired",
+        "first": {
+          "status": "error",
+          "type": "PermitError",
+          "reason": "permit_expired"
+        },
+        "retries": [],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          0,
+          0,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "policy_changed",
+        "first": {
+          "status": "error",
+          "type": "PermitError",
+          "reason": "policy_root_changed"
+        },
+        "retries": [],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          0,
+          0,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "identity_changed",
+        "first": {
+          "status": "error",
+          "type": "PermitError",
+          "reason": "identity_root_changed"
+        },
+        "retries": [],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          0,
+          0,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "tampered_signature",
+        "first": {
+          "status": "error",
+          "type": "PermitError",
+          "reason": "invalid_signature: Record signature is missing"
+        },
+        "retries": [],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          0,
+          0,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "replay",
+        "first": {
+          "status": "success"
+        },
+        "retries": [
+          {
+            "status": "error",
+            "type": "PermitError",
+            "reason": "permit_replayed"
+          }
+        ],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          1,
+          1,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "provider_head_changed",
+        "first": {
+          "status": "failed"
+        },
+        "retries": [],
+        "provider": [
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          0,
+          0,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "lost_response",
+        "first": {
+          "status": "success"
+        },
+        "retries": [],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          1,
+          1,
+          "lost_response"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "competing_head",
+        "first": {
+          "status": "unknown"
+        },
+        "retries": [],
+        "provider": [
+          "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          1,
+          1,
+          "competing_head"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "interrupted_after_claim",
+        "first": {
+          "status": "error",
+          "type": "RuntimeError",
+          "reason": "injected interruption after durable claim, before provider"
+        },
+        "retries": [
+          {
+            "status": "error",
+            "type": "PermitError",
+            "reason": "permit_replayed"
+          }
+        ],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          0,
+          0,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "concurrent_replay",
+        "attempts": [
+          {
+            "status": "success"
+          },
+          {
+            "status": "error",
+            "type": "PermitError",
+            "reason": "permit_replayed"
+          },
+          {
+            "status": "error",
+            "type": "PermitError",
+            "reason": "permit_replayed"
+          },
+          {
+            "status": "error",
+            "type": "PermitError",
+            "reason": "permit_replayed"
+          }
+        ],
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          1,
+          1,
+          "normal"
+        ],
+        "expected_behavior_observed": true,
+        "classification": "safety_or_functionality_check"
+      },
+      {
+        "case": "late_revocation_boundary",
+        "first": {
+          "status": "success"
+        },
+        "provider": [
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          1,
+          1,
+          "normal"
+        ],
+        "revocation_occurred_before_http_write": true,
+        "expected_behavior_observed": true,
+        "classification": "known_limit_reproduced"
+      }
+    ]
+  },
+  "summary": {
+    "conventional": {
+      "samples": 100,
+      "p50_ms": 5.308445000000001,
+      "p95_ms": 11.440446,
+      "p99_ms": 15.389915,
+      "mean_ms": 6.39370549
+    },
+    "proofrail": {
+      "samples": 100,
+      "p50_ms": 8.074715000000001,
+      "p95_ms": 15.015544,
+      "p99_ms": 18.484673,
+      "mean_ms": 8.82561511
+    }
+  },
+  "raw_ms": {
+    "conventional": [
+      4.661875,
+      6.335021,
+      6.671836,
+      8.67367,
+      5.193716,
+      8.603991,
+      4.694518,
+      6.237764,
+      5.30721,
+      6.68436,
+      15.389915,
+      4.798595,
+      6.962772,
+      6.954962,
+      9.080487,
+      4.037868,
+      12.82254,
+      20.647536,
+      8.703851,
+      8.919159,
+      9.466942,
+      6.902448,
+      7.59596,
+      5.107637,
+      9.81542,
+      9.731099,
+      6.504882,
+      4.417661,
+      5.919548,
+      4.046963,
+      9.240471,
+      5.058888,
+      6.176259,
+      5.30968,
+      9.9807,
+      8.073447,
+      7.312046,
+      11.659863,
+      6.644805,
+      10.308694,
+      11.440446,
+      4.232396,
+      4.117473,
+      3.891875,
+      4.160768,
+      4.43104,
+      5.096921,
+      4.945747,
+      4.534572,
+      6.303875,
+      5.822865,
+      5.202491,
+      5.180305,
+      5.914186,
+      6.851572,
+      4.405639,
+      5.809385,
+      5.062383,
+      6.177736,
+      4.78689,
+      4.843543,
+      4.104676,
+      5.06641,
+      4.342829,
+      8.509388,
+      3.733285,
+      4.15924,
+      4.923159,
+      5.450027,
+      4.711202,
+      4.416465,
+      4.252183,
+      4.576614,
+      4.52321,
+      5.158536,
+      4.921333,
+      4.328637,
+      3.920499,
+      5.729382,
+      7.689502,
+      4.41801,
+      4.208833,
+      4.498248,
+      4.558168,
+      4.399019,
+      3.784889,
+      4.931472,
+      4.935801,
+      6.855975,
+      8.551021,
+      8.996251,
+      4.879159,
+      6.234333,
+      4.617662,
+      14.694787,
+      5.422321,
+      5.394285,
+      9.415587,
+      4.623612,
+      5.567372
+    ],
+    "proofrail": [
+      6.576126,
+      8.410753,
+      8.606362,
+      8.441108,
+      11.634769,
+      10.940944,
+      13.023644,
+      9.830129,
+      5.8387,
+      9.415316,
+      11.400666,
+      9.701183,
+      15.015544,
+      6.034396,
+      7.943858,
+      9.658877,
+      13.344559,
+      7.036351,
+      7.249181,
+      7.179474,
+      7.718635,
+      6.064691,
+      6.519602,
+      9.683281,
+      18.484673,
+      9.744994,
+      8.343607,
+      10.405232,
+      6.550245,
+      5.585675,
+      7.220567,
+      7.075405,
+      13.945071,
+      6.693889,
+      7.661552,
+      15.95669,
+      8.158139,
+      18.650313,
+      7.380714,
+      13.125898,
+      15.202438,
+      6.069987,
+      8.724583,
+      7.481852,
+      6.196812,
+      6.03429,
+      7.241992,
+      9.416784,
+      7.437887,
+      6.80878,
+      9.246235,
+      10.817106,
+      6.955124,
+      8.302085,
+      6.223458,
+      7.555359,
+      9.257132,
+      6.763858,
+      6.158234,
+      6.767895,
+      6.498766,
+      8.723675,
+      6.124318,
+      7.347414,
+      6.428198,
+      14.994458,
+      7.136658,
+      9.333435,
+      8.056689,
+      9.149476,
+      5.970253,
+      6.420698,
+      5.901196,
+      8.324043,
+      9.515091,
+      7.723794,
+      6.793857,
+      8.036786,
+      6.861979,
+      6.965038,
+      7.229043,
+      8.753352,
+      8.092741,
+      7.68562,
+      8.348804,
+      9.023777,
+      6.673848,
+      7.446574,
+      9.232341,
+      9.956042,
+      8.70451,
+      9.054802,
+      11.060967,
+      8.516199,
+      13.244546,
+      17.38408,
+      7.727272,
+      10.14249,
+      7.73532,
+      9.330657
+    ]
+  },
+  "benchmark_errors": [],
+  "valid": true,
+  "limits": [
+    "not a live GitHub test",
+    "not a commercial policy-engine benchmark",
+    "shared adapter creates correlated failure risk",
+    "no checkpoint-mode comparison",
+    "no throughput/load test",
+    "permit minting excluded from timing",
+    "interruption is an exception injection, not process/power loss",
+    "late revocation is a reproduced limitation, not protection"
+  ]
+}
