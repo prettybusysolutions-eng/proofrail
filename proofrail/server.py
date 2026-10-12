@@ -27,6 +27,7 @@ from .checkpoint import create_checkpoint, read_ledger, verify_ledger
 from .control_plane import ControlPlane
 from .core import ProofRailError, digest_ledger_entry, utc_now
 from .crypto import hash_record
+from .audit_review import review_events
 from .permit import PermitError, execute_github_merge, mint_permit
 from .rbac import AuthorizationError, Principal
 from .trust import (
@@ -597,6 +598,8 @@ class PilotControlPlane:
             return 200, reason_code_summary(events), "application/json"
         if export_format == "permit-lifecycle":
             return 200, permit_lifecycle_report(events), "application/json"
+        if export_format == "review":
+            return 200, review_events(events, tenant_id=principal.tenant_id), "application/json"
         raise ProofRailError(f"Unsupported audit format: {export_format}")
 
     def _principal(self, headers: Mapping[str, str]) -> Principal:
