@@ -1,0 +1,38 @@
+{
+  "authenticity": "NOT_CHECKED",
+  "authorization_proven": false,
+  "event_count": 3,
+  "findings": [
+    {
+      "code": "contradictory_execution",
+      "event_id": "execute",
+      "explanation": "Reported outcome conflicts with adapter status.",
+      "line": 2,
+      "permit_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "code": "unresolved_execution",
+      "event_id": "execute",
+      "explanation": "Inspect provider evidence; do not infer that no effect occurred or retry automatically.",
+      "line": 2,
+      "permit_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "code": "conflicting_success_claims",
+      "event_id": "reconcile",
+      "explanation": "Reconciliation claims success after an unresolved or failed adapter result; inspect raw observations.",
+      "line": 3,
+      "permit_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "kind": "proofrail.audit-review.v1",
+  "limits": [
+    "Audit claims only; inspect permits, policies and raw provider observations separately.",
+    "No completeness, freshness, independent observation or universal revocation guarantee.",
+    "No findings is not approval to execute, retry or certify an action."
+  ],
+  "permit_count": 1,
+  "provider_effect_proven": false,
+  "status": "NEEDS_REVIEW",
+  "tenant_id": "tenant-a"
+}

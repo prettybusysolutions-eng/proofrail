@@ -1,0 +1,14 @@
+{
+  "base_remote_commit": "835cd9bb445fce1e8f1f27f0a36d45169ab53801",
+  "source_sha256": {
+    "proofrail/audit_review.py": "e02302fabdca8a66c30db843b84dd75ed40a0717bfee25f0b0c4d04e50e7d51a",
+    "proofrail/cli.py": "f3a7bd4d32a48622bc95332fcfc77d635cd4454693ad25fa930b0c68d8062abc",
+    "proofrail/server.py": "ee9e7f032c302563cff913a65fe812949f7cf1cb54232ec6784a8d286eac93ae",
+    "tests/test_audit_review.py": "8cbb59083b344f11bf79b2192d4b1973d32bee8fc23630e11c4cf78865f46f9f",
+    "tests/test_rbac_control_plane.py": "76254a34ca987c2b5aae2c2e974de6b76440f4c15d2d8bce27a3f680908519fb",
+    "benchmarks/audit_review_scaling.py": "2c0c54c89fee479eac910ce44c0b86a1f3a6344ffa0f1a28a45399bcb0135715"
+  },
+  "unit_tests": 98,
+  "independent_review": false,
+  "deployment_status": "draft_not_deployed"
+}

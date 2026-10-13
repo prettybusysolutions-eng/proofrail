@@ -1,0 +1,16 @@
+{
+  "valid": true,
+  "checks": [
+    "installed_artifact_accepted",
+    "modified_artifact_rejected_exit_4",
+    "offline_authority_demo",
+    "valid_ledger_accepted",
+    "tampered_ledger_rejected_exit_4",
+    "installed_audit_findings",
+    "audit_boundary_preserved",
+    "audit_input_preserved",
+    "consistent_audit_claims",
+    "audit_tenant_mismatch"
+  ],
+  "boundary": "Offline installed-package verification; not production certification."
+}

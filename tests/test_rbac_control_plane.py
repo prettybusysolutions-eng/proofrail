@@ -276,6 +276,18 @@ class RBACControlPlaneTests(unittest.TestCase):
             self.assertEqual(audit["permit_count"], 2)
             self.assertTrue(any(item["replayed"] for item in audit["permits"]))
 
+            review_status, review, _ = app.request(
+                "GET", "/audit/events?format=review", headers=auditor
+            )
+            self.assertEqual(review_status, 200)
+            self.assertEqual(review["status"], "NEEDS_REVIEW")
+            self.assertFalse(review["provider_effect_proven"])
+            self.assertIn("replay_attempt_recorded", {f["code"] for f in review["findings"]})
+            denied_review, _, _ = app.request(
+                "GET", "/audit/events?format=review", headers=proposer
+            )
+            self.assertEqual(denied_review, 403)
+
             proposer_read_status, _, _ = app.request(
                 "GET", "/ledger", headers=proposer
             )

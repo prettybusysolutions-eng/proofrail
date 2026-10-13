@@ -50,6 +50,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="proofrail")
     commands = parser.add_subparsers(required=True)
 
+    review = commands.add_parser('audit-review', help='Triage pilot audit claims; does not certify authorization')
+    review.add_argument('--events', required=True, help='Pilot audit JSONL export')
+    review.add_argument('--tenant', required=True)
+    review.add_argument('--output')
+    review.set_defaults(handler=handle_audit_review)
+
     sign = commands.add_parser("sign-claim")
     sign.add_argument("--input", required=True)
     sign.add_argument("--output", required=True)
@@ -347,6 +353,21 @@ def handle_reproduce(args: argparse.Namespace) -> int:
     result = reproduce_artifact(args.artifact)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["valid"] else 4
+
+
+def handle_audit_review(args: argparse.Namespace) -> int:
+    from .audit_review import review_events
+    from .checkpoint import read_ledger
+
+    if not args.tenant.strip():
+        raise ProofRailError('tenant is required')
+    result = review_events(read_ledger(args.events), tenant_id=args.tenant)
+    if args.output:
+        if Path(args.output).resolve() == Path(args.events).resolve():
+            raise ProofRailError('Output must not overwrite source evidence')
+        atomic_write_json(Path(args.output), result)
+    print(json.dumps(result, indent=2))
+    return 4 if result['findings'] else 0
 
 
 def handle_github_demo(args: argparse.Namespace) -> int:
