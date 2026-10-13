@@ -1,0 +1,1260 @@
+{
+  "schema": "proofrail.public-github-snapshot.v1",
+  "retrieved_at": "2026-10-13T09:49:56.684Z",
+  "selection": "First 10 closed PRs ordered by updated descending per repository; no outcome-based filtering.",
+  "projection": "API response field projection; bodies, diffs and personal profiles omitted. Reviewer identifiers pseudonymous within each PR. Not an organization audit export.",
+  "cases": [
+    {
+      "case_id": "pallets/flask#6168",
+      "repository": "pallets/flask",
+      "pull_url": "https://github.com/pallets/flask/pull/6168",
+      "retrieved_at": "2026-10-13T09:49:17.589Z",
+      "pull": {
+        "number": 6168,
+        "state": "closed",
+        "merged": true,
+        "created_at": "2026-10-07T13:48:01Z",
+        "updated_at": "2026-10-07T13:56:09Z",
+        "closed_at": "2026-10-07T13:56:06Z",
+        "merged_at": "2026-10-07T13:56:06Z",
+        "merge_commit_sha": "728c5e440af704a786384159184f695cf04ecbe7",
+        "head_sha": "7689f98403e2c0b0bc8d1031e60f8cff2620e86a",
+        "base_sha": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/pallets/flask/pulls/6168",
+        "reviews": "https://api.github.com/repos/pallets/flask/pulls/6168/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/pallets/flask/actions/runs?head_sha=7689f98403e2c0b0bc8d1031e60f8cff2620e86a&per_page=100"
+      },
+      "reviews": [],
+      "runs": [
+        {
+          "id": 37631414474,
+          "workflow_id": 1367898,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "failure",
+          "head_sha": "7689f98403e2c0b0bc8d1031e60f8cff2620e86a",
+          "event": "pull_request",
+          "created_at": "2026-10-07T13:48:09Z",
+          "updated_at": "2026-10-07T13:48:57Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/37631414474"
+        },
+        {
+          "id": 37631412233,
+          "workflow_id": 115253103,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "7689f98403e2c0b0bc8d1031e60f8cff2620e86a",
+          "event": "pull_request",
+          "created_at": "2026-10-07T13:48:08Z",
+          "updated_at": "2026-10-07T13:48:31Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/37631412233"
+        },
+        {
+          "id": 37631412232,
+          "workflow_id": 243361684,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "7689f98403e2c0b0bc8d1031e60f8cff2620e86a",
+          "event": "pull_request",
+          "created_at": "2026-10-07T13:48:08Z",
+          "updated_at": "2026-10-07T13:48:25Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/37631412232"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 3,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "pallets/flask#6162",
+      "repository": "pallets/flask",
+      "pull_url": "https://github.com/pallets/flask/pull/6162",
+      "retrieved_at": "2026-10-13T09:49:18.013Z",
+      "pull": {
+        "number": 6162,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2026-09-13T00:08:36Z",
+        "updated_at": "2026-09-28T00:16:14Z",
+        "closed_at": "2026-09-13T00:27:54Z",
+        "merged_at": null,
+        "merge_commit_sha": "cfb71a548383ed5d6bdc8ed726f040a5fe9c7e44",
+        "head_sha": "afe8961b7cb16262aec39d141452918147ec3af7",
+        "base_sha": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/pallets/flask/pulls/6162",
+        "reviews": "https://api.github.com/repos/pallets/flask/pulls/6162/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/pallets/flask/actions/runs?head_sha=afe8961b7cb16262aec39d141452918147ec3af7&per_page=100"
+      },
+      "reviews": [],
+      "runs": [
+        {
+          "id": 34727211010,
+          "workflow_id": 1367898,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "failure",
+          "head_sha": "afe8961b7cb16262aec39d141452918147ec3af7",
+          "event": "pull_request",
+          "created_at": "2026-09-13T00:08:39Z",
+          "updated_at": "2026-09-13T00:09:19Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/34727211010"
+        },
+        {
+          "id": 34727211038,
+          "workflow_id": 115253103,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "failure",
+          "head_sha": "afe8961b7cb16262aec39d141452918147ec3af7",
+          "event": "pull_request",
+          "created_at": "2026-09-13T00:08:39Z",
+          "updated_at": "2026-09-13T00:09:01Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/34727211038"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 2,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "pallets/flask#6157",
+      "repository": "pallets/flask",
+      "pull_url": "https://github.com/pallets/flask/pull/6157",
+      "retrieved_at": "2026-10-13T09:49:17.850Z",
+      "pull": {
+        "number": 6157,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2026-09-11T04:14:20Z",
+        "updated_at": "2026-09-26T00:12:57Z",
+        "closed_at": "2026-09-11T04:48:35Z",
+        "merged_at": null,
+        "merge_commit_sha": "a7510fafbac8950ae424f0011e1860a4ceda3c11",
+        "head_sha": "b9c4d39ed7ded2a7f2ab2ad1aa9c33dd147c82cd",
+        "base_sha": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/pallets/flask/pulls/6157",
+        "reviews": "https://api.github.com/repos/pallets/flask/pulls/6157/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/pallets/flask/actions/runs?head_sha=b9c4d39ed7ded2a7f2ab2ad1aa9c33dd147c82cd&per_page=100"
+      },
+      "reviews": [],
+      "runs": [
+        {
+          "id": 34561453561,
+          "workflow_id": 1367898,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "failure",
+          "head_sha": "b9c4d39ed7ded2a7f2ab2ad1aa9c33dd147c82cd",
+          "event": "pull_request",
+          "created_at": "2026-09-11T04:14:24Z",
+          "updated_at": "2026-09-11T04:15:04Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/34561453561"
+        },
+        {
+          "id": 34561453544,
+          "workflow_id": 115253103,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "b9c4d39ed7ded2a7f2ab2ad1aa9c33dd147c82cd",
+          "event": "pull_request",
+          "created_at": "2026-09-11T04:14:24Z",
+          "updated_at": "2026-09-11T04:14:49Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/34561453544"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 2,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "pallets/flask#6158",
+      "repository": "pallets/flask",
+      "pull_url": "https://github.com/pallets/flask/pull/6158",
+      "retrieved_at": "2026-10-13T09:49:18.027Z",
+      "pull": {
+        "number": 6158,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2026-09-11T14:53:09Z",
+        "updated_at": "2026-09-26T00:12:56Z",
+        "closed_at": "2026-09-11T14:56:40Z",
+        "merged_at": null,
+        "merge_commit_sha": "f5c014cf319860c1aaefc0d038603579f60e3e7f",
+        "head_sha": "c66b591aee573a637262e55db02d2a36c261413c",
+        "base_sha": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/pallets/flask/pulls/6158",
+        "reviews": "https://api.github.com/repos/pallets/flask/pulls/6158/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/pallets/flask/actions/runs?head_sha=c66b591aee573a637262e55db02d2a36c261413c&per_page=100"
+      },
+      "reviews": [],
+      "runs": [
+        {
+          "id": 34612807609,
+          "workflow_id": 115253103,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "c66b591aee573a637262e55db02d2a36c261413c",
+          "event": "pull_request",
+          "created_at": "2026-09-11T14:53:14Z",
+          "updated_at": "2026-09-11T14:53:35Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/34612807609"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 1,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "pallets/flask#6159",
+      "repository": "pallets/flask",
+      "pull_url": "https://github.com/pallets/flask/pull/6159",
+      "retrieved_at": "2026-10-13T09:49:18.037Z",
+      "pull": {
+        "number": 6159,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2026-09-11T23:25:42Z",
+        "updated_at": "2026-09-26T00:12:55Z",
+        "closed_at": "2026-09-11T23:47:56Z",
+        "merged_at": null,
+        "merge_commit_sha": "c5f86c2a1abb95bc8856041c6c11114fb8af2523",
+        "head_sha": "31e0bf6e79a4213dc118f871dc958aa833f9a6b7",
+        "base_sha": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/pallets/flask/pulls/6159",
+        "reviews": "https://api.github.com/repos/pallets/flask/pulls/6159/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/pallets/flask/actions/runs?head_sha=31e0bf6e79a4213dc118f871dc958aa833f9a6b7&per_page=100"
+      },
+      "reviews": [],
+      "runs": [
+        {
+          "id": 34658026204,
+          "workflow_id": 115253103,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "31e0bf6e79a4213dc118f871dc958aa833f9a6b7",
+          "event": "pull_request",
+          "created_at": "2026-09-11T23:25:45Z",
+          "updated_at": "2026-09-11T23:26:06Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/34658026204"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 1,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "pallets/flask#6155",
+      "repository": "pallets/flask",
+      "pull_url": "https://github.com/pallets/flask/pull/6155",
+      "retrieved_at": "2026-10-13T09:49:18.256Z",
+      "pull": {
+        "number": 6155,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2026-09-10T12:17:19Z",
+        "updated_at": "2026-09-25T00:13:49Z",
+        "closed_at": "2026-09-10T13:00:27Z",
+        "merged_at": null,
+        "merge_commit_sha": "fc4d8fe0b7d922b47d99eeb94aa53a7faa8bdb28",
+        "head_sha": "be443e138604cdcbfafeb48403dd99a02d0be3c3",
+        "base_sha": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/pallets/flask/pulls/6155",
+        "reviews": "https://api.github.com/repos/pallets/flask/pulls/6155/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/pallets/flask/actions/runs?head_sha=be443e138604cdcbfafeb48403dd99a02d0be3c3&per_page=100"
+      },
+      "reviews": [],
+      "runs": [
+        {
+          "id": 34475889285,
+          "workflow_id": 115253103,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "be443e138604cdcbfafeb48403dd99a02d0be3c3",
+          "event": "pull_request",
+          "created_at": "2026-09-10T12:17:23Z",
+          "updated_at": "2026-09-10T12:17:48Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/34475889285"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 1,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "pallets/flask#6156",
+      "repository": "pallets/flask",
+      "pull_url": "https://github.com/pallets/flask/pull/6156",
+      "retrieved_at": "2026-10-13T09:49:17.816Z",
+      "pull": {
+        "number": 6156,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2026-09-10T19:01:14Z",
+        "updated_at": "2026-09-25T00:13:48Z",
+        "closed_at": "2026-09-10T19:59:07Z",
+        "merged_at": null,
+        "merge_commit_sha": "a9bbef2693bf8986724ba2ab672a54279b4893eb",
+        "head_sha": "de4bfddc479749f0667d116473b799e18753fd11",
+        "base_sha": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/pallets/flask/pulls/6156",
+        "reviews": "https://api.github.com/repos/pallets/flask/pulls/6156/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/pallets/flask/actions/runs?head_sha=de4bfddc479749f0667d116473b799e18753fd11&per_page=100"
+      },
+      "reviews": [],
+      "runs": [
+        {
+          "id": 34517878146,
+          "workflow_id": 115253103,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "de4bfddc479749f0667d116473b799e18753fd11",
+          "event": "pull_request",
+          "created_at": "2026-09-10T19:01:19Z",
+          "updated_at": "2026-09-10T19:01:50Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/34517878146"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 1,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "pallets/flask#6154",
+      "repository": "pallets/flask",
+      "pull_url": "https://github.com/pallets/flask/pull/6154",
+      "retrieved_at": "2026-10-13T09:49:17.963Z",
+      "pull": {
+        "number": 6154,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2026-09-08T16:28:25Z",
+        "updated_at": "2026-09-23T00:12:46Z",
+        "closed_at": "2026-09-08T16:38:11Z",
+        "merged_at": null,
+        "merge_commit_sha": "744abee1b27e95b2d2ddf3e873e68095deed11b3",
+        "head_sha": "baa684c39c5a27568fc202d681744e2c02d87ea8",
+        "base_sha": "d318b683471101618febed18996405ad26462110"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/pallets/flask/pulls/6154",
+        "reviews": "https://api.github.com/repos/pallets/flask/pulls/6154/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/pallets/flask/actions/runs?head_sha=baa684c39c5a27568fc202d681744e2c02d87ea8&per_page=100"
+      },
+      "reviews": [
+        {
+          "id": 5144371284,
+          "state": "COMMENTED",
+          "submitted_at": "2026-09-08T16:28:32Z",
+          "commit_id": "baa684c39c5a27568fc202d681744e2c02d87ea8",
+          "html_url": "https://github.com/pallets/flask/pull/6154#pullrequestreview-5144371284",
+          "reviewer": "reviewer-1"
+        }
+      ],
+      "runs": [
+        {
+          "id": 34251262833,
+          "workflow_id": 115253103,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "baa684c39c5a27568fc202d681744e2c02d87ea8",
+          "event": "pull_request",
+          "created_at": "2026-09-08T16:28:29Z",
+          "updated_at": "2026-09-08T16:28:52Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/34251262833"
+        },
+        {
+          "id": 34251262977,
+          "workflow_id": 1367898,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "failure",
+          "head_sha": "baa684c39c5a27568fc202d681744e2c02d87ea8",
+          "event": "pull_request",
+          "created_at": "2026-09-08T16:28:29Z",
+          "updated_at": "2026-09-08T16:29:04Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/34251262977"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 2,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "pallets/flask#6137",
+      "repository": "pallets/flask",
+      "pull_url": "https://github.com/pallets/flask/pull/6137",
+      "retrieved_at": "2026-10-13T09:49:18.042Z",
+      "pull": {
+        "number": 6137,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2026-08-23T00:43:11Z",
+        "updated_at": "2026-09-22T00:13:18Z",
+        "closed_at": "2026-08-23T00:51:53Z",
+        "merged_at": null,
+        "merge_commit_sha": "bbf135ab279b19a5ebf42bc8a1fbea6bdc423f5c",
+        "head_sha": "ac7ab71c0b63ce9723a1f86c8a5c75e8dd098436",
+        "base_sha": "d318b683471101618febed18996405ad26462110"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/pallets/flask/pulls/6137",
+        "reviews": "https://api.github.com/repos/pallets/flask/pulls/6137/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/pallets/flask/actions/runs?head_sha=ac7ab71c0b63ce9723a1f86c8a5c75e8dd098436&per_page=100"
+      },
+      "reviews": [],
+      "runs": [
+        {
+          "id": 32608575605,
+          "workflow_id": 1367898,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "ac7ab71c0b63ce9723a1f86c8a5c75e8dd098436",
+          "event": "pull_request",
+          "created_at": "2026-08-23T00:43:14Z",
+          "updated_at": "2026-08-23T00:43:43Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/32608575605"
+        },
+        {
+          "id": 32608575627,
+          "workflow_id": 115253103,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "failure",
+          "head_sha": "ac7ab71c0b63ce9723a1f86c8a5c75e8dd098436",
+          "event": "pull_request",
+          "created_at": "2026-08-23T00:43:14Z",
+          "updated_at": "2026-08-23T00:43:41Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/32608575627"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 2,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "pallets/flask#6153",
+      "repository": "pallets/flask",
+      "pull_url": "https://github.com/pallets/flask/pull/6153",
+      "retrieved_at": "2026-10-13T09:49:18.210Z",
+      "pull": {
+        "number": 6153,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2026-09-07T01:36:14Z",
+        "updated_at": "2026-09-22T00:13:17Z",
+        "closed_at": "2026-09-07T02:11:54Z",
+        "merged_at": null,
+        "merge_commit_sha": "f4ec58adb213edffbdb510f39d338967134b92cf",
+        "head_sha": "e4f64df12156a8a9030023835aa86ffdf95db1a5",
+        "base_sha": "d318b683471101618febed18996405ad26462110"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/pallets/flask/pulls/6153",
+        "reviews": "https://api.github.com/repos/pallets/flask/pulls/6153/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/pallets/flask/actions/runs?head_sha=e4f64df12156a8a9030023835aa86ffdf95db1a5&per_page=100"
+      },
+      "reviews": [],
+      "runs": [
+        {
+          "id": 34073555226,
+          "workflow_id": 115253103,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "e4f64df12156a8a9030023835aa86ffdf95db1a5",
+          "event": "pull_request",
+          "created_at": "2026-09-07T01:36:18Z",
+          "updated_at": "2026-09-07T01:36:36Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/34073555226"
+        },
+        {
+          "id": 34073555224,
+          "workflow_id": 1367898,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "e4f64df12156a8a9030023835aa86ffdf95db1a5",
+          "event": "pull_request",
+          "created_at": "2026-09-07T01:36:18Z",
+          "updated_at": "2026-09-07T01:37:17Z",
+          "html_url": "https://github.com/pallets/flask/actions/runs/34073555224"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 2,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "psf/requests#7030",
+      "repository": "psf/requests",
+      "pull_url": "https://github.com/psf/requests/pull/7030",
+      "retrieved_at": "2026-10-13T09:49:17.985Z",
+      "pull": {
+        "number": 7030,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2025-09-14T05:45:36Z",
+        "updated_at": "2026-10-07T00:08:22Z",
+        "closed_at": "2025-10-06T13:57:46Z",
+        "merged_at": null,
+        "merge_commit_sha": "739766b9bede4553c68ce48890a1716e4bc6e29f",
+        "head_sha": "1e0b22863393cbb401b01e01c987a96d1a2ba3fe",
+        "base_sha": "420d16bc7ef326f7b65f90e4644adc0f6a0e1d44"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/psf/requests/pulls/7030",
+        "reviews": "https://api.github.com/repos/psf/requests/pulls/7030/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/psf/requests/actions/runs?head_sha=1e0b22863393cbb401b01e01c987a96d1a2ba3fe&per_page=100"
+      },
+      "reviews": [
+        {
+          "id": 3221967103,
+          "state": "COMMENTED",
+          "submitted_at": "2025-09-14T10:16:36Z",
+          "commit_id": "1e0b22863393cbb401b01e01c987a96d1a2ba3fe",
+          "html_url": "https://github.com/psf/requests/pull/7030#pullrequestreview-3221967103",
+          "reviewer": "reviewer-1"
+        },
+        {
+          "id": 3221967445,
+          "state": "COMMENTED",
+          "submitted_at": "2025-09-14T10:17:39Z",
+          "commit_id": "1e0b22863393cbb401b01e01c987a96d1a2ba3fe",
+          "html_url": "https://github.com/psf/requests/pull/7030#pullrequestreview-3221967445",
+          "reviewer": "reviewer-1"
+        },
+        {
+          "id": 3221995655,
+          "state": "CHANGES_REQUESTED",
+          "submitted_at": "2025-09-14T11:03:23Z",
+          "commit_id": "1e0b22863393cbb401b01e01c987a96d1a2ba3fe",
+          "html_url": "https://github.com/psf/requests/pull/7030#pullrequestreview-3221995655",
+          "reviewer": "reviewer-2"
+        }
+      ],
+      "runs": [],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 0,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "psf/requests#6767",
+      "repository": "psf/requests",
+      "pull_url": "https://github.com/psf/requests/pull/6767",
+      "retrieved_at": "2026-10-13T09:49:17.666Z",
+      "pull": {
+        "number": 6767,
+        "state": "closed",
+        "merged": true,
+        "created_at": "2024-07-18T18:00:33Z",
+        "updated_at": "2026-10-02T00:08:10Z",
+        "closed_at": "2025-06-13T16:42:08Z",
+        "merged_at": "2025-06-13T16:42:08Z",
+        "merge_commit_sha": "90fee0876aea97c639b3bf698d83a12876d2f160",
+        "head_sha": "11d68c17bcd66bd3e2c5137b0a7aad7f59967102",
+        "base_sha": "8ff173b186f135670879db9fbe1e68a6b5209c89"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/psf/requests/pulls/6767",
+        "reviews": "https://api.github.com/repos/psf/requests/pulls/6767/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/psf/requests/actions/runs?head_sha=11d68c17bcd66bd3e2c5137b0a7aad7f59967102&per_page=100"
+      },
+      "reviews": [
+        {
+          "id": 2186534311,
+          "state": "COMMENTED",
+          "submitted_at": "2024-07-18T18:02:54Z",
+          "commit_id": "d520f46f94d0e637d440c6c0d55aa49240e2d46a",
+          "html_url": "https://github.com/psf/requests/pull/6767#pullrequestreview-2186534311",
+          "reviewer": "reviewer-1"
+        },
+        {
+          "id": 2887963612,
+          "state": "APPROVED",
+          "submitted_at": "2025-06-02T11:30:11Z",
+          "commit_id": "11d68c17bcd66bd3e2c5137b0a7aad7f59967102",
+          "html_url": "https://github.com/psf/requests/pull/6767#pullrequestreview-2887963612",
+          "reviewer": "reviewer-2"
+        }
+      ],
+      "runs": [],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 0,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "psf/requests#7010",
+      "repository": "psf/requests",
+      "pull_url": "https://github.com/psf/requests/pull/7010",
+      "retrieved_at": "2026-10-13T09:49:17.680Z",
+      "pull": {
+        "number": 7010,
+        "state": "closed",
+        "merged": true,
+        "created_at": "2025-08-11T22:15:23Z",
+        "updated_at": "2026-09-27T00:08:51Z",
+        "closed_at": "2025-08-11T22:32:17Z",
+        "merged_at": "2025-08-11T22:32:17Z",
+        "merge_commit_sha": "131e506079d97606e4214cc4d87b780ac478de7a",
+        "head_sha": "b336cb2bc616a63a93c6470c558fc1f576b77f90",
+        "base_sha": "46e939b5525d9c72b677340985582b04b128478a"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/psf/requests/pulls/7010",
+        "reviews": "https://api.github.com/repos/psf/requests/pulls/7010/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/psf/requests/actions/runs?head_sha=b336cb2bc616a63a93c6470c558fc1f576b77f90&per_page=100"
+      },
+      "reviews": [
+        {
+          "id": 3107935883,
+          "state": "APPROVED",
+          "submitted_at": "2025-08-11T22:16:57Z",
+          "commit_id": "b336cb2bc616a63a93c6470c558fc1f576b77f90",
+          "html_url": "https://github.com/psf/requests/pull/7010#pullrequestreview-3107935883",
+          "reviewer": "reviewer-1"
+        },
+        {
+          "id": 3108323479,
+          "state": "APPROVED",
+          "submitted_at": "2025-08-12T02:06:31Z",
+          "commit_id": "b336cb2bc616a63a93c6470c558fc1f576b77f90",
+          "html_url": "https://github.com/psf/requests/pull/7010#pullrequestreview-3108323479",
+          "reviewer": "reviewer-2"
+        },
+        {
+          "id": 3269783041,
+          "state": "COMMENTED",
+          "submitted_at": "2025-09-26T00:20:09Z",
+          "commit_id": "b336cb2bc616a63a93c6470c558fc1f576b77f90",
+          "html_url": "https://github.com/psf/requests/pull/7010#pullrequestreview-3269783041",
+          "reviewer": "reviewer-3"
+        }
+      ],
+      "runs": [],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 0,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "psf/requests#7037",
+      "repository": "psf/requests",
+      "pull_url": "https://github.com/psf/requests/pull/7037",
+      "retrieved_at": "2026-10-13T09:49:18.222Z",
+      "pull": {
+        "number": 7037,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2025-09-25T21:30:38Z",
+        "updated_at": "2026-09-26T00:07:19Z",
+        "closed_at": "2025-09-25T22:05:02Z",
+        "merged_at": null,
+        "merge_commit_sha": "0945ef1c31bf9a776654d34794bc726138a952c9",
+        "head_sha": "7b596c7631a15b2dacc6a593c4569e0230680fee",
+        "base_sha": "420d16bc7ef326f7b65f90e4644adc0f6a0e1d44"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/psf/requests/pulls/7037",
+        "reviews": "https://api.github.com/repos/psf/requests/pulls/7037/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/psf/requests/actions/runs?head_sha=7b596c7631a15b2dacc6a593c4569e0230680fee&per_page=100"
+      },
+      "reviews": [],
+      "runs": [],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 0,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "psf/requests#7628",
+      "repository": "psf/requests",
+      "pull_url": "https://github.com/psf/requests/pull/7628",
+      "retrieved_at": "2026-10-13T09:49:17.632Z",
+      "pull": {
+        "number": 7628,
+        "state": "closed",
+        "merged": true,
+        "created_at": "2026-09-21T16:56:09Z",
+        "updated_at": "2026-09-22T07:29:51Z",
+        "closed_at": "2026-09-21T20:22:34Z",
+        "merged_at": "2026-09-21T20:22:33Z",
+        "merge_commit_sha": "611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60",
+        "head_sha": "3b9342848c5de80080dff749a2ab8a771a97d469",
+        "base_sha": "dae7ef63b4df6eded86637f251fc4e3a06c3b479"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/psf/requests/pulls/7628",
+        "reviews": "https://api.github.com/repos/psf/requests/pulls/7628/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/psf/requests/actions/runs?head_sha=3b9342848c5de80080dff749a2ab8a771a97d469&per_page=100"
+      },
+      "reviews": [
+        {
+          "id": 5271463864,
+          "state": "APPROVED",
+          "submitted_at": "2026-09-21T20:22:26Z",
+          "commit_id": "3b9342848c5de80080dff749a2ab8a771a97d469",
+          "html_url": "https://github.com/psf/requests/pull/7628#pullrequestreview-5271463864",
+          "reviewer": "reviewer-1"
+        }
+      ],
+      "runs": [
+        {
+          "id": 35628779678,
+          "workflow_id": 3526169,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3b9342848c5de80080dff749a2ab8a771a97d469",
+          "event": "pull_request",
+          "created_at": "2026-09-21T16:56:14Z",
+          "updated_at": "2026-09-21T17:00:41Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/35628779678"
+        },
+        {
+          "id": 35628779615,
+          "workflow_id": 27729629,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3b9342848c5de80080dff749a2ab8a771a97d469",
+          "event": "pull_request",
+          "created_at": "2026-09-21T16:56:14Z",
+          "updated_at": "2026-09-21T16:56:39Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/35628779615"
+        },
+        {
+          "id": 35628779590,
+          "workflow_id": 254573157,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3b9342848c5de80080dff749a2ab8a771a97d469",
+          "event": "pull_request",
+          "created_at": "2026-09-21T16:56:14Z",
+          "updated_at": "2026-09-21T16:56:39Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/35628779590"
+        },
+        {
+          "id": 35628779579,
+          "workflow_id": 2828917,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3b9342848c5de80080dff749a2ab8a771a97d469",
+          "event": "pull_request",
+          "created_at": "2026-09-21T16:56:14Z",
+          "updated_at": "2026-09-21T16:57:15Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/35628779579"
+        },
+        {
+          "id": 35628779652,
+          "workflow_id": 247665300,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3b9342848c5de80080dff749a2ab8a771a97d469",
+          "event": "pull_request",
+          "created_at": "2026-09-21T16:56:14Z",
+          "updated_at": "2026-09-21T16:56:44Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/35628779652"
+        },
+        {
+          "id": 35628772960,
+          "workflow_id": 3526169,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3b9342848c5de80080dff749a2ab8a771a97d469",
+          "event": "push",
+          "created_at": "2026-09-21T16:56:10Z",
+          "updated_at": "2026-09-21T17:00:53Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/35628772960"
+        },
+        {
+          "id": 35628772947,
+          "workflow_id": 247665300,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3b9342848c5de80080dff749a2ab8a771a97d469",
+          "event": "push",
+          "created_at": "2026-09-21T16:56:10Z",
+          "updated_at": "2026-09-21T16:56:28Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/35628772947"
+        },
+        {
+          "id": 35628772990,
+          "workflow_id": 27729629,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3b9342848c5de80080dff749a2ab8a771a97d469",
+          "event": "push",
+          "created_at": "2026-09-21T16:56:10Z",
+          "updated_at": "2026-09-21T16:56:39Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/35628772990"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 8,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "psf/requests#6991",
+      "repository": "psf/requests",
+      "pull_url": "https://github.com/psf/requests/pull/6991",
+      "retrieved_at": "2026-10-13T09:49:18.561Z",
+      "pull": {
+        "number": 6991,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2025-07-13T15:03:22Z",
+        "updated_at": "2026-09-14T00:08:14Z",
+        "closed_at": "2025-09-13T20:33:19Z",
+        "merged_at": null,
+        "merge_commit_sha": "2f3ba5f4c734e847413ad13a2fb6284bb36250ec",
+        "head_sha": "1688e65119a0de5e9434702fb3805fc7cfeb8a41",
+        "base_sha": "91a3eabd3dcc4d7f36dd8249e4777a90ef9b4305"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/psf/requests/pulls/6991",
+        "reviews": "https://api.github.com/repos/psf/requests/pulls/6991/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/psf/requests/actions/runs?head_sha=1688e65119a0de5e9434702fb3805fc7cfeb8a41&per_page=100"
+      },
+      "reviews": [
+        {
+          "id": 3221313545,
+          "state": "COMMENTED",
+          "submitted_at": "2025-09-13T19:59:26Z",
+          "commit_id": "1688e65119a0de5e9434702fb3805fc7cfeb8a41",
+          "html_url": "https://github.com/psf/requests/pull/6991#pullrequestreview-3221313545",
+          "reviewer": "reviewer-1"
+        }
+      ],
+      "runs": [],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 0,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "psf/requests#7023",
+      "repository": "psf/requests",
+      "pull_url": "https://github.com/psf/requests/pull/7023",
+      "retrieved_at": "2026-10-13T09:49:18.176Z",
+      "pull": {
+        "number": 7023,
+        "state": "closed",
+        "merged": false,
+        "created_at": "2025-09-07T09:06:11Z",
+        "updated_at": "2026-09-11T00:07:46Z",
+        "closed_at": "2025-09-10T03:52:52Z",
+        "merged_at": null,
+        "merge_commit_sha": "8099a8440424b68a56aa63ea1d8b47e50c23b053",
+        "head_sha": "47fdbfb923c9ce0c9cfb456d6aab235cde404d4c",
+        "base_sha": "1c49660b84c88eeb2695796ce4a68903c00e00c5"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/psf/requests/pulls/7023",
+        "reviews": "https://api.github.com/repos/psf/requests/pulls/7023/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/psf/requests/actions/runs?head_sha=47fdbfb923c9ce0c9cfb456d6aab235cde404d4c&per_page=100"
+      },
+      "reviews": [],
+      "runs": [
+        {
+          "id": 17526508444,
+          "workflow_id": 3526169,
+          "run_attempt": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "47fdbfb923c9ce0c9cfb456d6aab235cde404d4c",
+          "event": "pull_request",
+          "created_at": "2025-09-07T09:06:14Z",
+          "updated_at": "2026-10-12T13:09:46Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17526508444"
+        },
+        {
+          "id": 17526508452,
+          "workflow_id": 27729629,
+          "run_attempt": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "47fdbfb923c9ce0c9cfb456d6aab235cde404d4c",
+          "event": "pull_request",
+          "created_at": "2025-09-07T09:06:14Z",
+          "updated_at": "2026-10-12T13:05:44Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17526508452"
+        },
+        {
+          "id": 17526508460,
+          "workflow_id": 2828917,
+          "run_attempt": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "47fdbfb923c9ce0c9cfb456d6aab235cde404d4c",
+          "event": "pull_request",
+          "created_at": "2025-09-07T09:06:14Z",
+          "updated_at": "2026-10-12T13:05:45Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17526508460"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 3,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "psf/requests#7025",
+      "repository": "psf/requests",
+      "pull_url": "https://github.com/psf/requests/pull/7025",
+      "retrieved_at": "2026-10-13T09:49:17.757Z",
+      "pull": {
+        "number": 7025,
+        "state": "closed",
+        "merged": true,
+        "created_at": "2025-09-08T16:18:38Z",
+        "updated_at": "2026-09-10T00:07:13Z",
+        "closed_at": "2025-09-09T00:08:50Z",
+        "merged_at": "2025-09-09T00:08:50Z",
+        "merge_commit_sha": "5a270e2a95cdf84e746f26face11efdda3aa0127",
+        "head_sha": "7d8df1df573a01f20a80994685e9f6c375f9c63f",
+        "base_sha": "1c49660b84c88eeb2695796ce4a68903c00e00c5"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/psf/requests/pulls/7025",
+        "reviews": "https://api.github.com/repos/psf/requests/pulls/7025/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/psf/requests/actions/runs?head_sha=7d8df1df573a01f20a80994685e9f6c375f9c63f&per_page=100"
+      },
+      "reviews": [
+        {
+          "id": 3198552913,
+          "state": "APPROVED",
+          "submitted_at": "2025-09-09T00:08:38Z",
+          "commit_id": "7d8df1df573a01f20a80994685e9f6c375f9c63f",
+          "html_url": "https://github.com/psf/requests/pull/7025#pullrequestreview-3198552913",
+          "reviewer": "reviewer-1"
+        }
+      ],
+      "runs": [
+        {
+          "id": 17557288760,
+          "workflow_id": 3526169,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "7d8df1df573a01f20a80994685e9f6c375f9c63f",
+          "event": "pull_request",
+          "created_at": "2025-09-08T16:18:41Z",
+          "updated_at": "2025-09-08T16:27:18Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17557288760"
+        },
+        {
+          "id": 17557288761,
+          "workflow_id": 2828917,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "7d8df1df573a01f20a80994685e9f6c375f9c63f",
+          "event": "pull_request",
+          "created_at": "2025-09-08T16:18:41Z",
+          "updated_at": "2025-09-08T16:19:44Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17557288761"
+        },
+        {
+          "id": 17557288764,
+          "workflow_id": 27729629,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "7d8df1df573a01f20a80994685e9f6c375f9c63f",
+          "event": "pull_request",
+          "created_at": "2025-09-08T16:18:41Z",
+          "updated_at": "2025-09-08T16:19:04Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17557288764"
+        },
+        {
+          "id": 17557287949,
+          "workflow_id": 27729629,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "7d8df1df573a01f20a80994685e9f6c375f9c63f",
+          "event": "push",
+          "created_at": "2025-09-08T16:18:39Z",
+          "updated_at": "2025-09-08T16:18:56Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17557287949"
+        },
+        {
+          "id": 17557287969,
+          "workflow_id": 3526169,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "7d8df1df573a01f20a80994685e9f6c375f9c63f",
+          "event": "push",
+          "created_at": "2025-09-08T16:18:39Z",
+          "updated_at": "2025-09-08T16:23:37Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17557287969"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 5,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "psf/requests#7026",
+      "repository": "psf/requests",
+      "pull_url": "https://github.com/psf/requests/pull/7026",
+      "retrieved_at": "2026-10-13T09:49:17.731Z",
+      "pull": {
+        "number": 7026,
+        "state": "closed",
+        "merged": true,
+        "created_at": "2025-09-08T16:22:56Z",
+        "updated_at": "2026-09-10T00:07:12Z",
+        "closed_at": "2025-09-09T09:00:19Z",
+        "merged_at": "2025-09-09T09:00:19Z",
+        "merge_commit_sha": "420d16bc7ef326f7b65f90e4644adc0f6a0e1d44",
+        "head_sha": "3c8decb92fb9062cac4bdd12d6c0d32fb3a2d119",
+        "base_sha": "5a270e2a95cdf84e746f26face11efdda3aa0127"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/psf/requests/pulls/7026",
+        "reviews": "https://api.github.com/repos/psf/requests/pulls/7026/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/psf/requests/actions/runs?head_sha=3c8decb92fb9062cac4bdd12d6c0d32fb3a2d119&per_page=100"
+      },
+      "reviews": [
+        {
+          "id": 3200230926,
+          "state": "APPROVED",
+          "submitted_at": "2025-09-09T09:00:09Z",
+          "commit_id": "3c8decb92fb9062cac4bdd12d6c0d32fb3a2d119",
+          "html_url": "https://github.com/psf/requests/pull/7026#pullrequestreview-3200230926",
+          "reviewer": "reviewer-1"
+        }
+      ],
+      "runs": [
+        {
+          "id": 17567620018,
+          "workflow_id": 27729629,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3c8decb92fb9062cac4bdd12d6c0d32fb3a2d119",
+          "event": "pull_request",
+          "created_at": "2025-09-09T00:09:52Z",
+          "updated_at": "2025-09-09T00:10:15Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17567620018"
+        },
+        {
+          "id": 17567620022,
+          "workflow_id": 2828917,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3c8decb92fb9062cac4bdd12d6c0d32fb3a2d119",
+          "event": "pull_request",
+          "created_at": "2025-09-09T00:09:52Z",
+          "updated_at": "2025-09-09T00:11:00Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17567620022"
+        },
+        {
+          "id": 17567620029,
+          "workflow_id": 3526169,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3c8decb92fb9062cac4bdd12d6c0d32fb3a2d119",
+          "event": "pull_request",
+          "created_at": "2025-09-09T00:09:52Z",
+          "updated_at": "2025-09-09T00:22:13Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17567620029"
+        },
+        {
+          "id": 17567619284,
+          "workflow_id": 3526169,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3c8decb92fb9062cac4bdd12d6c0d32fb3a2d119",
+          "event": "push",
+          "created_at": "2025-09-09T00:09:49Z",
+          "updated_at": "2025-09-09T00:21:22Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17567619284"
+        },
+        {
+          "id": 17567619325,
+          "workflow_id": 27729629,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "3c8decb92fb9062cac4bdd12d6c0d32fb3a2d119",
+          "event": "push",
+          "created_at": "2025-09-09T00:09:49Z",
+          "updated_at": "2025-09-09T00:10:09Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17567619325"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 5,
+        "runs_truncated": false
+      }
+    },
+    {
+      "case_id": "psf/requests#7019",
+      "repository": "psf/requests",
+      "pull_url": "https://github.com/psf/requests/pull/7019",
+      "retrieved_at": "2026-10-13T09:49:17.743Z",
+      "pull": {
+        "number": 7019,
+        "state": "closed",
+        "merged": true,
+        "created_at": "2025-09-02T02:56:18Z",
+        "updated_at": "2026-09-03T00:07:53Z",
+        "closed_at": "2025-09-02T08:15:01Z",
+        "merged_at": "2025-09-02T08:15:01Z",
+        "merge_commit_sha": "1c49660b84c88eeb2695796ce4a68903c00e00c5",
+        "head_sha": "d889393b7eedc7e41d347885959519ac760aec76",
+        "base_sha": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741"
+      },
+      "sources": {
+        "pull": "https://api.github.com/repos/psf/requests/pulls/7019",
+        "reviews": "https://api.github.com/repos/psf/requests/pulls/7019/reviews?per_page=100",
+        "runs": "https://api.github.com/repos/psf/requests/actions/runs?head_sha=d889393b7eedc7e41d347885959519ac760aec76&per_page=100"
+      },
+      "reviews": [
+        {
+          "id": 3175382671,
+          "state": "APPROVED",
+          "submitted_at": "2025-09-02T08:14:56Z",
+          "commit_id": "d889393b7eedc7e41d347885959519ac760aec76",
+          "html_url": "https://github.com/psf/requests/pull/7019#pullrequestreview-3175382671",
+          "reviewer": "reviewer-1"
+        }
+      ],
+      "runs": [
+        {
+          "id": 17391901451,
+          "workflow_id": 27729629,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "d889393b7eedc7e41d347885959519ac760aec76",
+          "event": "pull_request",
+          "created_at": "2025-09-02T02:56:21Z",
+          "updated_at": "2026-10-07T02:58:22Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17391901451"
+        },
+        {
+          "id": 17391901453,
+          "workflow_id": 2828917,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "d889393b7eedc7e41d347885959519ac760aec76",
+          "event": "pull_request",
+          "created_at": "2025-09-02T02:56:21Z",
+          "updated_at": "2026-10-07T02:58:22Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17391901453"
+        },
+        {
+          "id": 17391901456,
+          "workflow_id": 3526169,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "d889393b7eedc7e41d347885959519ac760aec76",
+          "event": "pull_request",
+          "created_at": "2025-09-02T02:56:21Z",
+          "updated_at": "2026-10-07T03:09:48Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17391901456"
+        },
+        {
+          "id": 17391901007,
+          "workflow_id": 3526169,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "d889393b7eedc7e41d347885959519ac760aec76",
+          "event": "push",
+          "created_at": "2025-09-02T02:56:19Z",
+          "updated_at": "2026-10-07T03:06:49Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17391901007"
+        },
+        {
+          "id": 17391901025,
+          "workflow_id": 27729629,
+          "run_attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "d889393b7eedc7e41d347885959519ac760aec76",
+          "event": "push",
+          "created_at": "2025-09-02T02:56:19Z",
+          "updated_at": "2026-10-07T02:58:45Z",
+          "html_url": "https://github.com/psf/requests/actions/runs/17391901025"
+        }
+      ],
+      "coverage": {
+        "reviews_possibly_truncated": false,
+        "runs_total_count": 5,
+        "runs_truncated": false
+      }
+    }
+  ]
+}
