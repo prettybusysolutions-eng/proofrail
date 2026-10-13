@@ -1,0 +1,14 @@
+{
+  "base_remote_commit": "72185f4aaae7f02003550af007e05c8556ce6325",
+  "source_sha256": {
+    "scripts/score_adopter_trial.py": "ce0bccbb40117dbabf7e560d4041a61f34178ce2639b355298557f5561275e24",
+    "scripts/verify_installed_artifact.py": "13d687ddf1a9694c724ea0bcac97722c27f31f9d00c14bfb690ae301f166d069",
+    "tests/test_adopter_trial.py": "d923050bf94f45c5ec8638907cc701d79239f1b35d4774dc266a6e8a4048d2c9"
+  },
+  "wheel_sha256": "751a69de05d8d580f04138d21db58e46f37f08c4552a525e4771c129b26f6402",
+  "unit_tests_passed": 103,
+  "human_observations": 0,
+  "customers_engaged": 0,
+  "independent_review": false,
+  "local_environment": "existing audit venv; wheel execution from temporary directory with python -I"
+}

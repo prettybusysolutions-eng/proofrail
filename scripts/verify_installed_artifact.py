@@ -46,9 +46,31 @@ def verify(artifact: Path) -> dict:
         run(["demo", "github-merge-authority", "--out-dir", str(demo)], root)
         run(["ledger", "verify", str(demo / "proofrail-ledger.jsonl")], root)
         run(["ledger", "verify", str(demo / "tampered-ledger.jsonl")], root, expected=4)
+        audit_source = artifact.parent / 'audit-review' / 'events.jsonl'
+        events = root / 'audit-events.jsonl'
+        shutil.copyfile(audit_source, events)
+        original = events.read_bytes()
+        review = json.loads(run(['audit-review', '--events', str(events), '--tenant', 'tenant-a'], root, expected=4))
+        expected_codes = {'contradictory_execution', 'unresolved_execution', 'conflicting_success_claims'}
+        if {f['code'] for f in review['findings']} != expected_codes:
+            raise RuntimeError('Installed audit review did not identify the expected contradictions')
+        if review['authenticity'] != 'NOT_CHECKED' or review['provider_effect_proven']:
+            raise RuntimeError('Installed audit review overstated its verification boundary')
+        run(['audit-review', '--events', str(events), '--tenant', 'tenant-a', '--output', str(events)], root, expected=2)
+        if events.read_bytes() != original:
+            raise RuntimeError('Audit review modified its input')
+        records = [json.loads(line) for line in original.splitlines()]
+        records[1]['metadata']['adapter_status'] = 'success'
+        events.write_text(''.join(json.dumps(row) + '\n' for row in records))
+        clean = json.loads(run(['audit-review', '--events', str(events), '--tenant', 'tenant-a'], root))
+        if clean['status'] != 'NO_FINDINGS_IN_SUPPLIED_EVENTS':
+            raise RuntimeError('Installed audit review rejected consistent claims')
+        run(['audit-review', '--events', str(events), '--tenant', 'wrong-tenant'], root, expected=4)
     return {"valid": True, "checks": [
         "installed_artifact_accepted", "modified_artifact_rejected_exit_4",
         "offline_authority_demo", "valid_ledger_accepted", "tampered_ledger_rejected_exit_4",
+        "installed_audit_findings", "audit_boundary_preserved", "audit_input_preserved",
+        "consistent_audit_claims", "audit_tenant_mismatch",
     ], "boundary": "Offline installed-package verification; not production certification."}
 
 

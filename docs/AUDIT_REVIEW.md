@@ -76,3 +76,6 @@ and verifies that a proposer cannot read the report.
 No customer time savings, paid adoption, competitive superiority or acquisition
 value has been measured. The purpose is to make a bounded adopter experiment
 possible with a usable command, explicit findings and reproducible evidence.
+
+For a counterbalanced human trial, use `docs/ADOPTER_TRIAL.md`, the unfilled
+templates in `examples/adopter-trial`, and `scripts/score_adopter_trial.py`.

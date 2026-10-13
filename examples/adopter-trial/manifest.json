@@ -1,0 +1,148 @@
+{
+  "workflow": "",
+  "baseline_tools": "",
+  "assisted_version": "",
+  "label_approver": "",
+  "cases": [
+    {
+      "case_id": "case-01",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-02",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-03",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-04",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-05",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-06",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-07",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-08",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-09",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-10",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-11",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-12",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-13",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-14",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-15",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-16",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-17",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-18",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-19",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    },
+    {
+      "case_id": "case-20",
+      "expected_label": null,
+      "critical": null,
+      "evidence_path": "",
+      "label_rationale": ""
+    }
+  ]
+}
