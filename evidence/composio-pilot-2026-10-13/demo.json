@@ -1,0 +1,116 @@
+{
+  "scope": "Partner demo: synthetic provider effects, real HTTP, no Composio credentials.\n\nBoth paths deliberately share the production adapter. This demonstrates behavior,\nnot a competitive advantage, Composio integration or independent verification.\n",
+  "valid": true,
+  "results": [
+    {
+      "path": "conventional",
+      "case": "response_lost_after_effect",
+      "first_attempt": {
+        "status": "success"
+      },
+      "repeated_authority": {
+        "status": "error",
+        "type": "IntegrityError",
+        "reason": "UNIQUE constraint failed: claims.hash"
+      },
+      "fixture_provider_effects": 1,
+      "fixture_head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "fixture_merged": true,
+      "expected_behavior_observed": true,
+      "claim_boundary": "Matched provider state does not identify which actor caused it."
+    },
+    {
+      "path": "conventional",
+      "case": "competing_actor_changes_head",
+      "first_attempt": {
+        "status": "unknown"
+      },
+      "repeated_authority": {
+        "status": "error",
+        "type": "IntegrityError",
+        "reason": "UNIQUE constraint failed: claims.hash"
+      },
+      "fixture_provider_effects": 1,
+      "fixture_head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "fixture_merged": true,
+      "expected_behavior_observed": true,
+      "claim_boundary": "Matched provider state does not identify which actor caused it."
+    },
+    {
+      "path": "conventional",
+      "case": "interrupted_before_provider_write",
+      "first_attempt": {
+        "status": "error",
+        "type": "RuntimeError",
+        "reason": "Synthetic interruption after local claim, before provider write"
+      },
+      "repeated_authority": {
+        "status": "error",
+        "type": "IntegrityError",
+        "reason": "UNIQUE constraint failed: claims.hash"
+      },
+      "fixture_provider_effects": 0,
+      "fixture_head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "fixture_merged": false,
+      "expected_behavior_observed": true,
+      "claim_boundary": "Matched provider state does not identify which actor caused it."
+    },
+    {
+      "path": "proofrail",
+      "case": "response_lost_after_effect",
+      "first_attempt": {
+        "status": "success"
+      },
+      "repeated_authority": {
+        "status": "error",
+        "type": "PermitError",
+        "reason": "permit_replayed"
+      },
+      "fixture_provider_effects": 1,
+      "fixture_head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "fixture_merged": true,
+      "expected_behavior_observed": true,
+      "claim_boundary": "Matched provider state does not identify which actor caused it."
+    },
+    {
+      "path": "proofrail",
+      "case": "competing_actor_changes_head",
+      "first_attempt": {
+        "status": "unknown"
+      },
+      "repeated_authority": {
+        "status": "error",
+        "type": "PermitError",
+        "reason": "permit_replayed"
+      },
+      "fixture_provider_effects": 1,
+      "fixture_head": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "fixture_merged": true,
+      "expected_behavior_observed": true,
+      "claim_boundary": "Matched provider state does not identify which actor caused it."
+    },
+    {
+      "path": "proofrail",
+      "case": "interrupted_before_provider_write",
+      "first_attempt": {
+        "status": "error",
+        "type": "RuntimeError",
+        "reason": "Synthetic interruption after local claim, before provider write"
+      },
+      "repeated_authority": {
+        "status": "error",
+        "type": "PermitError",
+        "reason": "permit_replayed"
+      },
+      "fixture_provider_effects": 0,
+      "fixture_head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "fixture_merged": false,
+      "expected_behavior_observed": true,
+      "claim_boundary": "Matched provider state does not identify which actor caused it."
+    }
+  ],
+  "composio_integration_tested": false,
+  "independent_review": false,
+  "automatic_retry_authorized": false,
+  "competitive_superiority_demonstrated": false
+}
