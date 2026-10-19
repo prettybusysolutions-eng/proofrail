@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sqlite3
 import uuid
 from collections.abc import Mapping
@@ -446,13 +447,15 @@ def _require_digest(value: str, field: str) -> None:
         raise PermitError(f"invalid_{field}") from exc
 
 
+_GIT_OBJECT_ID = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+
+
 def _require_sha(value: str, field: str) -> None:
-    if not isinstance(value, str) or not 7 <= len(value) <= 64:
+    # Bind only the canonical form the provider reports (full lowercase SHA-1
+    # or SHA-256 object ID). Abbreviated, uppercase, "0x"-prefixed, or
+    # underscore-separated values could never match exactly at execution.
+    if not isinstance(value, str) or not _GIT_OBJECT_ID.fullmatch(value):
         raise PermitError(f"invalid_{field}")
-    try:
-        int(value, 16)
-    except ValueError as exc:
-        raise PermitError(f"invalid_{field}") from exc
 
 
 def _validated_trust_constraints(trust: Mapping[str, Any]) -> dict[str, Any]:
