@@ -11,6 +11,7 @@ execution experiments, not a production worker or a new protocol version.
 Read `DISCOVERY.md` for the hypothesis, results, limitations, and next build.
 
 ```bash
+python -m pip install ../..
 python -m pip install -r requirements-dev.txt
 python -m pytest -q tests/
 python counterfactual_lab.py --output counterfactual_results.json
@@ -22,6 +23,14 @@ two real subprocesses. Injected crashes call `os._exit(73)`. Destination
 verification reads actual committed fixture state and binds its digest into
 the existing signed completion receipt. False acknowledgments and wrong outputs
 remain unconfirmed in the verified arm. No external service or AI model is used.
+
+## ProofRail acceptance bridge
+
+`acceptance_bridge.py` now verifies an SMATP handoff against ProofRail's existing
+signed Action Authority Envelope and a pinned acceptance contract. It requires
+the authority's existing `success_predicate_digest` to commit to that contract.
+See [ACCEPTANCE_BRIDGE.md](ACCEPTANCE_BRIDGE.md) for trust inputs, result meanings,
+tests, and the execution boundary. This is a read-only verifier, not a dispatcher.
 
 **Status: local prototype, not a production-ready protocol or new standard.**
 

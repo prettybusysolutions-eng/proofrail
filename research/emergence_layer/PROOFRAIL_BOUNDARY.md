@@ -41,6 +41,7 @@ From the repository root:
 ```bash
 cd research/emergence_layer
 python -m pip install -r requirements-dev.txt
+python -m pip install ../..
 python -m pytest -q tests/
 python counterfactual_lab.py --output reproduced-results.json
 diff -u counterfactual_results.json reproduced-results.json
@@ -50,10 +51,12 @@ The CI job runs Python 3.11 and 3.12 and checks every recorded observation,
 including negative controls, against the committed results. These deterministic
 fixtures are not statistical reliability estimates or real-provider benchmarks.
 
-## Next integration gate
+## Read-only integration implemented
 
-Bind a future handoff acceptance contract to an existing ProofRail action
-digest and authorized target, with a versioned observer predicate. Prove that
-changing either task, authority, target, expected output, or observer identity
-is rejected. Preserve uncertainty when the destination cannot substantiate an
-effect. Implement that bridge separately from this experimental harness.
+`acceptance_bridge.py` binds the acceptance contract through the existing
+authority observation-contract predicate digest and calls ProofRail's actual
+authority verifier. It checks exact task, tenant, target, subject, pinned
+authority, current caller-supplied roots and approval, observer identity and
+key, observation freshness, and handoff binding. It never consumes authority,
+dispatches an action, or grants a retry. The returned execution_authorized field
+is always false. See ACCEPTANCE_BRIDGE.md for the remaining execution gate.
