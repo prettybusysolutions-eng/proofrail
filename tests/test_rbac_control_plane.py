@@ -8,8 +8,34 @@ from urllib import request
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from proofrail.control_plane import ControlPlane
+from proofrail.quorum import QuorumObservationAdapter, observation_subject, sign_attestation
 from proofrail.rbac import PILOT_ROLE_PERMISSIONS, AuthorizationError, Principal
 from proofrail.server import PilotControlPlane, make_server
+
+
+class SignedGitHubObserver:
+    """Signs what the shared provider fixture reports, including merged head."""
+
+    def __init__(self, signer_id, key, provider):
+        self.signer_id = signer_id
+        self.key = key
+        self.provider = provider
+
+    def observe(self, action):
+        seen = self.provider.observe(action)
+        return sign_attestation(
+            kind="proofrail.github-observation.v0.5.1",
+            subject_digest=observation_subject(action),
+            statement={
+                "merged": seen["merged"],
+                "merge_commit_sha": seen["merge_commit_sha"],
+                "head_sha": seen["pull"]["head_sha"],
+            },
+            signer_id=self.signer_id,
+            signer_role="observer",
+            private_key=self.key,
+            key_id=f"{self.signer_id}-key",
+        )
 
 
 class ConfirmedMergeAdapter:
@@ -17,6 +43,8 @@ class ConfirmedMergeAdapter:
         self.calls = 0
         self.observed_merged = True
         self.observed_merge_sha = "merge123"
+        # None means "GitHub reports the head that was requested" (the approved head).
+        self.observed_head_sha = None
 
     def execute(self, action, *, idempotency_key):
         self.calls += 1
@@ -45,6 +73,11 @@ class ConfirmedMergeAdapter:
                 "number": action["execution"]["pull_number"],
                 "merged": self.observed_merged,
                 "merge_commit_sha": self.observed_merge_sha,
+                "head_sha": (
+                    self.observed_head_sha
+                    if self.observed_head_sha is not None
+                    else action["execution"]["expected_head_sha"]
+                ),
             },
         }
 
@@ -66,12 +99,28 @@ class RBACControlPlaneTests(unittest.TestCase):
     def test_http_control_plane_enforces_full_role_separation(self):
         with TemporaryDirectory() as directory:
             adapter = ConfirmedMergeAdapter()
+            # Reconcile through the real M-of-N observation adapter, with
+            # observers that sign what they see, rather than a hand-built
+            # observation shape the production adapter never returns.
+            observers = {
+                name: SignedGitHubObserver(name, Ed25519PrivateKey.generate(), adapter)
+                for name in ("audit", "provider", "mirror")
+            }
+            quorum_adapter = QuorumObservationAdapter(
+                executor_adapter=adapter,
+                observation_sources=observers,
+                trusted_observers={
+                    name: ("observer", observer.key.public_key())
+                    for name, observer in observers.items()
+                },
+                threshold=2,
+            )
             app = PilotControlPlane(
                 database=Path(directory) / "pilot.sqlite3",
                 ledger_dir=Path(directory) / "ledgers",
                 verifier_private_key=Ed25519PrivateKey.generate(),
                 checkpoint_private_key=Ed25519PrivateKey.generate(),
-                github_adapter=adapter,
+                github_adapter=quorum_adapter,
             )
             tenant = app.control.create_tenant("Pilot")
             roles = (
@@ -239,6 +288,19 @@ class RBACControlPlaneTests(unittest.TestCase):
             self.assertEqual(replay_status, 400)
             self.assertIn("permit_replayed", replay["error"])
             self.assertEqual(adapter.calls, 1)
+
+            # A merge observed at a different head is not this permit's effect.
+            adapter.observed_head_sha = "f" * 16
+            status, wrong_head, _ = app.request(
+                "POST",
+                "/reconcile/github-merge",
+                headers=reconciler,
+                body={"execution_id": execution["execution_id"]},
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(wrong_head["state"], "RECONCILIATION_FAILED")
+            self.assertEqual(wrong_head["observed_head_sha"], "f" * 16)
+            adapter.observed_head_sha = None
 
             status, reconciliation, _ = app.request(
                 "POST",

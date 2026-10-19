@@ -186,6 +186,10 @@ class QuorumObservationAdapter:
             "merge_commit_sha": (
                 statement.get("merge_commit_sha") if quorum["met"] else None
             ),
+            # Observers must sign the merged head; reconciliation only accepts
+            # a merge at the permit's approved head. The head is part of the
+            # quorum-agreed statement, so it carries the same M-of-N assurance.
+            "head_sha": statement.get("head_sha") if quorum["met"] else None,
         }
 
 
