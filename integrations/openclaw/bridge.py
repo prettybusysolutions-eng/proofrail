@@ -131,10 +131,25 @@ class OpenClawProofRailBridge:
                 execution=execution,
             )
         except Exception as exc:
+            # The adapter was invoked, so the side effect may already have
+            # happened (e.g. the process ran, then output decoding or receipt
+            # validation failed). Record the outcome as unknown, never failed,
+            # and keep it in the tamper-evident ledger.
+            error = {"error_type": type(exc).__name__, "error": str(exc)}
+            try:
+                receipt = self.ledger.append(
+                    action=action,
+                    decision=decision,
+                    outcome="unknown",
+                    actor=actor,
+                    details={"adapter_error": error},
+                )
+            except Exception:
+                receipt = None
             self._complete_execution(
                 decision.action_digest,
-                "failed",
-                {"error_type": type(exc).__name__, "error": str(exc)},
+                "unknown",
+                {**error, "ledger_receipt": receipt},
             )
             raise
 
@@ -238,16 +253,33 @@ class SubprocessAdapter:
             raise ProofRailError(f"Program is not allowlisted: {program!r}")
         if not isinstance(arguments, list) or not all(isinstance(arg, str) for arg in arguments):
             raise ProofRailError("Execution args must be a list of strings")
-        completed = subprocess.run(
-            [program, *arguments],
-            cwd=self.cwd,
-            capture_output=True,
-            text=True,
-            timeout=self.timeout_seconds,
-            check=False,
-            shell=False,
-            env={"PATH": "/usr/bin:/bin", "PROOFRAIL_IDEMPOTENCY_KEY": idempotency_key},
-        )
+        try:
+            completed = subprocess.run(
+                [program, *arguments],
+                cwd=self.cwd,
+                capture_output=True,
+                timeout=self.timeout_seconds,
+                check=False,
+                shell=False,
+                env={"PATH": "/usr/bin:/bin", "PROOFRAIL_IDEMPOTENCY_KEY": idempotency_key},
+            )
+        except subprocess.TimeoutExpired as exc:
+            # The program ran and may have produced its side effect before
+            # being killed: outcome is unknown and must not be retried blindly.
+            return {
+                "contract": "proofrail.adapter-receipt.v1",
+                "idempotency_key": idempotency_key,
+                "remote_operation_id": f"local:{program}:{idempotency_key[:16]}",
+                "status": "unknown",
+                "side_effect_confirmed": False,
+                "retry_safe": False,
+                "receipt_evidence": {
+                    "program": program,
+                    "args": arguments,
+                    "timeout_seconds": self.timeout_seconds,
+                    **_output_evidence(exc.stdout or b"", exc.stderr or b""),
+                },
+            }
         result = {
             "contract": "proofrail.adapter-receipt.v1",
             "idempotency_key": idempotency_key,
@@ -259,15 +291,24 @@ class SubprocessAdapter:
                 "program": program,
                 "args": arguments,
                 "returncode": completed.returncode,
-                "stdout_sha256": hashlib.sha256(completed.stdout.encode()).hexdigest(),
-                "stderr_sha256": hashlib.sha256(completed.stderr.encode()).hexdigest(),
-                "stdout_tail": completed.stdout[-8192:],
-                "stderr_tail": completed.stderr[-8192:],
+                **_output_evidence(completed.stdout, completed.stderr),
             },
         }
-        if completed.returncode != 0:
-            return result
         return result
+
+
+def _output_evidence(stdout: bytes, stderr: bytes) -> dict[str, str]:
+    """Hash the exact output bytes; decode only the display tails, lossily.
+
+    Programs may emit bytes that are not valid UTF-8. Decoding strictly would
+    raise after the program's side effect already happened.
+    """
+    return {
+        "stdout_sha256": hashlib.sha256(stdout).hexdigest(),
+        "stderr_sha256": hashlib.sha256(stderr).hexdigest(),
+        "stdout_tail": stdout[-8192:].decode("utf-8", errors="replace"),
+        "stderr_tail": stderr[-8192:].decode("utf-8", errors="replace"),
+    }
 
 
 def validate_adapter_receipt(
