@@ -1,0 +1,1 @@
+trial_id,commit_sha,environment,setup_minutes,baseline_review_minutes,request_to_confirmation_seconds,human_intervention_minutes,outcome,recovery_mode,provider_write_count,buyer_accepted,evidence_url
