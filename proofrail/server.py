@@ -491,8 +491,14 @@ class PilotControlPlane:
         observed_merged = observation.get("merged") is True
         observed_merge_sha = observation.get("merge_commit_sha")
         claimed_sha = adapter_result.get("remote_operation_id")
+        observed_head_sha = observation.get("head_sha")
+        if observed_head_sha is None and isinstance(observation.get("pull"), Mapping):
+            observed_head_sha = observation["pull"].get("head_sha")
+        # A merge reconciles as this permit's effect only at the approved head.
+        head_matches = observed_head_sha == effect["expected_head_sha"]
         confirmed = (
             observed_merged
+            and head_matches
             and adapter_result.get("side_effect_confirmed") is True
             and isinstance(observed_merge_sha, str)
             and observed_merge_sha == claimed_sha
@@ -510,6 +516,8 @@ class PilotControlPlane:
             "state": state,
             "observed_merged": observed_merged,
             "observed_merge_sha": observed_merge_sha,
+            "observed_head_sha": observed_head_sha,
+            "expected_head_sha": effect["expected_head_sha"],
             "executor_claim_sha": claimed_sha,
             "provider_observation": observation,
         }
