@@ -23,8 +23,22 @@ CLI exit codes:
 - 2: the input cannot be read/parsed or the requested output would overwrite it.
 
 Reports always distinguish `NO_FINDINGS_IN_SUPPLIED_EVENTS` from certification.
-`authenticity` is `NOT_CHECKED`, and both `authorization_proven` and
-`provider_effect_proven` are false. No command output authorizes execution or retry.
+Both `authorization_proven` and `provider_effect_proven` are false. No command
+output authorizes execution or retry.
+
+`authenticity` reports the hash chain carried by the export:
+
+- `HASH_CHAIN_CONSISTENT`: every event's `entry_hash` matches its content and
+  each `previous_hash` links to the event before it. Pilot exports carry these.
+  `hash_chain.starts_at_genesis` says whether the export begins at the first
+  ledger entry.
+- `HASH_CHAIN_INVALID`: an event was edited (`hash_chain_invalid`), removed,
+  inserted or reordered (`hash_chain_broken`), or only some events are hashed
+  (`partial_hash_chain`). These are findings, so the review exits `4`.
+- `NOT_CHECKED`: the events carry no hashes (for example, hand-built input).
+
+A consistent chain does not detect a full rewrite or tail truncation. That
+needs an independently retained checkpoint or external anchor.
 
 The pilot also exposes `GET /audit/events?format=review` using the authenticated
 principal's tenant and existing `audit:read` and `audit:export` permissions. The

@@ -343,6 +343,13 @@ class RBACControlPlaneTests(unittest.TestCase):
             )
             self.assertEqual(review_status, 200)
             self.assertEqual(review["status"], "NEEDS_REVIEW")
+            # A genuine pilot export is hash-chained and must verify as such.
+            self.assertEqual(review["authenticity"], "HASH_CHAIN_CONSISTENT")
+            self.assertTrue(review["hash_chain"]["starts_at_genesis"])
+            self.assertFalse(
+                {"hash_chain_invalid", "hash_chain_broken", "partial_hash_chain"}
+                & {f["code"] for f in review["findings"]}
+            )
             self.assertFalse(review["provider_effect_proven"])
             self.assertIn("replay_attempt_recorded", {f["code"] for f in review["findings"]})
             denied_review, _, _ = app.request(
