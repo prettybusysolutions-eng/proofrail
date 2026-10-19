@@ -273,20 +273,30 @@ def _trusted_key(
     bundled = (artifact / filename).read_text(encoding="utf-8").strip()
     if trusted_keys is None:
         return decode_public_key(bundled)
-    pinned = trusted_keys.get(filename)
-    if pinned is None:
+    pinned = (trusted_keys.get(filename) or "").strip()
+    if not pinned:
         checks.append(_check(f"pinned_key:{filename}", False, "no pinned key supplied"))
         return decode_public_key(bundled)
-    pinned = pinned.strip()
+    pinned_key = decode_public_key(pinned)
+    try:
+        same = _raw_public_bytes(pinned_key) == _raw_public_bytes(decode_public_key(bundled))
+    except ProofRailError:
+        same = False
     checks.append(
         _check(
             f"pinned_key:{filename}",
-            pinned == bundled,
-            "matches pinned key" if pinned == bundled else "bundle key differs from pinned key",
+            same,
+            "matches pinned key" if same else "bundle key differs from pinned key",
         )
     )
     # Always verify against the independently obtained key.
-    return decode_public_key(pinned)
+    return pinned_key
+
+
+def _raw_public_bytes(key: Any) -> bytes:
+    from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+
+    return key.public_bytes(Encoding.Raw, PublicFormat.Raw)
 
 
 def load_trusted_keys(directory: str | Path) -> dict[str, str]:
