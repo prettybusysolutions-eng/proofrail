@@ -1135,6 +1135,38 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                 digest = rc._entry_digest(big)
             self.assertTrue(digest.startswith("file:"))
 
+    def test_job_allowing_a_forbidden_path_is_refused_before_authority(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            for forbidden in (["allowed.py"], ["/allowed.py/"]):
+                with self.subTest(forbidden=forbidden):
+                    job["forbidden_paths"] = forbidden
+                    with self.assertRaisesRegex(RepositoryAuthorityError, "allowed_path_forbidden:allowed.py"):
+                        parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo))
+
+    def test_forbidden_directory_covers_paths_beneath_it(self):
+        from integrations.openclaw.repository_change import is_forbidden_path
+        self.assertTrue(is_forbidden_path("secrets/key.pem", ["secrets"]))
+        self.assertTrue(is_forbidden_path("secrets/a/b", ["secrets/"]))
+        self.assertTrue(is_forbidden_path("secrets", ["secrets"]))
+        self.assertFalse(is_forbidden_path("secrets-public/x", ["secrets"]))
+        self.assertFalse(is_forbidden_path("allowed.py", []))
+
+    def test_worker_change_under_forbidden_directory_is_flagged(self):
+        with TemporaryDirectory() as directory:
+            write = "(repo/'secrets').mkdir(); (repo/'secrets'/'key.pem').write_text('x')\n"
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + write + _PASS_REPORT)
+            action["execution"]["job"]["forbidden_paths"] = ["secrets"]
+            job_file = Path(action["execution"]["job_file"])
+            job = json.loads(job_file.read_text()); job["forbidden_paths"] = ["secrets"]
+            job_file.write_text(json.dumps(job, sort_keys=True))
+            action["execution"]["authority"] = self._authority(job, repo)
+            rec = adapter.execute(action, idempotency_key="b1" * 32)["receipt_evidence"]["reconciliation"]
+            self.assertEqual(rec["state"], "RECONCILIATION_FAILED")
+            self.assertIn("forbidden_path_changed", rec["errors"])
+            self.assertEqual(rec["forbidden_changes"], ["secrets/key.pem"])
+
     def _registered_worker(self):
         """The installed worker the governor's authority must name.
 

@@ -12,7 +12,7 @@ single-use ProofRail `repository_change` authority.
 5. The adapter atomically consumes the authority in SQLite and emits a signed `proofrail.execution-consumption-grant.v1` using a role-separated consumption signing key.
 6. `xzenia-coder-dispatch` verifies the signed consumption grant against the canonical job digest, live repo base, and the installation-owned consumption trust store before resolving the worker. It does not accept a caller-supplied public key, CLI-selected trust store, environment-selected trust store, CLI-selected worker, or environment-selected worker.
 7. The dispatcher resolves the worker from an installation-owned registry, verifies the installed executable fingerprint against the signed consumption grant, atomically records the grant in `config/proofrail-dispatch-claims.sqlite3` (a grant already recorded is refused: `consumption_grant_replayed`), and sends the verified canonical job bytes to the worker over stdin. The worker does not reopen a caller-writable verified-job path after verification.
-8. The dispatcher supervises the worker: it waits up to the signed `max_runtime_seconds`, kills the worker's process group on timeout (exit 3, `worker_runtime_exceeded`), and kills any remaining group members after the worker exits, so reconciliation observes a repository nothing in the group is still writing. A nonzero dispatcher exit fails the adapter immediately.
+8. The dispatcher supervises the worker: it waits up to the signed `max_runtime_seconds`, kills the worker's process group on timeout (exit 3, `worker_runtime_exceeded`), and after the worker exits kills its process group and, on Linux as a child subreaper, every remaining descendant (including ones that left the group), so reconciliation observes a repository nothing the worker started is still writing. A nonzero dispatcher exit fails the adapter immediately.
 9. The reconciler first snapshots git's control files (`.git/config`, `hooks/`, `info/`, `modules/`) and the whole working tree from the filesystem, without running git. If any control file changed, reconciliation fails (`repository_control_tampered`) without running git or the acceptance tests in that repository, because hooks, `core.fsmonitor`, filters and excludes there are worker-chosen. Otherwise it runs git with system/global config disabled, fsmonitor and hooks off and no external diff or textconv, and combines git's view with the filesystem comparison, which still sees files hidden from git. It then reruns the signed acceptance tests locally.
 10. Replay, drift, split-job execution, forged consumption grants, signer substitution, worker substitution, verified-input replacement, scope expansion, false worker success, and failed tests produce explicit denial or reconciliation failure.
 
@@ -91,10 +91,18 @@ Not enforced by this pilot: outside Linux, descendants that leave the process
 group are not contained (that needs an OS boundary such as a cgroup, container
 or separate user). The dispatcher and reconciler still inherit the
 caller's environment and resolve `git`/`python3` through `PATH`; run them from a
-trusted environment. Signed `forbidden_paths` and `allowed_commands` are bound
-into authority but not yet enforced against observed changes or the command
-log. Acceptance tests execute worker-written code with the reconciler's
-privileges.
+trusted environment. Signed `allowed_commands` are bound into authority but
+not enforced: the only record of the commands a worker ran is its own
+`commands.jsonl`, which the reconciler hashes as untrusted evidence, and a
+check against a worker-written log would only trust the worker. Enforcing
+commands needs an execution boundary that observes them. Acceptance tests
+execute worker-written code with the reconciler's privileges.
+
+`forbidden_paths` are enforced: an entry covers that exact path and, as a
+directory, everything beneath it. A job whose `allowed_paths` include a
+forbidden path is refused when it is canonicalized (`allowed_path_forbidden`),
+before authority is minted or consumed, and an observed change under a
+forbidden path fails reconciliation (`forbidden_path_changed`).
 
 The included tests do not demonstrate arbitrary agent framework
 interoperability, recursive agent delegation, an independent external

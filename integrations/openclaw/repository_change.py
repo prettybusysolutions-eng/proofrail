@@ -674,7 +674,25 @@ def canonicalize_job(job: Mapping[str, Any], *, repo_path: str | Path | None = N
         "max_runtime_seconds": int(job["max_runtime_seconds"]),
         "max_model_calls": int(job.get("max_model_calls", 1)),
     }
+    contradictions = [
+        path for path in canonical["allowed_paths"]
+        if is_forbidden_path(path, canonical["forbidden_paths"])
+    ]
+    if contradictions:
+        # A path both allowed and forbidden makes the signed scope
+        # self-contradictory; refuse before any authority is minted or spent.
+        raise RepositoryAuthorityError("allowed_path_forbidden:" + ",".join(contradictions))
     return canonical
+
+
+def is_forbidden_path(path: str, forbidden_paths: list[str]) -> bool:
+    """A forbidden entry covers that exact path and, as a directory, everything under it."""
+    candidate = path.strip("/")
+    for entry in forbidden_paths:
+        prefix = str(entry).strip("/")
+        if prefix and (candidate == prefix or candidate.startswith(prefix + "/")):
+            return True
+    return False
 
 
 def canonical_job_digest(job: Mapping[str, Any]) -> str:
@@ -892,8 +910,13 @@ def reconcile_repository_change(
             )
         except RepositoryAuthorityError as exc:
             errors.append(str(exc))
+    forbidden_changes = sorted(
+        path for path in changed if is_forbidden_path(path, list(job.get("forbidden_paths", [])))
+    )
     if control_tampered:
         errors.append("repository_control_tampered")
+    if forbidden_changes:
+        errors.append("forbidden_path_changed")
     if worker_report.get("status") != "PASS":
         errors.append("worker_status_not_pass")
     if unauthorized:
@@ -927,6 +950,7 @@ def reconcile_repository_change(
         "errors": errors,
         "changed_files": sorted(changed),
         "unauthorized_changes": unauthorized,
+        "forbidden_changes": forbidden_changes,
         "tests_passed": not command_failures,
         "independent_tests": independent_tests,
         "artifact_manifest": artifact_manifest,
