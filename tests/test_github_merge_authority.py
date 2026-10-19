@@ -25,7 +25,7 @@ EVIDENCE_ROOT = "2" * 64
 POLICY_ROOT = "3" * 64
 STATE_ROOT = "4" * 64
 APPROVAL_DIGEST = "5" * 64
-HEAD_SHA = "abcdef1234567890"
+HEAD_SHA = "abcdef1234567890abcdef1234567890abcdef12"
 
 
 class RecordingAdapter:
@@ -126,6 +126,24 @@ class GitHubMergeAuthorityTests(unittest.TestCase):
             action = adapter.calls[0][0]
             self.assertEqual(action["execution"]["expected_head_sha"], HEAD_SHA)
             self.assertEqual(action["execution"]["merge_method"], "squash")
+
+    def test_permit_binds_only_canonical_full_head_sha(self):
+        # Accepted: full lowercase SHA-1 and SHA-256 object IDs.
+        self.permit(expected_head_sha="a" * 40)
+        self.permit(expected_head_sha="b" * 64)
+        # Rejected at mint time: forms that can never match the provider exactly.
+        for bad in (
+            HEAD_SHA[:7],          # abbreviated
+            HEAD_SHA.upper(),      # uppercase
+            "0x" + HEAD_SHA[:38],  # int(x, 16) accepts a 0x prefix
+            "abcd_" + HEAD_SHA[5:],  # int(x, 16) accepts underscores
+            HEAD_SHA + "0",        # 41 characters
+            " " + HEAD_SHA[1:],
+        ):
+            with self.subTest(bad=bad):
+                with self.assertRaises(PermitError) as caught:
+                    self.permit(expected_head_sha=bad)
+                self.assertEqual(caught.exception.code, "invalid_expected_head_sha")
 
     def test_expired_permit_is_denied_before_adapter_call(self):
         permit = self.permit(expires_at=NOW + timedelta(seconds=1))

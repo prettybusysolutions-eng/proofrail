@@ -150,6 +150,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     reproduce = commands.add_parser("reproduce")
     reproduce.add_argument("artifact")
+    reproduce.add_argument(
+        "--trusted-keys",
+        metavar="DIR",
+        help=(
+            "directory of *-public-key.txt files obtained independently of the "
+            "bundle; every in-bundle key must match its pinned value"
+        ),
+    )
     reproduce.set_defaults(handler=handle_reproduce)
 
     demo = commands.add_parser("demo")
@@ -348,10 +356,19 @@ def handle_anchor_verify(args: argparse.Namespace) -> int:
 
 
 def handle_reproduce(args: argparse.Namespace) -> int:
-    from .reproduce import reproduce_artifact
+    from .reproduce import load_trusted_keys, reproduce_artifact
 
-    result = reproduce_artifact(args.artifact)
+    trusted = load_trusted_keys(args.trusted_keys) if args.trusted_keys else None
+    result = reproduce_artifact(args.artifact, trusted_keys=trusted)
     print(json.dumps(result, indent=2, sort_keys=True))
+    if trusted is None:
+        print(
+            "WARNING: verified against public keys shipped inside the bundle "
+            "(key_trust=self_asserted). This proves internal consistency only; "
+            "a bundle re-signed with any new key also verifies. Pass "
+            "--trusted-keys DIR with independently obtained keys to verify origin.",
+            file=sys.stderr,
+        )
     return 0 if result["valid"] else 4
 
 
