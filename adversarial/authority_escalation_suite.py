@@ -58,7 +58,7 @@ def run() -> list[dict]:
                 approval_digest="5" * 64,
                 repository="owner/repo",
                 pull_number=42,
-                expected_head_sha="abcdef1234567890",
+                expected_head_sha="abcdef1234567890abcdef1234567890abcdef12",
                 merge_method="squash",
                 nonce="executor-escalation-nonce",
                 expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
