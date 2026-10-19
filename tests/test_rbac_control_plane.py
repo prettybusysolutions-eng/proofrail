@@ -164,7 +164,7 @@ class RBACControlPlaneTests(unittest.TestCase):
                     "effect": {
                         "repository": "owner/repo",
                         "pull_number": 42,
-                        "expected_head_sha": "abcdef1234567890",
+                        "expected_head_sha": "abcdef1234567890abcdef1234567890abcdef12",
                         "merge_method": "squash",
                     },
                 },
@@ -398,7 +398,7 @@ class RBACControlPlaneTests(unittest.TestCase):
                         "effect": {
                             "repository": "owner/repo",
                             "pull_number": 7,
-                            "expected_head_sha": "abcdef1234567890",
+                            "expected_head_sha": "abcdef1234567890abcdef1234567890abcdef12",
                             "merge_method": "squash",
                         },
                     }

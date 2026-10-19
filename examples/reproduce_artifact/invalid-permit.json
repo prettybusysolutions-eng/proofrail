@@ -17,7 +17,7 @@
   "kind": "proofrail.execution-permit.v0.2",
   "nonce": "reproduce-valid-nonce-0001",
   "permit_id": "proofrail-reproduce-valid-permit",
-  "record_hash": "674ab4d428f0ae9c4898b0d4c9171c4f138cbdddf86b55f94fb1959e03174334",
+  "record_hash": "a002e15df47ec6d5c20ceb0f156bbc4d2bcf74585ebdd766891bf7caaeb55012",
   "roots": {
     "evidence": "2222222222222222222222222222222222222222222222222222222222222222",
     "identity": "1111111111111111111111111111111111111111111111111111111111111111",
@@ -27,7 +27,7 @@
   "signature": {
     "algorithm": "ed25519",
     "key_id": "reproduce-verifier",
-    "value": "o04n7M9-924dPxdTC3Pb6nfaoxmDNKInsRJsRpXCbMLcTq6KNm0ryHSaZCfoEHlximRNJQhAuzisDzLu6XEGBw"
+    "value": "vav5HF7X2GlDbLQ9_AK_KGFdPnyDAooAIROlo52wWgKszd5c5tUsQOQIdt77EhMvf5qmoWZTM8pvzA_yVgi6Cg"
   },
   "state": "PERMITTED",
   "trust": {
