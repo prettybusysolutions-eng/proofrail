@@ -94,6 +94,8 @@ jobs:
           test -f cases/CASE-0001/case.json
       - name: Run ProofRail tests
         run: python -m unittest discover -s tests -v
+      - name: Enforce adapter end-to-end rule
+        run: python scripts/check_adapter_e2e.py
       - name: Verify pilot server entry point
         run: proofrail-server --help
       - name: Regenerate adversarial validation evidence
