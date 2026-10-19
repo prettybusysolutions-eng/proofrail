@@ -47,3 +47,7 @@
     atomic. A later revocation cannot cancel an already dispatched request.
     Multi-process fencing and provider-enforced revocation require additional
     design and evidence; the local lock is not a distributed revocation barrier.
+    Full-pilot counterexamples in `tests/test_revocation_boundary_review.py`
+    also reproduce governance changes committed before HTTP dispatch, after
+    local admission, followed by a successful effect. Passing these tests means
+    the known limitation was reproduced, not that revocation was enforced.
