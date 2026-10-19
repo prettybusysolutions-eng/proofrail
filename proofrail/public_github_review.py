@@ -33,7 +33,7 @@ def review_public_snapshot(snapshot):
                 raise ValueError('case identity does not match repository and PR')
             if type(pull['merged']) is not bool or pull['state'] not in ('open', 'closed'):
                 raise ValueError('invalid merge/state fields')
-            if not re.fullmatch('[0-9a-f]{40,64}', pull['head_sha']):
+            if not re.fullmatch('[0-9a-f]{40}|[0-9a-f]{64}', pull['head_sha']):
                 raise ValueError('invalid head SHA')
             if not isinstance(case['reviews'], list) or not isinstance(case['runs'], list):
                 raise ValueError('invalid review/run lists')
@@ -45,7 +45,7 @@ def review_public_snapshot(snapshot):
             _time(case['retrieved_at'])
             created = _time(pull['created_at'])
             if pull['merged']:
-                if pull['state'] != 'closed' or not re.fullmatch('[0-9a-f]{40,64}', pull['merge_commit_sha']):
+                if pull['state'] != 'closed' or not re.fullmatch('[0-9a-f]{40}|[0-9a-f]{64}', pull['merge_commit_sha']):
                     raise ValueError('merged state lacks a closed PR and commit')
                 if _time(pull['merged_at']) < created:
                     raise ValueError('merge precedes creation')

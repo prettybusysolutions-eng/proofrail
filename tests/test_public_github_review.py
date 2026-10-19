@@ -28,6 +28,24 @@ class PublicGitHubReviewTests(unittest.TestCase):
         with self.assertRaises(ProofRailError):
             review_public_snapshot(self.snapshot)
 
+    def test_non_canonical_head_sha_length_rejected(self):
+        # Only full SHA-1 (40) or SHA-256 (64) object IDs, matching mint_permit.
+        # Replace every reference to the head (runs, reviews) so the case stays
+        # internally consistent and only the SHA length is wrong.
+        original = self.snapshot['cases'][0]['pull']['head_sha']
+        for length in (41, 52, 63):
+            with self.subTest(length=length):
+                case = json.loads(json.dumps(self.snapshot['cases'][0]).replace(original, 'a' * length))
+                snapshot = copy.deepcopy(self.snapshot)
+                snapshot['cases'][0] = case
+                with self.assertRaises(ProofRailError):
+                    review_public_snapshot(snapshot)
+        # Control: the same consistent substitution at a canonical length is accepted.
+        case = json.loads(json.dumps(self.snapshot['cases'][0]).replace(original, 'a' * 40))
+        snapshot = copy.deepcopy(self.snapshot)
+        snapshot['cases'][0] = case
+        review_public_snapshot(snapshot)
+
     def test_duplicate_case_rejected(self):
         self.snapshot['cases'].append(copy.deepcopy(self.snapshot['cases'][0]))
         with self.assertRaises(ProofRailError):
