@@ -195,6 +195,89 @@ class MCPAuthorityMiddlewareTests(unittest.TestCase):
             result = self.invoke(self.middleware(directory), envelope)
         self.assertEqual(result.reason, "invalid_envelope")
 
+    def test_mapping_that_changes_between_reads_cannot_swap_the_effect(self):
+        # Review of #1: verification read INC-42/closed, execution read INC-1/deleted.
+        from collections.abc import Mapping
+
+        authorized, swapped = dict(self.arguments), {"ticket_id": "INC-1", "state": "deleted"}
+
+        class Shifting(Mapping):
+            """Consistent within each full pass; swaps contents after the first pass."""
+
+            def __init__(self):
+                self.passes = 0
+                self.view = authorized
+
+            def __iter__(self):
+                self.view = authorized if self.passes == 0 else swapped
+                self.passes += 1
+                return iter(self.view)
+
+            def __getitem__(self, key):
+                return self.view[key]
+
+            def __len__(self):
+                return len(self.view)
+
+        recorder = RecordingAdapter()
+        with TemporaryDirectory() as directory:
+            result = self.invoke(self.middleware(directory, adapter=recorder),
+                                 self.envelope(), arguments=Shifting())
+        # Authorized once, then executed exactly as authorized.
+        self.assertEqual(result.status, "success")
+        self.assertEqual(recorder.seen, [authorized])
+
+    def test_nested_mutation_after_verification_does_not_reach_the_tool(self):
+        self.arguments = {"ticket_id": "INC-42", "state": "closed", "recipients": ["a@x"]}
+        envelope = self.envelope()
+        arguments = copy.deepcopy(self.arguments)
+
+        class MutateAfterVerify(ToolAdapter):
+            def execute(inner, tool_name, args, *, idempotency_key):
+                arguments["recipients"].append("attacker@evil")  # caller-held object
+                inner.seen = copy.deepcopy(args)
+                return super().execute(tool_name, args, idempotency_key=idempotency_key)
+
+        adapter = MutateAfterVerify()
+        with TemporaryDirectory() as directory:
+            result = self.invoke(self.middleware(directory, adapter=adapter), envelope,
+                                 arguments=arguments)
+        self.assertEqual(result.status, "success")
+        self.assertEqual(adapter.seen["recipients"], ["a@x"])
+
+    def test_adapter_mutating_its_copy_cannot_change_what_the_observer_checks(self):
+        class Mutating(ToolAdapter):
+            def execute(inner, tool_name, args, *, idempotency_key):
+                args["state"] = "deleted"
+                return super().execute(tool_name, args, idempotency_key=idempotency_key)
+
+        class Watching(Observer):
+            def observe(inner, tool_name, args, **kwargs):
+                inner.seen = dict(args)
+                return super().observe(tool_name, args, **kwargs)
+
+        authorized = copy.deepcopy(self.arguments)
+        observer = Watching()
+        with TemporaryDirectory() as directory:
+            self.invoke(self.middleware(directory, adapter=Mutating(), observer=observer),
+                        self.envelope(), arguments=copy.deepcopy(self.arguments))
+        self.assertEqual(observer.seen, authorized)
+
+    def test_non_mapping_envelope_is_denied_not_raised(self):
+        with TemporaryDirectory() as directory:
+            result = self.invoke(self.middleware(directory), "not-an-envelope")
+        self.assertEqual((result.status, result.reason), ("denied", "invalid_envelope"))
+
+
+class RecordingAdapter(ToolAdapter):
+    def __init__(self):
+        super().__init__()
+        self.seen = []
+
+    def execute(self, tool_name, arguments, *, idempotency_key):
+        self.seen.append(copy.deepcopy(dict(arguments)))
+        return super().execute(tool_name, arguments, idempotency_key=idempotency_key)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from integrations.openclaw.bridge import validate_adapter_receipt
 from proofrail.core import ProofRailError
+from proofrail.crypto import canonical_json
 from proofrail.envelope import effect_digest, verify_action_authority_envelope
 from proofrail.permit import PermitError
 
@@ -86,6 +87,21 @@ class MCPAuthorityMiddleware:
         expected_roots: Mapping[str, str],
         expected_approval_digest: str,
     ) -> MCPAuthorityResult:
+        # Snapshot caller-supplied inputs exactly once, as canonical JSON bytes.
+        # Everything below (verification, consumption, execution, observation)
+        # works from fresh copies decoded from these bytes, so a caller-held
+        # Mapping that changes between reads, or a nested object mutated after
+        # verification, cannot alter the effect that was authorized.
+        if not isinstance(envelope, Mapping):
+            return MCPAuthorityResult("denied", "invalid_envelope", "")
+        if not isinstance(arguments, Mapping) or not isinstance(tool_name, str):
+            return MCPAuthorityResult("denied", "invalid_arguments", "")
+        try:
+            frozen_envelope = canonical_json(dict(envelope))
+            frozen_arguments = canonical_json(dict(arguments))
+        except (ProofRailError, TypeError, ValueError):
+            return MCPAuthorityResult("denied", "non_canonical_input", "")
+        envelope = _thaw(frozen_envelope)
         envelope_digest = str(envelope.get("record_hash", ""))
         try:
             verify_action_authority_envelope(
@@ -95,7 +111,7 @@ class MCPAuthorityMiddleware:
                 expected_approval_digest=expected_approval_digest,
                 action_type=MCP_ACTION_TYPE,
                 target=tool_name,
-                parameters=arguments,
+                parameters=_thaw(frozen_arguments),
             )
         except PermitError as exc:
             return MCPAuthorityResult("denied", exc.code, envelope_digest)
@@ -108,7 +124,7 @@ class MCPAuthorityMiddleware:
             adapter_receipt = validate_adapter_receipt(
                 self.adapter.execute(
                     tool_name,
-                    arguments,
+                    _thaw(frozen_arguments),
                     idempotency_key=envelope_digest,
                 ),
                 expected_idempotency_key=envelope_digest,
@@ -130,7 +146,7 @@ class MCPAuthorityMiddleware:
             observation = validate_observation_receipt(
                 self.observer.observe(
                     tool_name,
-                    arguments,
+                    _thaw(frozen_arguments),
                     adapter_receipt=adapter_receipt,
                     effect_digest=envelope["effect"]["effect_digest"],
                 ),
@@ -243,6 +259,11 @@ class MCPAuthorityMiddleware:
             raise
         finally:
             connection.close()
+
+
+def _thaw(frozen: bytes) -> dict[str, Any]:
+    """Decode an independent copy of a canonical JSON snapshot."""
+    return json.loads(frozen)
 
 
 def validate_observation_receipt(
