@@ -98,3 +98,10 @@ The `signature` (base64 Ed25519) is computed over canonical JSON of all fields a
 ## Commercial positioning
 
 The candidate differentiator is a neutral *verified handoff and recovery* layer, not a semantic monopoly. Pilot on one paid workflow where agent actions cross a trust boundary. Demonstrate receipt validation, recovery after restart, latency added, avoided errors and a verifiable customer saving before setting revenue expectations.
+
+## Enforcing dispatcher pilot
+
+See [DISPATCHER_PILOT.md](DISPATCHER_PILOT.md) for the service-account CLI,
+retained-journal recovery boundary and proposed paid evaluation. New dispatcher
+fault tests are synthetic; the earlier live connector trial is separate.
+[Independent review request](INDEPENDENT_DISPATCH_REVIEW.md) remains open.
