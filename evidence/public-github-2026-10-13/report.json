@@ -1,0 +1,425 @@
+{
+  "case_count": 20,
+  "cases": [
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "pallets/flask#6168",
+      "head_sha": "7689f98403e2c0b0bc8d1031e60f8cff2620e86a",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "728c5e440af704a786384159184f695cf04ecbe7",
+      "non_success_or_unfinished_run_ids": [
+        37631414474
+      ],
+      "provider_state": "MERGED_RECORDED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown.",
+        "Inspect selected non-success or unfinished runs; their requiredness and merge-time state are unknown."
+      ],
+      "review_records": 0,
+      "selected_workflow_runs": [
+        37631414474,
+        37631412233,
+        37631412232
+      ],
+      "source": "https://api.github.com/repos/pallets/flask/pulls/6168",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "pallets/flask#6162",
+      "head_sha": "afe8961b7cb16262aec39d141452918147ec3af7",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "cfb71a548383ed5d6bdc8ed726f040a5fe9c7e44",
+      "non_success_or_unfinished_run_ids": [
+        34727211010,
+        34727211038
+      ],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown.",
+        "Inspect selected non-success or unfinished runs; their requiredness and merge-time state are unknown."
+      ],
+      "review_records": 0,
+      "selected_workflow_runs": [
+        34727211010,
+        34727211038
+      ],
+      "source": "https://api.github.com/repos/pallets/flask/pulls/6162",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "pallets/flask#6157",
+      "head_sha": "b9c4d39ed7ded2a7f2ab2ad1aa9c33dd147c82cd",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "a7510fafbac8950ae424f0011e1860a4ceda3c11",
+      "non_success_or_unfinished_run_ids": [
+        34561453561
+      ],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown.",
+        "Inspect selected non-success or unfinished runs; their requiredness and merge-time state are unknown."
+      ],
+      "review_records": 0,
+      "selected_workflow_runs": [
+        34561453561,
+        34561453544
+      ],
+      "source": "https://api.github.com/repos/pallets/flask/pulls/6157",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "pallets/flask#6158",
+      "head_sha": "c66b591aee573a637262e55db02d2a36c261413c",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "f5c014cf319860c1aaefc0d038603579f60e3e7f",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown."
+      ],
+      "review_records": 0,
+      "selected_workflow_runs": [
+        34612807609
+      ],
+      "source": "https://api.github.com/repos/pallets/flask/pulls/6158",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "pallets/flask#6159",
+      "head_sha": "31e0bf6e79a4213dc118f871dc958aa833f9a6b7",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "c5f86c2a1abb95bc8856041c6c11114fb8af2523",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown."
+      ],
+      "review_records": 0,
+      "selected_workflow_runs": [
+        34658026204
+      ],
+      "source": "https://api.github.com/repos/pallets/flask/pulls/6159",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "pallets/flask#6155",
+      "head_sha": "be443e138604cdcbfafeb48403dd99a02d0be3c3",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "fc4d8fe0b7d922b47d99eeb94aa53a7faa8bdb28",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown."
+      ],
+      "review_records": 0,
+      "selected_workflow_runs": [
+        34475889285
+      ],
+      "source": "https://api.github.com/repos/pallets/flask/pulls/6155",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "pallets/flask#6156",
+      "head_sha": "de4bfddc479749f0667d116473b799e18753fd11",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "a9bbef2693bf8986724ba2ab672a54279b4893eb",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown."
+      ],
+      "review_records": 0,
+      "selected_workflow_runs": [
+        34517878146
+      ],
+      "source": "https://api.github.com/repos/pallets/flask/pulls/6156",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "pallets/flask#6154",
+      "head_sha": "baa684c39c5a27568fc202d681744e2c02d87ea8",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "744abee1b27e95b2d2ddf3e873e68095deed11b3",
+      "non_success_or_unfinished_run_ids": [
+        34251262977
+      ],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown.",
+        "Inspect selected non-success or unfinished runs; their requiredness and merge-time state are unknown."
+      ],
+      "review_records": 1,
+      "selected_workflow_runs": [
+        34251262833,
+        34251262977
+      ],
+      "source": "https://api.github.com/repos/pallets/flask/pulls/6154",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "pallets/flask#6137",
+      "head_sha": "ac7ab71c0b63ce9723a1f86c8a5c75e8dd098436",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "bbf135ab279b19a5ebf42bc8a1fbea6bdc423f5c",
+      "non_success_or_unfinished_run_ids": [
+        32608575627
+      ],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown.",
+        "Inspect selected non-success or unfinished runs; their requiredness and merge-time state are unknown."
+      ],
+      "review_records": 0,
+      "selected_workflow_runs": [
+        32608575605,
+        32608575627
+      ],
+      "source": "https://api.github.com/repos/pallets/flask/pulls/6137",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "pallets/flask#6153",
+      "head_sha": "e4f64df12156a8a9030023835aa86ffdf95db1a5",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "f4ec58adb213edffbdb510f39d338967134b92cf",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown."
+      ],
+      "review_records": 0,
+      "selected_workflow_runs": [
+        34073555226,
+        34073555224
+      ],
+      "source": "https://api.github.com/repos/pallets/flask/pulls/6153",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "psf/requests#7030",
+      "head_sha": "1e0b22863393cbb401b01e01c987a96d1a2ba3fe",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "739766b9bede4553c68ce48890a1716e4bc6e29f",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown.",
+        "No retained Actions runs returned for this head; this does not establish that CI never ran."
+      ],
+      "review_records": 3,
+      "selected_workflow_runs": [],
+      "source": "https://api.github.com/repos/psf/requests/pulls/7030",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "psf/requests#6767",
+      "head_sha": "11d68c17bcd66bd3e2c5137b0a7aad7f59967102",
+      "latest_current_head_approvals": 1,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "90fee0876aea97c639b3bf698d83a12876d2f160",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "MERGED_RECORDED",
+      "questions": [
+        "No retained Actions runs returned for this head; this does not establish that CI never ran."
+      ],
+      "review_records": 2,
+      "selected_workflow_runs": [],
+      "source": "https://api.github.com/repos/psf/requests/pulls/6767",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "psf/requests#7010",
+      "head_sha": "b336cb2bc616a63a93c6470c558fc1f576b77f90",
+      "latest_current_head_approvals": 2,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "131e506079d97606e4214cc4d87b780ac478de7a",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "MERGED_RECORDED",
+      "questions": [
+        "No retained Actions runs returned for this head; this does not establish that CI never ran."
+      ],
+      "review_records": 3,
+      "selected_workflow_runs": [],
+      "source": "https://api.github.com/repos/psf/requests/pulls/7010",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "psf/requests#7037",
+      "head_sha": "7b596c7631a15b2dacc6a593c4569e0230680fee",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "0945ef1c31bf9a776654d34794bc726138a952c9",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown.",
+        "No retained Actions runs returned for this head; this does not establish that CI never ran."
+      ],
+      "review_records": 0,
+      "selected_workflow_runs": [],
+      "source": "https://api.github.com/repos/psf/requests/pulls/7037",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "psf/requests#7628",
+      "head_sha": "3b9342848c5de80080dff749a2ab8a771a97d469",
+      "latest_current_head_approvals": 1,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "MERGED_RECORDED",
+      "questions": [],
+      "review_records": 1,
+      "selected_workflow_runs": [
+        35628779678,
+        35628779615,
+        35628779590,
+        35628779579,
+        35628779652,
+        35628772960,
+        35628772947,
+        35628772990
+      ],
+      "source": "https://api.github.com/repos/psf/requests/pulls/7628",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "psf/requests#6991",
+      "head_sha": "1688e65119a0de5e9434702fb3805fc7cfeb8a41",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "2f3ba5f4c734e847413ad13a2fb6284bb36250ec",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown.",
+        "No retained Actions runs returned for this head; this does not establish that CI never ran."
+      ],
+      "review_records": 1,
+      "selected_workflow_runs": [],
+      "source": "https://api.github.com/repos/psf/requests/pulls/6991",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "psf/requests#7023",
+      "head_sha": "47fdbfb923c9ce0c9cfb456d6aab235cde404d4c",
+      "latest_current_head_approvals": 0,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "8099a8440424b68a56aa63ea1d8b47e50c23b053",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "CLOSED_UNMERGED",
+      "questions": [
+        "No current-head approval observed; required approvals and bypass rules are unknown."
+      ],
+      "review_records": 0,
+      "selected_workflow_runs": [
+        17526508444,
+        17526508452,
+        17526508460
+      ],
+      "source": "https://api.github.com/repos/psf/requests/pulls/7023",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "psf/requests#7025",
+      "head_sha": "7d8df1df573a01f20a80994685e9f6c375f9c63f",
+      "latest_current_head_approvals": 1,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "5a270e2a95cdf84e746f26face11efdda3aa0127",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "MERGED_RECORDED",
+      "questions": [],
+      "review_records": 1,
+      "selected_workflow_runs": [
+        17557288760,
+        17557288761,
+        17557288764,
+        17557287949,
+        17557287969
+      ],
+      "source": "https://api.github.com/repos/psf/requests/pulls/7025",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "psf/requests#7026",
+      "head_sha": "3c8decb92fb9062cac4bdd12d6c0d32fb3a2d119",
+      "latest_current_head_approvals": 1,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "420d16bc7ef326f7b65f90e4644adc0f6a0e1d44",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "MERGED_RECORDED",
+      "questions": [],
+      "review_records": 1,
+      "selected_workflow_runs": [
+        17567620018,
+        17567620022,
+        17567620029,
+        17567619284,
+        17567619325
+      ],
+      "source": "https://api.github.com/repos/psf/requests/pulls/7026",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    },
+    {
+      "authorization": "NOT_ESTABLISHED",
+      "case_id": "psf/requests#7019",
+      "head_sha": "d889393b7eedc7e41d347885959519ac760aec76",
+      "latest_current_head_approvals": 1,
+      "latest_other_head_approvals": 0,
+      "merge_commit_sha": "1c49660b84c88eeb2695796ce4a68903c00e00c5",
+      "non_success_or_unfinished_run_ids": [],
+      "provider_state": "MERGED_RECORDED",
+      "questions": [],
+      "review_records": 1,
+      "selected_workflow_runs": [
+        17391901451,
+        17391901453,
+        17391901456,
+        17391901007,
+        17391901025
+      ],
+      "source": "https://api.github.com/repos/psf/requests/pulls/7019",
+      "source_authenticity": "NOT_CRYPTOGRAPHICALLY_VERIFIED"
+    }
+  ],
+  "kind": "proofrail.public-github-review.v1",
+  "limits": [
+    "Public API snapshots are provider observations, not ProofRail permits or organization audit logs.",
+    "No historic policy, required-check, bypass, actor-causation or universal revocation determination.",
+    "Latest retrieved reviews/runs may differ from merge-time state; Actions coverage excludes external status providers.",
+    "No human review-time or commercial validation is measured."
+  ],
+  "provider_states": {
+    "CLOSED_UNMERGED": 13,
+    "MERGED_RECORDED": 7
+  }
+}

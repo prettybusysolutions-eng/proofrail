@@ -56,6 +56,11 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument('--output')
     review.set_defaults(handler=handle_audit_review)
 
+    public_review = commands.add_parser('public-github-review', help='Summarize public PR observations without inferring authority')
+    public_review.add_argument('--snapshot', required=True)
+    public_review.add_argument('--output')
+    public_review.set_defaults(handler=handle_public_github_review)
+
     sign = commands.add_parser("sign-claim")
     sign.add_argument("--input", required=True)
     sign.add_argument("--output", required=True)
@@ -370,6 +375,17 @@ def handle_reproduce(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
     return 0 if result["valid"] else 4
+
+
+def handle_public_github_review(args: argparse.Namespace) -> int:
+    from .public_github_review import review_public_snapshot
+    result = review_public_snapshot(read_json(args.snapshot))
+    if args.output:
+        if Path(args.output).resolve() == Path(args.snapshot).resolve():
+            raise ProofRailError('Output must not overwrite source snapshot')
+        atomic_write_json(Path(args.output), result)
+    print(json.dumps(result, indent=2))
+    return 0
 
 
 def handle_audit_review(args: argparse.Namespace) -> int:

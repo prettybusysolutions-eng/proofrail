@@ -1,0 +1,13 @@
+{
+  "base_remote_commit": "cc995c8309460bb422f3ddd39c7974dd2a8fb32c",
+  "source_type": "public GitHub REST field projections",
+  "files_sha256": {
+    "evidence/public-github-2026-10-13/snapshot.json": "699f1f855516bd7e47c084a643c7466689c00c3d1c822aa14c19ea0f146b241f",
+    "evidence/public-github-2026-10-13/report.json": "b2fd25994e20c4c400631515bc247213f7fba034ff5a9bbc08e8bd46fc661f0c",
+    "proofrail/public_github_review.py": "974f91367c5ebf9153e4c720415cb234f71a7ed01a3fac95dd0b286d8f2c17d5",
+    "tests/test_public_github_review.py": "12a3125ad69d353ff3523badac43a016698193a64d69f8b1bcba9f6d058ca7bf"
+  },
+  "tests_passed": 111,
+  "human_timing_observations": 0,
+  "independent_review": false
+}
