@@ -35,7 +35,17 @@ DISPATCH_SUPERVISION_GRACE_SECONDS = 30
 # Repository files that configure what git executes (hooks, fsmonitor,
 # filters, excludes). A worker that changes any of them must fail
 # reconciliation before the reconciler runs git in that repository.
-GIT_CONTROL_SURFACES = (".git/config", ".git/hooks", ".git/info", ".git/modules")
+GIT_CONTROL_SURFACES = (
+    ".git/config",
+    ".git/hooks",
+    ".git/info",
+    ".git/modules",
+    # Redirect where git reads config/objects from: commondir and worktrees
+    # can point config at another file; alternates add foreign object stores.
+    ".git/commondir",
+    ".git/worktrees",
+    ".git/objects/info",
+)
 RECONCILED_ARTIFACT_MANIFEST_KIND = "proofrail.reconciled-artifact-manifest.v1"
 REQUIRED_WORKER_ARTIFACTS = (
     "job.json",

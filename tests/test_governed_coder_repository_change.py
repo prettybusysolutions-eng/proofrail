@@ -1012,6 +1012,21 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             self.assertIn("repository_control_tampered", rec["errors"])
             self.assertFalse(marker.exists(), "reconciler executed worker-planted fsmonitor")
 
+    def test_b3_redirected_git_config_and_object_store_fail_reconciliation(self):
+        # commondir/worktrees can redirect where git reads config (hooks,
+        # fsmonitor); alternates add a foreign object store.
+        for label, plant in (
+            ("alternates", "(repo/'.git/objects/info/alternates').write_text('/tmp/elsewhere\\n')\n"),
+            ("commondir", "(repo/'.git/commondir').write_text('../elsewhere\\n')\n"),
+            ("worktrees", "(repo/'.git/worktrees/x').mkdir(parents=True); (repo/'.git/worktrees/x/commondir').write_text('../..\\n')\n"),
+        ):
+            with self.subTest(surface=label), TemporaryDirectory() as directory:
+                self.installation_dispatch_claims.unlink(missing_ok=True)  # fixtures reuse one nonce
+                repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT + plant)
+                rec = adapter.execute(action, idempotency_key="8" * 64)["receipt_evidence"]["reconciliation"]
+                self.assertEqual(rec["state"], "RECONCILIATION_FAILED")
+                self.assertIn("repository_control_tampered", rec["errors"])
+
     def test_b4_changes_after_the_pass_report_are_observed(self):
         with TemporaryDirectory() as directory:
             late = "import time\ntime.sleep(1.5)\n(repo/'late_unauthorized.py').write_text('x = 1\\n')\n"
