@@ -79,7 +79,7 @@ def generate(output: Path = OUTPUT) -> dict:
         approval_digest=APPROVAL_DIGEST,
         repository="example/repository",
         pull_number=42,
-        expected_head_sha="abcdef1234567890",
+        expected_head_sha="abcdef1234567890abcdef1234567890abcdef12",
         merge_method="squash",
         nonce="reproduce-valid-nonce-0001",
         expires_at=ARTIFACT_TIME + timedelta(days=1),
