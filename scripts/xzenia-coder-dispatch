@@ -116,6 +116,7 @@ def main() -> int:
     stderr = dispatch_dir / "worker.stderr.log"
     started_ms = int(time.time() * 1000)
     with stdout.open("w", encoding="utf-8") as out, stderr.open("w", encoding="utf-8") as err:
+        subreaper = _become_subreaper()
         proc = subprocess.Popen(
             [
                 worker_spec["path"],
@@ -145,6 +146,7 @@ def main() -> int:
             _kill_group(proc.pid)
             exit_code = proc.wait()
         _kill_group(proc.pid)
+        escaped = _kill_descendants() if subreaper else None
     result = {
         "job_id": job_id,
         "status": "TIMED_OUT" if timed_out else "COMPLETED",
@@ -165,6 +167,8 @@ def main() -> int:
         "stdout_log": str(stdout),
         "stderr_log": str(stderr),
         "gateway_blocking": True,
+        "descendant_containment": "subreaper" if subreaper else "process_group_only",
+        "escaped_descendants_killed": escaped,
     }
     write_json(dispatch_dir / "dispatch.json", result)
     print(json.dumps(result, sort_keys=True))
@@ -174,11 +178,64 @@ def main() -> int:
     return 0
 
 
-def _kill_group(pid: int) -> None:
-    """SIGKILL the worker's session/process group; ignore if already gone.
+def _become_subreaper() -> bool:
+    """Linux: adopt orphaned descendants so none can outlive supervision.
 
-    Limit: a descendant that calls setsid() leaves this group. Containing
-    that requires an OS boundary (cgroup, container, separate user).
+    Descendants that leave the worker's process group (setsid, setpgid,
+    double fork) re-parent to this dispatcher instead of init, so
+    _kill_descendants can find and remove them before reconciliation.
+    """
+    try:
+        import ctypes
+
+        libc = ctypes.CDLL(None, use_errno=True)
+        return libc.prctl(36, 1, 0, 0, 0) == 0  # PR_SET_CHILD_SUBREAPER
+    except (OSError, AttributeError):
+        return False
+
+
+def _children(pid: int) -> list[int]:
+    found = []
+    for entry in pathlib.Path("/proc").iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            stat = (entry / "stat").read_text()
+        except OSError:
+            continue
+        # Field 4 (ppid) follows the parenthesised command name.
+        if int(stat.rsplit(")", 1)[1].split()[1]) == pid:
+            found.append(int(entry.name))
+    return found
+
+
+def _kill_descendants(rounds: int = 50) -> int:
+    """SIGKILL and reap every remaining descendant; return how many were found."""
+    me, killed = os.getpid(), 0
+    for _ in range(rounds):
+        children = _children(me)
+        if not children:
+            break
+        for child in children:
+            try:
+                os.kill(child, signal.SIGKILL)
+                killed += 1
+            except ProcessLookupError:
+                pass
+        for child in children:
+            try:
+                os.waitpid(child, 0)
+            except ChildProcessError:
+                pass
+    return killed
+
+
+def _kill_group(pid: int) -> None:
+    """SIGKILL the worker's process group; ignore if already gone.
+
+    Descendants that leave the group are handled by _kill_descendants when
+    the dispatcher is a subreaper (Linux). Elsewhere, containing them
+    requires an OS boundary (cgroup, container, separate user).
     """
     try:
         os.killpg(pid, signal.SIGKILL)

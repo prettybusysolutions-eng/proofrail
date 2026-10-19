@@ -79,9 +79,17 @@ authority, single-use grants at dispatch, files hidden via git excludes and
 hooks, worker-planted `core.fsmonitor` never executing, changes made after the
 worker's PASS report, and runtime-limit enforcement.
 
-Not enforced by this pilot: a worker descendant that calls `setsid()` leaves the
-supervised process group (containment needs an OS boundary such as a cgroup,
-container or separate user). The dispatcher and reconciler still inherit the
+Also covered: replace refs and shallow grafts are control surfaces and the
+reconciler's git ignores replacement objects (a committed file cannot be hidden
+from it); a nested `.git` or an `include`/`includeIf` in the repository config
+is refused (before consuming authority when present up front); on Linux the
+dispatcher is a child subreaper, so descendants that leave the worker's process
+group (`setsid`, `setpgid`, double fork) are killed before reconciliation; files
+are hashed in chunks, so large files cannot exhaust memory.
+
+Not enforced by this pilot: outside Linux, descendants that leave the process
+group are not contained (that needs an OS boundary such as a cgroup, container
+or separate user). The dispatcher and reconciler still inherit the
 caller's environment and resolve `git`/`python3` through `PATH`; run them from a
 trusted environment. Signed `forbidden_paths` and `allowed_commands` are bound
 into authority but not yet enforced against observed changes or the command

@@ -1048,6 +1048,93 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             time.sleep(6)
             self.assertFalse(marker.exists(), "worker survived its runtime limit")
 
+    # --- Second review of #11 -------------------------------------------
+
+    def _reconcile(self, adapter, action, key):
+        return adapter.execute(action, idempotency_key=key)
+
+    def test_replace_ref_cannot_hide_a_committed_unauthorized_file(self):
+        # Previously RECONCILED/success for a HEAD whose real tree held escape.py.
+        with TemporaryDirectory() as directory:
+            body = (
+                "import subprocess as sp, os\n"
+                "env = {k: v for k, v in os.environ.items() if not k.startswith('GIT_')}\n"
+                "g = lambda *a: sp.run(['git', *a], cwd=repo, check=True, capture_output=True, env=env).stdout.decode().strip()\n"
+                + _ALLOWED_CHANGE +
+                "g('add', 'allowed.py'); g('commit', '-m', 'clean'); clean = g('rev-parse', 'HEAD')\n"
+                "g('reset', '--hard', 'HEAD~1')\n"
+                + _ALLOWED_CHANGE +
+                "(repo/'escape.py').write_text('BACKDOOR = 1\\n')\n"
+                "g('add', 'allowed.py', 'escape.py'); g('commit', '-m', 'evil'); evil = g('rev-parse', 'HEAD')\n"
+                "g('replace', evil, clean)\n"
+                "g('rm', '-q', '--cached', 'escape.py'); (repo/'escape.py').unlink()\n"
+                + _PASS_REPORT)
+            repo, action, adapter = self._real_run(directory, body)
+            receipt = self._reconcile(adapter, action, "a1" * 32)
+            rec = receipt["receipt_evidence"]["reconciliation"]
+            self.assertEqual(receipt["status"], "failed")
+            self.assertIn("repository_control_tampered", rec["errors"])
+
+    def test_nested_repository_filter_never_runs_in_the_reconciler(self):
+        with TemporaryDirectory() as directory:
+            marker = Path(directory) / "nested-filter-ran"
+            body = (_ALLOWED_CHANGE +
+                "import subprocess as sp, os\n"
+                "env = {k: v for k, v in os.environ.items() if not k.startswith('GIT_')}\n"
+                "sub = repo/'sub'; sub.mkdir()\n"
+                "g = lambda *a, cwd=sub: sp.run(['git', *a], cwd=cwd, check=True, capture_output=True, env=env).stdout.decode().strip()\n"
+                "g('init'); g('config', 'user.email', 'a@b'); g('config', 'user.name', 'a')\n"
+                "(sub/'a.txt').write_text('hello\\n'); g('add', 'a.txt'); g('commit', '-m', 'x')\n"
+                f"g('config', 'filter.evil.clean', 'sh -c \"echo ran >> {marker}; cat\"')\n"
+                "(sub/'.gitattributes').write_text('* filter=evil\\n')\n"
+                "os.utime(sub/'a.txt', (1, 1))\n"
+                "h = g('rev-parse', 'HEAD')\n"
+                "g('update-index', '--add', '--cacheinfo', f'160000,{h},sub', cwd=repo)\n"
+                + _PASS_REPORT)
+            repo, action, adapter = self._real_run(directory, body)
+            marker.unlink(missing_ok=True)  # only count runs after the worker exits
+            rec = self._reconcile(adapter, action, "a2" * 32)["receipt_evidence"]["reconciliation"]
+            self.assertIn("repository_control_tampered", rec["errors"])
+            self.assertFalse(marker.exists(), "reconciler executed a nested repository's filter")
+
+    def test_repository_with_config_include_is_refused_before_consumption(self):
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            subprocess.run(["git", "config", "include.path", "../wt.gitconfig"], cwd=repo, check=True)
+            with self.assertRaisesRegex(RepositoryAuthorityError, "unsafe_repository:config_include"):
+                self._reconcile(adapter, action, "a3" * 32)
+            # The authority was not spent: nothing reached the consumption registry.
+            registry = Path(directory) / "registry.sqlite3"
+            if registry.exists():
+                with sqlite3.connect(registry) as db:
+                    self.assertEqual(db.execute("SELECT COUNT(*) FROM permit_claims").fetchone()[0], 0)
+
+    def test_descendant_escaping_the_process_group_is_killed(self):
+        # setpgid(0, 0) leaves the worker's group; the subreaper still reaps it.
+        with TemporaryDirectory() as directory:
+            child = ("import subprocess\n"
+                     "subprocess.Popen([sys.executable, '-c', \"import time, pathlib, sys; "
+                     "time.sleep(1.0); pathlib.Path(sys.argv[1], 'late_child.py').write_text('x = 1')\", "
+                     "str(repo)], process_group=0)\n")
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT + child)
+            receipt = self._reconcile(adapter, action, "a4" * 32)
+            time.sleep(2.0)
+            self.assertFalse((repo / "late_child.py").exists(), "escaped descendant outlived supervision")
+            dispatch = receipt["receipt_evidence"]["dispatch"]["result"]
+            if dispatch.get("descendant_containment") == "subreaper":
+                self.assertGreaterEqual(dispatch["escaped_descendants_killed"], 1)
+
+    def test_tree_snapshot_hashes_large_files_without_reading_them_whole(self):
+        from unittest.mock import patch
+        from integrations.openclaw import repository_change as rc
+        with TemporaryDirectory() as directory:
+            big = Path(directory) / "big.bin"
+            with big.open("wb") as handle:
+                handle.truncate(64 * 1024 * 1024)  # sparse 64 MiB
+            with patch.object(Path, "read_bytes", side_effect=AssertionError("read whole file")):
+                digest = rc._entry_digest(big)
+            self.assertTrue(digest.startswith("file:"))
+
     def _registered_worker(self):
         """The installed worker the governor's authority must name.
 

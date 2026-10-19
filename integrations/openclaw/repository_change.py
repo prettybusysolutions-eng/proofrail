@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import time
@@ -45,6 +46,10 @@ GIT_CONTROL_SURFACES = (
     ".git/commondir",
     ".git/worktrees",
     ".git/objects/info",
+    # Replace refs make git substitute one object for another (a committed
+    # file can be hidden from every git view); shallow grafts rewrite history.
+    ".git/refs/replace",
+    ".git/shallow",
 )
 RECONCILED_ARTIFACT_MANIFEST_KIND = "proofrail.reconciled-artifact-manifest.v1"
 REQUIRED_WORKER_ARTIFACTS = (
@@ -351,7 +356,7 @@ def executable_fingerprint(path: str | Path) -> str:
     target = Path(path)
     if not target.exists() or not target.is_file() or target.is_symlink():
         raise RepositoryAuthorityError("installed_worker_missing")
-    return _sha256_bytes(target.read_bytes())
+    return _sha256_file(target)
 
 
 def write_worker_registry(
@@ -520,6 +525,11 @@ class XzeniaCoderRepositoryAdapter:
             raise RepositoryAuthorityError("job_file_mismatch")
         if authority is None:
             raise RepositoryAuthorityError("authority_missing")
+        unsafe = unsafe_repository_reasons(repo_path)
+        if unsafe:
+            # Refuse before consuming authority: the reconciler could not run
+            # git here without executing repository-chosen configuration.
+            raise RepositoryAuthorityError("unsafe_repository:" + ",".join(unsafe))
         current_base = git_head(repo_path)
         # The governor's authority must name the installed worker: parameters
         # include its contract and fingerprint, so an envelope minted for a
@@ -705,7 +715,7 @@ def observe_repository(
             path for path in set(before_tree) | set(tree)
             if before_tree.get(path) != tree.get(path)
         }
-        if control != baseline.get("control"):
+        if control != baseline.get("control") or unsafe_repository_reasons(repo):
             before_control = baseline.get("control", {})
             touched = sorted(
                 path for path in set(before_control) | set(control)
@@ -723,18 +733,18 @@ def observe_repository(
             state["state_root"] = hash_record({"kind": "proofrail.repository-observation.v1", **state})
             return state
     changed_files = set(tree_changed)
-    for line in _git_lines(repo, ["status", "--porcelain", "--untracked-files=all", "--ignored"]):
+    for line in _git_lines(repo, ["status", "--porcelain", "--untracked-files=all", "--ignored", "--ignore-submodules=all"]):
         if len(line) >= 4:
             changed_files.add(line[3:])
     if base_commit_sha:
         for args in (
-            ["diff", "--no-ext-diff", "--no-textconv", "--name-only", base_commit_sha, "HEAD"],
-            ["diff", "--no-ext-diff", "--no-textconv", "--name-only", base_commit_sha],
-            ["diff", "--no-ext-diff", "--no-textconv", "--cached", "--name-only"],
+            ["diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=all", "--name-only", base_commit_sha, "HEAD"],
+            ["diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=all", "--name-only", base_commit_sha],
+            ["diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=all", "--cached", "--name-only"],
         ):
             changed_files.update(_git_lines(repo, args))
     diff = subprocess.run(
-        ["git", *_HARDENED_GIT, "diff", "--no-ext-diff", "--no-textconv", "--binary",
+        ["git", *_HARDENED_GIT, "diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=all", "--binary",
          *([base_commit_sha] if base_commit_sha else [])],
         cwd=repo,
         env=_git_env(),
@@ -762,6 +772,7 @@ def observe_repository(
 
 
 _HARDENED_GIT = (
+    "--no-replace-objects",
     "-c", "core.fsmonitor=false",
     "-c", "core.hooksPath=/dev/null",
     "-c", "core.untrackedCache=false",
@@ -773,7 +784,8 @@ def _git_env() -> dict[str, str]:
     """Environment for reconciler git calls: no system/global config, no prompts."""
     env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
     env.update({"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
-                "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0"})
+                "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0",
+                "GIT_NO_REPLACE_OBJECTS": "1"})
     return env
 
 
@@ -782,7 +794,7 @@ def _entry_digest(path: Path) -> str:
     if path.is_symlink():
         return "symlink:" + _sha256_text(os.readlink(path))
     if path.is_file():
-        return "file:" + _sha256_bytes(path.read_bytes())
+        return "file:" + _sha256_file(path)
     if path.is_dir():
         return "dir"
     return "other"
@@ -800,6 +812,30 @@ def _control_snapshot(repo: Path) -> dict[str, str]:
             for item in sorted(root.rglob("*")):
                 snapshot[str(item.relative_to(repo))] = _entry_digest(item)
     return snapshot
+
+
+def unsafe_repository_reasons(repo: str | Path) -> list[str]:
+    """Repository shapes whose git config the reconciler cannot neutralise.
+
+    `include`/`includeIf` in .git/config can pull config (filters, hooks)
+    from worker-writable files; a nested `.git` brings its own config and
+    filters into the reconciler's git calls.
+    """
+    root = Path(repo).resolve()
+    reasons = []
+    config = root / ".git" / "config"
+    if config.is_file() and re.search(r"^\s*\[\s*include(if)?\b", config.read_text(errors="replace"),
+                                      re.IGNORECASE | re.MULTILINE):
+        reasons.append("config_include")
+    for current, dirs, files in os.walk(root, followlinks=False):
+        here = Path(current)
+        if here == root:
+            dirs[:] = [d for d in dirs if d != ".git"]
+            continue
+        if ".git" in dirs or ".git" in files:
+            reasons.append("nested_git:" + str((here / ".git").relative_to(root)))
+            dirs[:] = [d for d in dirs if d != ".git"]
+    return reasons
 
 
 def _tree_snapshot(repo: Path) -> dict[str, str]:
@@ -1153,7 +1189,7 @@ def _read_json(path: Path, *, default: Any) -> Any:
 def _optional_sha256(path: Path) -> str | None:
     if not path.exists():
         return None
-    return _sha256_bytes(path.read_bytes())
+    return _sha256_file(path)
 
 
 def _sha256_json(value: Any) -> str:
@@ -1166,6 +1202,15 @@ def _sha256_text(text: str) -> str:
 
 def _sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
+
+
+def _sha256_file(path: Path, chunk_size: int = 1 << 20) -> str:
+    """Hash a file in fixed-size chunks so large files cannot exhaust memory."""
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(chunk_size), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _timestamp_ms() -> str:
