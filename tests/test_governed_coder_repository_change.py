@@ -20,7 +20,9 @@ from integrations.openclaw.repository_change import (
     consume_repository_change_authority,
     DEFAULT_EXECUTOR_CONTRACT_VERSION,
     default_consumption_trust_store_path,
+    default_dispatch_claims_path,
     default_worker_registry_path,
+    load_worker_registry_executor,
     executable_fingerprint,
     mint_consumption_grant,
     mint_repository_change_authority,
@@ -61,8 +63,23 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             else None
         )
         self.installation_worker_registry.unlink(missing_ok=True)
+        # Dispatch claims are installation state too; isolate them per test so
+        # fixed fixture digests reused across tests are not cross-test replays.
+        self.installation_dispatch_claims = default_dispatch_claims_path()
+        self._existing_dispatch_claims = (
+            self.installation_dispatch_claims.read_bytes()
+            if self.installation_dispatch_claims.exists()
+            else None
+        )
+        self.installation_dispatch_claims.unlink(missing_ok=True)
+        self._placeholder_dir = TemporaryDirectory()
 
     def tearDown(self):
+        self._placeholder_dir.cleanup()
+        if self._existing_dispatch_claims is None:
+            self.installation_dispatch_claims.unlink(missing_ok=True)
+        else:
+            self.installation_dispatch_claims.write_bytes(self._existing_dispatch_claims)
         if self._existing_trust_store is None:
             self.installation_trust_store.unlink(missing_ok=True)
         else:
@@ -418,7 +435,8 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             repo = _repo(directory)
             job = _job(repo)
             authority = self._authority(job, repo)
-            parameters = parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo))
+            parameters = parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo),
+                                             worker=self._registered_worker())
             grant = consume_repository_change_authority(
                 authority,
                 registry_path=Path(directory) / "registry.sqlite3",
@@ -880,7 +898,8 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             repo = _repo(directory)
             job = _job(repo)
             authority = self._authority(job, repo)
-            parameters = parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo))
+            parameters = parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo),
+                                             worker=self._registered_worker())
             registry = Path(directory) / "registry.sqlite3"
             outcomes = []
 
@@ -912,11 +931,130 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                 count = db.execute("SELECT COUNT(*) FROM permit_claims").fetchone()[0]
             self.assertEqual(count, 1)
 
+    # --- Review of #11: real adapter + real dispatcher + real worker -------
+
+    def _real_run(self, directory, worker_body, *, max_runtime=30):
+        """Install a real worker, mint authority naming it, run the real adapter."""
+        repo = _repo(directory)
+        job = _job(repo)
+        job["max_runtime_seconds"] = max_runtime
+        worker = _scripted_worker(directory, worker_body)
+        self._write_installation_worker_registry(worker)
+        authority = self._authority(job, repo)
+        adapter = self._adapter(directory, _real_dispatcher(directory))
+        action = _action(job, repo, directory, authority=authority)
+        return repo, action, adapter
+
+    def test_b1_real_adapter_drives_real_dispatcher_and_binds_worker(self):
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            receipt = adapter.execute(action, idempotency_key="1" * 64)
+            self.assertEqual(receipt["status"], "success", receipt["receipt_evidence"]["reconciliation"]["errors"])
+            grant = json.loads((Path(directory) / "evidence/proofrail-consumption.json").read_text())
+            self.assertEqual(len(grant["executable_identity_digest"]), 64)
+            self.assertEqual(grant["executor_contract_version"], DEFAULT_EXECUTOR_CONTRACT_VERSION)
+            self.assertEqual(receipt["receipt_evidence"]["dispatch"]["result"]["status"], "COMPLETED")
+
+    def test_b1_authority_not_naming_the_worker_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            job = action["execution"]["job"]
+            action["execution"]["authority"] = mint_repository_change_authority(
+                roots=ROOTS, approval_digest=APPROVAL,
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_identity="xzenia-coder", issuer_principal_id="verifier",
+                issuer_role="verifier", nonce="repository-authority-unbound",
+                expires_at=NOW + timedelta(minutes=5), private_key=self.private_key,
+                key_id="verifier-key", now=NOW)
+            with self.assertRaisesRegex(Exception, "parameters_changed"):
+                adapter.execute(action, idempotency_key="2" * 64)
+            self.assertFalse((repo / "spawned.log").exists())
+
+    def test_b2_consumption_grant_cannot_start_the_worker_twice(self):
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(
+                directory, _SPAWN_LOG + _ALLOWED_CHANGE + _PASS_REPORT)
+            adapter.execute(action, idempotency_key="3" * 64)
+            output = Path(directory) / "evidence"
+            again = subprocess.run(
+                [sys.executable, "scripts/xzenia-coder-dispatch",
+                 "--job-file", action["execution"]["job_file"], "--repo-path", str(repo),
+                 "--output-dir", str(Path(directory) / "replay"),
+                 "--proofrail-consumption-file", str(output / "proofrail-consumption.json")],
+                cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True)
+            self.assertNotEqual(again.returncode, 0)
+            self.assertIn("consumption_grant_replayed", again.stderr)
+            self.assertEqual((Path(directory) / "spawned.log").read_text().count("spawn"), 1)
+
+    def test_b3_files_hidden_via_git_exclude_and_hooks_fail_reconciliation(self):
+        with TemporaryDirectory() as directory:
+            hide = ("(repo/'.git/info/exclude').write_text('backdoor.py\\n')\n"
+                    "(repo/'backdoor.py').write_text('STOLEN = 1\\n')\n"
+                    "(repo/'.git/hooks/pre-commit').write_text('#!/bin/sh\\n')\n")
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + hide + _PASS_REPORT)
+            receipt = adapter.execute(action, idempotency_key="4" * 64)
+            rec = receipt["receipt_evidence"]["reconciliation"]
+            self.assertEqual(rec["state"], "RECONCILIATION_FAILED")
+            self.assertIn("repository_control_tampered", rec["errors"])
+            self.assertIn("backdoor.py", rec["unauthorized_changes"])
+
+    def test_b3_worker_fsmonitor_is_never_executed_by_the_reconciler(self):
+        with TemporaryDirectory() as directory:
+            marker = Path(directory) / "fsmonitor-ran"
+            plant = ("hook = repo.parent/'fsmon.sh'\n"
+                     f"hook.write_text('#!/bin/sh\\necho ran >> {marker}\\n'); hook.chmod(0o755)\n"
+                     "import subprocess\n"
+                     "subprocess.run(['git','config','core.fsmonitor',str(hook)],cwd=repo,check=True)\n")
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + plant + _PASS_REPORT)
+            receipt = adapter.execute(action, idempotency_key="5" * 64)
+            rec = receipt["receipt_evidence"]["reconciliation"]
+            self.assertEqual(rec["state"], "RECONCILIATION_FAILED")
+            self.assertIn("repository_control_tampered", rec["errors"])
+            self.assertFalse(marker.exists(), "reconciler executed worker-planted fsmonitor")
+
+    def test_b4_changes_after_the_pass_report_are_observed(self):
+        with TemporaryDirectory() as directory:
+            late = "import time\ntime.sleep(1.5)\n(repo/'late_unauthorized.py').write_text('x = 1\\n')\n"
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT + late)
+            receipt = adapter.execute(action, idempotency_key="6" * 64)
+            rec = receipt["receipt_evidence"]["reconciliation"]
+            self.assertEqual(rec["state"], "RECONCILIATION_FAILED")
+            self.assertIn("late_unauthorized.py", rec["unauthorized_changes"])
+
+    def test_b4_runtime_limit_kills_the_worker(self):
+        with TemporaryDirectory() as directory:
+            marker = Path(directory) / "still-running"
+            hang = f"import time\ntime.sleep(6)\npathlib.Path({str(marker)!r}).write_text('x')\n"
+            repo, action, adapter = self._real_run(directory, hang, max_runtime=1)
+            started = time.monotonic()
+            with self.assertRaisesRegex(RepositoryAuthorityError, "worker_runtime_exceeded"):
+                adapter.execute(action, idempotency_key="7" * 64)
+            self.assertLess(time.monotonic() - started, 5)
+            time.sleep(6)
+            self.assertFalse(marker.exists(), "worker survived its runtime limit")
+
+    def _registered_worker(self):
+        """The installed worker the governor's authority must name.
+
+        Tests that install a real worker do so before minting; otherwise a
+        placeholder executable is registered so authority can bind a
+        fingerprint, exactly as production authority must.
+        """
+        if not self.installation_worker_registry.exists():
+            placeholder = Path(self._placeholder_dir.name) / "placeholder-worker"
+            placeholder.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            placeholder.chmod(0o755)
+            self._write_installation_worker_registry(placeholder)
+        return load_worker_registry_executor("xzenia-coder")
+
     def _authority(self, job, repo):
         return mint_repository_change_authority(
             roots=ROOTS,
             approval_digest=APPROVAL,
-            parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+            parameters=parameters_from_job(
+                job, repo_path=repo, base_commit_sha=_head(repo),
+                worker=self._registered_worker(),
+            ),
             executor_identity="xzenia-coder",
             issuer_principal_id="verifier",
             issuer_role="verifier",
@@ -1112,3 +1250,40 @@ def _head(repo):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# Worker script fragments for the review-of-#11 regression tests. Each runs in
+# a real worker process started by the real dispatcher; `repo` and `out` are
+# the paths the dispatcher passes on the command line.
+_ALLOWED_CHANGE = "(repo/'allowed.py').write_text('def value():\\n    return 2\\n')\n"
+_SPAWN_LOG = "open(repo.parent/'spawned.log','a').write('spawn\\n')\n"
+_PASS_REPORT = (
+    "for n in ('transcript.jsonl','commands.jsonl','patch.diff','tests.json','hashes.json'):\n"
+    "    (out/n).write_text('{}')\n"
+    "(out/'job.json').write_bytes(job)\n"
+    "(out/'final_report.json').write_text(json.dumps({'status':'PASS','changed_files':['allowed.py']}))\n"
+)
+
+
+def _scripted_worker(directory, body):
+    path = Path(directory) / "scripted_worker.py"
+    path.write_text(
+        f"#!{sys.executable}\n"
+        "import json, pathlib, sys\n"
+        "job = sys.stdin.buffer.read()\n"
+        "repo = pathlib.Path(sys.argv[sys.argv.index('--repo-path') + 1])\n"
+        "out = pathlib.Path(sys.argv[sys.argv.index('--output-dir') + 1])\n"
+        "out.mkdir(parents=True, exist_ok=True)\n" + body,
+        encoding="utf-8",
+    )
+    os.chmod(path, 0o755)
+    return path
+
+
+def _real_dispatcher(directory):
+    """Run the repository's real dispatcher under this test interpreter."""
+    real = Path(__file__).resolve().parents[1] / "scripts" / "xzenia-coder-dispatch"
+    wrapper = Path(directory) / "real-dispatch.sh"
+    wrapper.write_text(f'#!/bin/sh\nexec "{sys.executable}" "{real}" "$@"\n', encoding="utf-8")
+    os.chmod(wrapper, 0o755)
+    return wrapper

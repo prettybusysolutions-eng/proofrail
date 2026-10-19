@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sqlite3
 import subprocess
 import time
@@ -30,6 +31,11 @@ CONSUMPTION_GRANT_KIND = "proofrail.execution-consumption-grant.v1"
 CONSUMPTION_TRUST_STORE_KIND = "proofrail.consumption-trust-store.v1"
 WORKER_REGISTRY_KIND = "proofrail.worker-registry.v1"
 DEFAULT_EXECUTOR_CONTRACT_VERSION = "xzenia-coder.v1"
+DISPATCH_SUPERVISION_GRACE_SECONDS = 30
+# Repository files that configure what git executes (hooks, fsmonitor,
+# filters, excludes). A worker that changes any of them must fail
+# reconciliation before the reconciler runs git in that repository.
+GIT_CONTROL_SURFACES = (".git/config", ".git/hooks", ".git/info", ".git/modules")
 RECONCILED_ARTIFACT_MANIFEST_KIND = "proofrail.reconciled-artifact-manifest.v1"
 REQUIRED_WORKER_ARTIFACTS = (
     "job.json",
@@ -284,6 +290,53 @@ def default_worker_registry_path() -> Path:
     return Path(__file__).resolve().parents[2] / "config" / "proofrail-worker-registry.json"
 
 
+def default_dispatch_claims_path() -> Path:
+    return Path(__file__).resolve().parents[2] / "config" / "proofrail-dispatch-claims.sqlite3"
+
+
+def record_dispatch_claim(
+    *,
+    authority_digest: str,
+    authority_nonce: str,
+    grant_digest: str,
+    executor_id: str,
+    path: str | Path | None = None,
+) -> None:
+    """Atomically record that a consumption grant started a worker.
+
+    The authority is single-use at consumption; this makes the *grant*
+    single-use at dispatch, so one grant cannot start the worker repeatedly.
+    """
+    _require_digest(authority_digest, "authority_digest")
+    target = Path(path) if path is not None else default_dispatch_claims_path()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    database = sqlite3.connect(target, isolation_level=None, timeout=30)
+    try:
+        database.execute(
+            """
+            CREATE TABLE IF NOT EXISTS dispatch_claims (
+                authority_digest TEXT PRIMARY KEY,
+                authority_nonce TEXT NOT NULL UNIQUE,
+                grant_digest TEXT NOT NULL,
+                executor_id TEXT NOT NULL,
+                dispatched_at TEXT NOT NULL
+            )
+            """
+        )
+        database.execute("BEGIN IMMEDIATE")
+        try:
+            database.execute(
+                "INSERT INTO dispatch_claims VALUES (?, ?, ?, ?, ?)",
+                (authority_digest, authority_nonce, grant_digest, executor_id, _timestamp_ms()),
+            )
+            database.execute("COMMIT")
+        except sqlite3.IntegrityError as exc:
+            database.execute("ROLLBACK")
+            raise RepositoryAuthorityError("consumption_grant_replayed") from exc
+    finally:
+        database.close()
+
+
 def executable_fingerprint(path: str | Path) -> str:
     target = Path(path)
     if not target.exists() or not target.is_file() or target.is_symlink():
@@ -455,8 +508,16 @@ class XzeniaCoderRepositoryAdapter:
         job = read_canonical_job_file(job_file, expected_repo_path=repo_path)
         if "job" in execution and canonicalize_job(_mapping(execution, "job"), repo_path=repo_path) != dict(job):
             raise RepositoryAuthorityError("job_file_mismatch")
+        if authority is None:
+            raise RepositoryAuthorityError("authority_missing")
         current_base = git_head(repo_path)
-        parameters = parameters_from_job(job, repo_path=repo_path, base_commit_sha=current_base)
+        # The governor's authority must name the installed worker: parameters
+        # include its contract and fingerprint, so an envelope minted for a
+        # different (or unspecified) worker fails verification here.
+        worker = load_worker_registry_executor(self.executor_id)
+        parameters = parameters_from_job(
+            job, repo_path=repo_path, base_commit_sha=current_base, worker=worker,
+        )
         claim = consume_repository_change_authority(
             authority,
             registry_path=self.registry_path,
@@ -500,6 +561,7 @@ class XzeniaCoderRepositoryAdapter:
             repo_path,
             allowed_paths=job["allowed_paths"],
             base_commit_sha=current_base,
+            baseline=before,
         )
         reconciliation = reconcile_repository_change(
             job=job,
@@ -539,9 +601,19 @@ def parameters_from_job(
     repo_path: str | Path,
     base_commit_sha: str,
     repository_identity: str | None = None,
+    worker: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
+    """Authority parameters for a job.
+
+    Pass `worker` (from load_worker_registry_executor) to bind the exact
+    executor contract and executable fingerprint into the parameters the
+    governor signs. The adapter always does; verifiers that only need to
+    re-derive job/repository bindings may omit it.
+    """
     canonical_job = canonicalize_job(job, repo_path=repo_path)
     return repository_change_parameters(
+        executor_contract_version=worker["contract_version"] if worker else None,
+        executable_identity_digest=worker["executable_identity_digest"] if worker else None,
         repository_identity=repository_identity or str(Path(repo_path).resolve()),
         repository_path=repo_path,
         base_commit_sha=base_commit_sha,
@@ -602,24 +674,60 @@ def observe_repository(
     *,
     allowed_paths: list[str],
     base_commit_sha: str | None = None,
+    baseline: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Observe repository state without trusting worker-controlled git config.
+
+    The working tree and git's control surfaces (config, hooks, info, modules)
+    are snapshotted from the filesystem first, without running git. When a
+    `baseline` observation is supplied and any control surface changed, the
+    observation stops there: running git would execute worker-chosen hooks,
+    fsmonitor commands or filters. Files hidden from git (excludes, ignores)
+    still appear in the filesystem tree comparison.
+    """
     repo = Path(repo_path).resolve()
-    changed = _git_lines(repo, ["status", "--short"])
-    changed_files = set()
-    for line in changed:
+    control = _control_snapshot(repo)
+    tree = _tree_snapshot(repo)
+    tree_changed: set[str] = set()
+    if baseline is not None:
+        before_tree = baseline.get("tree", {})
+        tree_changed = {
+            path for path in set(before_tree) | set(tree)
+            if before_tree.get(path) != tree.get(path)
+        }
+        if control != baseline.get("control"):
+            before_control = baseline.get("control", {})
+            touched = sorted(
+                path for path in set(before_control) | set(control)
+                if before_control.get(path) != control.get(path)
+            )
+            state = {
+                "head": None,
+                "control_tampered": True,
+                "control": control,
+                "tree": tree,
+                "changed_files": sorted(tree_changed | set(touched)),
+                "diff_sha256": None,
+                "allowed_file_hashes": {},
+            }
+            state["state_root"] = hash_record({"kind": "proofrail.repository-observation.v1", **state})
+            return state
+    changed_files = set(tree_changed)
+    for line in _git_lines(repo, ["status", "--porcelain", "--untracked-files=all", "--ignored"]):
         if len(line) >= 4:
             changed_files.add(line[3:])
     if base_commit_sha:
         for args in (
-            ["diff", "--name-only", base_commit_sha, "HEAD"],
-            ["diff", "--name-only", base_commit_sha],
-            ["diff", "--cached", "--name-only"],
+            ["diff", "--no-ext-diff", "--no-textconv", "--name-only", base_commit_sha, "HEAD"],
+            ["diff", "--no-ext-diff", "--no-textconv", "--name-only", base_commit_sha],
+            ["diff", "--no-ext-diff", "--no-textconv", "--cached", "--name-only"],
         ):
             changed_files.update(_git_lines(repo, args))
-    changed_files.update(_git_lines(repo, ["ls-files", "--others", "--exclude-standard"]))
     diff = subprocess.run(
-        ["git", "diff", "--binary", *( [base_commit_sha] if base_commit_sha else [] )],
+        ["git", *_HARDENED_GIT, "diff", "--no-ext-diff", "--no-textconv", "--binary",
+         *([base_commit_sha] if base_commit_sha else [])],
         cwd=repo,
+        env=_git_env(),
         capture_output=True,
         text=True,
         timeout=20,
@@ -627,17 +735,74 @@ def observe_repository(
     ).stdout
     file_hashes = {}
     for rel in allowed_paths:
-        path = (repo / rel).resolve()
-        if path.exists() and path.is_file():
-            file_hashes[rel] = _sha256_bytes(path.read_bytes())
+        entry = tree.get(rel)
+        if entry is not None and entry.startswith("file:"):
+            file_hashes[rel] = entry[len("file:"):]
     state = {
         "head": git_head(repo),
+        "control_tampered": False,
+        "control": control,
+        "tree": tree,
         "changed_files": sorted(path for path in changed_files if path),
         "diff_sha256": _sha256_text(diff),
         "allowed_file_hashes": file_hashes,
     }
     state["state_root"] = hash_record({"kind": "proofrail.repository-observation.v1", **state})
     return state
+
+
+_HARDENED_GIT = (
+    "-c", "core.fsmonitor=false",
+    "-c", "core.hooksPath=/dev/null",
+    "-c", "core.untrackedCache=false",
+    "-c", "core.excludesFile=/dev/null",
+)
+
+
+def _git_env() -> dict[str, str]:
+    """Environment for reconciler git calls: no system/global config, no prompts."""
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    env.update({"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
+                "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0"})
+    return env
+
+
+def _entry_digest(path: Path) -> str:
+    """Describe one filesystem entry without following symlinks."""
+    if path.is_symlink():
+        return "symlink:" + _sha256_text(os.readlink(path))
+    if path.is_file():
+        return "file:" + _sha256_bytes(path.read_bytes())
+    if path.is_dir():
+        return "dir"
+    return "other"
+
+
+def _control_snapshot(repo: Path) -> dict[str, str]:
+    snapshot = {".git": _entry_digest(repo / ".git") if (repo / ".git").exists() or (repo / ".git").is_symlink() else "absent"}
+    for surface in GIT_CONTROL_SURFACES:
+        root = repo / surface
+        if not root.exists() and not root.is_symlink():
+            snapshot[surface] = "absent"
+            continue
+        snapshot[surface] = _entry_digest(root)
+        if root.is_dir() and not root.is_symlink():
+            for item in sorted(root.rglob("*")):
+                snapshot[str(item.relative_to(repo))] = _entry_digest(item)
+    return snapshot
+
+
+def _tree_snapshot(repo: Path) -> dict[str, str]:
+    """Hash every working-tree entry outside .git, including ignored files."""
+    snapshot: dict[str, str] = {}
+    for current, dirs, files in os.walk(repo, followlinks=False):
+        here = Path(current)
+        if here == repo:
+            dirs[:] = [d for d in dirs if d != ".git"]
+        for name in [*files, *[d for d in dirs if (here / d).is_symlink()]]:
+            item = here / name
+            snapshot[str(item.relative_to(repo))] = _entry_digest(item)
+    return snapshot
 
 
 def reconcile_repository_change(
@@ -658,8 +823,13 @@ def reconcile_repository_change(
     report_changed = set(worker_report.get("changed_files", []))
     missing_artifacts = [name for name in REQUIRED_WORKER_ARTIFACTS if not (Path(output_dir) / name).exists()]
     worker_hash_errors = verify_hashes_json(Path(output_dir))
+    control_tampered = after.get("control_tampered") is True
     independent_tests = []
-    if repo_path is not None:
+    if control_tampered:
+        # Do not execute anything in a repository whose git control files the
+        # worker changed (hooks, fsmonitor, filters, excludes).
+        independent_tests = []
+    elif repo_path is not None:
         independent_tests = run_acceptance_tests(repo_path, job.get("acceptance_tests", []))
     else:
         tests = _read_json(Path(output_dir) / "tests.json", default={"final": []})
@@ -676,6 +846,8 @@ def reconcile_repository_change(
             )
         except RepositoryAuthorityError as exc:
             errors.append(str(exc))
+    if control_tampered:
+        errors.append("repository_control_tampered")
     if worker_report.get("status") != "PASS":
         errors.append("worker_status_not_pass")
     if unauthorized:
@@ -794,8 +966,9 @@ def verify_hashes_json(output_dir: Path) -> list[str]:
 
 def git_head(repo_path: str | Path) -> str:
     return subprocess.run(
-        ["git", "rev-parse", "HEAD"],
+        ["git", *_HARDENED_GIT, "rev-parse", "HEAD"],
         cwd=Path(repo_path),
+        env=_git_env(),
         capture_output=True,
         text=True,
         timeout=10,
@@ -875,13 +1048,20 @@ def _run_dispatcher(
         ],
         capture_output=True,
         text=True,
-        timeout=timeout,
+        # The dispatcher supervises the worker for up to `timeout` seconds and
+        # then kills its process group; allow it time to finish doing so.
+        timeout=timeout + DISPATCH_SUPERVISION_GRACE_SECONDS,
         check=False,
     )
     try:
         parsed = json.loads(completed.stdout)
     except json.JSONDecodeError:
         parsed = {}
+    if completed.returncode != 0:
+        # The authority is already spent; surface the refusal instead of
+        # polling for a worker that was never started.
+        reason = (completed.stderr.strip().splitlines() or ["unknown"])[-1]
+        raise RepositoryAuthorityError(f"dispatcher_failed:{reason}")
     return {
         "returncode": completed.returncode,
         "stdout_sha256": _sha256_text(completed.stdout),
@@ -942,8 +1122,9 @@ def _public_key_hex(value: Ed25519PublicKey | bytes) -> str:
 
 def _git_lines(repo_path: Path, args: list[str]) -> list[str]:
     result = subprocess.run(
-        ["git", *args],
+        ["git", *_HARDENED_GIT, *args],
         cwd=repo_path,
+        env=_git_env(),
         capture_output=True,
         text=True,
         timeout=20,

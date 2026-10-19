@@ -7,13 +7,14 @@ single-use ProofRail `repository_change` authority.
 
 1. OpenClaw proposes a machine-readable worker job.
 2. ProofRail canonicalizes the job as `proofrail.xzenia-job.v1` and derives the repository-change effect from that exact job file, repo path, base commit, allowed paths, allowed commands, acceptance tests, runtime, and model-call limits.
-3. A verifier or governor mints a signed action authority envelope. The worker cannot mint this authority.
-4. The OpenClaw repository adapter verifies the signature, roots, approval digest, expiry, target repo/base SHA, and exact effect parameters.
+3. A verifier or governor mints a signed action authority envelope naming the installed worker's contract version and executable fingerprint (from the installation registry). The worker cannot mint this authority.
+4. The OpenClaw repository adapter resolves the installed worker from the registry, then verifies the signature, roots, approval digest, expiry, target repo/base SHA, and exact effect parameters, including that worker binding. Authority minted for a different or unspecified worker is denied (`parameters_changed`).
 5. The adapter atomically consumes the authority in SQLite and emits a signed `proofrail.execution-consumption-grant.v1` using a role-separated consumption signing key.
 6. `xzenia-coder-dispatch` verifies the signed consumption grant against the canonical job digest, live repo base, and the installation-owned consumption trust store before resolving the worker. It does not accept a caller-supplied public key, CLI-selected trust store, environment-selected trust store, CLI-selected worker, or environment-selected worker.
-7. The dispatcher resolves the worker from an installation-owned registry, verifies the installed executable fingerprint against the signed consumption grant, and sends the verified canonical job bytes to the worker over stdin. The worker does not reopen a caller-writable verified-job path after verification.
-8. The reconciler independently observes git state, changed files, patch, command log, worker ledger, actual artifact bytes, and final repository state root, then reruns the signed acceptance tests locally.
-9. Replay, drift, split-job execution, forged consumption grants, signer substitution, worker substitution, verified-input replacement, scope expansion, false worker success, and failed tests produce explicit denial or reconciliation failure.
+7. The dispatcher resolves the worker from an installation-owned registry, verifies the installed executable fingerprint against the signed consumption grant, atomically records the grant in `config/proofrail-dispatch-claims.sqlite3` (a grant already recorded is refused: `consumption_grant_replayed`), and sends the verified canonical job bytes to the worker over stdin. The worker does not reopen a caller-writable verified-job path after verification.
+8. The dispatcher supervises the worker: it waits up to the signed `max_runtime_seconds`, kills the worker's process group on timeout (exit 3, `worker_runtime_exceeded`), and kills any remaining group members after the worker exits, so reconciliation observes a repository nothing in the group is still writing. A nonzero dispatcher exit fails the adapter immediately.
+9. The reconciler first snapshots git's control files (`.git/config`, `hooks/`, `info/`, `modules/`) and the whole working tree from the filesystem, without running git. If any control file changed, reconciliation fails (`repository_control_tampered`) without running git or the acceptance tests in that repository, because hooks, `core.fsmonitor`, filters and excludes there are worker-chosen. Otherwise it runs git with system/global config disabled, fsmonitor and hooks off and no external diff or textconv, and combines git's view with the filesystem comparison, which still sees files hidden from git. It then reruns the signed acceptance tests locally.
+10. Replay, drift, split-job execution, forged consumption grants, signer substitution, worker substitution, verified-input replacement, scope expansion, false worker success, and failed tests produce explicit denial or reconciliation failure.
 
 ## Bound Fields
 
@@ -72,7 +73,20 @@ CLI-selected trust-store denial, trust-store fingerprint fail-closed behavior,
 stdin-transported verified worker-input binding, CLI and environment worker
 override denial, installed worker fingerprint fail-closed behavior, verified
 input replacement race denial, reconciler-authored artifact manifest generation,
-and a race where only one consumer can consume the authority.
+and a race where only one consumer can consume the authority. End-to-end tests
+(real adapter, real dispatcher, real worker process) cover worker-bound
+authority, single-use grants at dispatch, files hidden via git excludes and
+hooks, worker-planted `core.fsmonitor` never executing, changes made after the
+worker's PASS report, and runtime-limit enforcement.
+
+Not enforced by this pilot: a worker descendant that calls `setsid()` leaves the
+supervised process group (containment needs an OS boundary such as a cgroup,
+container or separate user). The dispatcher and reconciler still inherit the
+caller's environment and resolve `git`/`python3` through `PATH`; run them from a
+trusted environment. Signed `forbidden_paths` and `allowed_commands` are bound
+into authority but not yet enforced against observed changes or the command
+log. Acceptance tests execute worker-written code with the reconciler's
+privileges.
 
 The included tests do not demonstrate arbitrary agent framework
 interoperability, recursive agent delegation, an independent external

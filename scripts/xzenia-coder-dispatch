@@ -12,7 +12,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import pathlib
+import signal
 import subprocess
 import sys
 import time
@@ -30,6 +32,7 @@ from integrations.openclaw.repository_change import (
     load_worker_registry_executor,
     parameters_from_job,
     read_canonical_job_file,
+    record_dispatch_claim,
     verify_consumption_grant,
 )
 
@@ -96,10 +99,22 @@ def main() -> int:
         raise SystemExit(str(exc)) from exc
 
     worker_spec = resolve_worker(consumption)
+    # Single-use at dispatch: record this grant before any worker starts.
+    try:
+        record_dispatch_claim(
+            authority_digest=str(consumption.get("authority_digest")),
+            authority_nonce=str(consumption.get("authority_nonce")),
+            grant_digest=record_digest(consumption),
+            executor_id=worker_spec["executor_id"],
+        )
+    except RepositoryAuthorityError as exc:
+        raise SystemExit(str(exc)) from exc
+    runtime_limit = int(job["max_runtime_seconds"])
     dispatch_dir = args.output_dir.resolve() / "dispatch"
     dispatch_dir.mkdir(parents=True, exist_ok=True)
     stdout = dispatch_dir / "worker.stdout.log"
     stderr = dispatch_dir / "worker.stderr.log"
+    started_ms = int(time.time() * 1000)
     with stdout.open("w", encoding="utf-8") as out, stderr.open("w", encoding="utf-8") as err:
         proc = subprocess.Popen(
             [
@@ -119,11 +134,25 @@ def main() -> int:
         assert proc.stdin is not None
         proc.stdin.write(verified_job_bytes)
         proc.stdin.close()
+        # Own the worker's lifetime: enforce the signed runtime limit, then
+        # remove the whole process group so nothing keeps mutating the
+        # repository after the dispatcher returns and reconciliation begins.
+        timed_out = False
+        try:
+            exit_code = proc.wait(timeout=runtime_limit)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            _kill_group(proc.pid)
+            exit_code = proc.wait()
+        _kill_group(proc.pid)
     result = {
         "job_id": job_id,
-        "status": "DISPATCHED",
+        "status": "TIMED_OUT" if timed_out else "COMPLETED",
         "pid": proc.pid,
-        "started_ms": int(time.time() * 1000),
+        "worker_exit_code": exit_code,
+        "runtime_limit_seconds": runtime_limit,
+        "started_ms": started_ms,
+        "finished_ms": int(time.time() * 1000),
         "evidence_directory": str(args.output_dir.resolve()),
         "original_job_file": str(args.job_file.resolve()),
         "verified_input_transport": "stdin_pipe",
@@ -135,11 +164,26 @@ def main() -> int:
         "consumption_grant_digest": record_digest(consumption),
         "stdout_log": str(stdout),
         "stderr_log": str(stderr),
-        "gateway_blocking": False,
+        "gateway_blocking": True,
     }
     write_json(dispatch_dir / "dispatch.json", result)
     print(json.dumps(result, sort_keys=True))
+    if timed_out:
+        print("worker_runtime_exceeded", file=sys.stderr)
+        return 3
     return 0
+
+
+def _kill_group(pid: int) -> None:
+    """SIGKILL the worker's session/process group; ignore if already gone.
+
+    Limit: a descendant that calls setsid() leaves this group. Containing
+    that requires an OS boundary (cgroup, container, separate user).
+    """
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
 
 
 if __name__ == "__main__":
