@@ -73,7 +73,7 @@ class ActionAuthorityEnvelopeTests(unittest.TestCase):
             (
                 "github_merge",
                 "github:owner/repo#42",
-                {"expected_head_sha": "abcdef1234567890", "merge_method": "squash"},
+                {"expected_head_sha": "abcdef1234567890abcdef1234567890abcdef12", "merge_method": "squash"},
             ),
             (
                 "database_migration",
@@ -88,7 +88,7 @@ class ActionAuthorityEnvelopeTests(unittest.TestCase):
                 self.assertTrue(envelope["failure_semantics"]["consume_before_effect"])
 
     def test_parameter_expansion_is_denied(self):
-        parameters = {"expected_head_sha": "abcdef1234567890", "merge_method": "squash"}
+        parameters = {"expected_head_sha": "abcdef1234567890abcdef1234567890abcdef12", "merge_method": "squash"}
         envelope = self.envelope("github_merge", "github:owner/repo#42", parameters)
         expanded = {**parameters, "delete_branch": True}
         with self.assertRaisesRegex(PermitError, "parameters_changed"):

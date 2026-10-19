@@ -1,0 +1,139 @@
+{
+  "adapter_versions": {
+    "A_happy_path": "main 27b59c1",
+    "B_moved_head": "main 27b59c1",
+    "C_foreign_head_race": "main 27b59c1",
+    "C_old_adapter_8e84c17": "pre-#31 adapter 8e84c17",
+    "D_replay": "main 27b59c1"
+  },
+  "observed_github_behaviour": {
+    "head_sha_after_squash_merge": "unchanged PR head (A: 6ebca60 before and after; squash commit 0cff941 is merge_commit_sha)",
+    "put_merge_on_already_merged_pr_with_stale_sha": {
+      "body": {
+        "merged": true,
+        "message": "Pull Request successfully merged",
+        "sha": "844d124a61142fc2f219a3853c53b401f8024b34"
+      },
+      "note": "GitHub ignores the sha precondition once the PR is merged and returns the existing merge commit",
+      "pr": 36,
+      "request": {
+        "merge_method": "squash",
+        "sha": "e33f03594fb79e95257a6b38b6eaa441b5c8121b"
+      },
+      "status": 200
+    }
+  },
+  "repo": "prettybusysolutions-eng/proofrail",
+  "run": "20261019231254",
+  "safety": "All trial PRs targeted throwaway trial/live-*-base-* branches created from main; main was never a merge target.",
+  "scenarios": {
+    "A_happy_path": {
+      "approved_head": "6ebca60fc4b045d5f50928f6a1a2483c0ae7eea8",
+      "authority_state": "RECONCILED",
+      "calls": [
+        [
+          "GET",
+          "prettybusysolutions-eng/proofrail/pulls/34",
+          200
+        ],
+        [
+          "PUT",
+          "prettybusysolutions-eng/proofrail/pulls/34/merge",
+          200
+        ],
+        [
+          "GET",
+          "prettybusysolutions-eng/proofrail/pulls/34",
+          200
+        ]
+      ],
+      "github_head_after_merge": "6ebca60fc4b045d5f50928f6a1a2483c0ae7eea8",
+      "github_merge_commit": "0cff9418a47652526354d494eda43fcc4f771447",
+      "github_merged": true,
+      "pr": 34,
+      "receipt_status": "success",
+      "remote_operation_id": "0cff9418a47652526354d494eda43fcc4f771447"
+    },
+    "B_moved_head": {
+      "actual_head": "953e307f9977ab6cfda2854fbdcab49ce15e4500",
+      "approved_head": "ff59cbf8ebe5ca1f1c7885f89acae095bc4728c7",
+      "authority_state": "EXECUTION_FAILED",
+      "calls": [
+        [
+          "GET",
+          "prettybusysolutions-eng/proofrail/pulls/35",
+          200
+        ]
+      ],
+      "github_merged": false,
+      "pr": 35,
+      "reason": "head_sha_mismatch",
+      "receipt_status": "failed"
+    },
+    "C_foreign_head_race": {
+      "approved_head": "e33f03594fb79e95257a6b38b6eaa441b5c8121b",
+      "authority_state": "EXECUTION_FAILED",
+      "calls": [
+        [
+          "GET",
+          "prettybusysolutions-eng/proofrail/pulls/36",
+          200
+        ],
+        [
+          "PUT",
+          "prettybusysolutions-eng/proofrail/pulls/36/merge",
+          200
+        ],
+        [
+          "GET",
+          "prettybusysolutions-eng/proofrail/pulls/36",
+          200
+        ]
+      ],
+      "foreign_head": "15ed5c5b62b832f766dcb6a2a49877b0f80bb831",
+      "foreign_merge_sha": "844d124a61142fc2f219a3853c53b401f8024b34",
+      "foreign_merge_status": 200,
+      "github_head_after_merge": "15ed5c5b62b832f766dcb6a2a49877b0f80bb831",
+      "github_merged": true,
+      "pr": 36,
+      "reason": "merged_head_mismatch",
+      "receipt_status": "failed",
+      "side_effect_confirmed": false
+    },
+    "C_old_adapter_8e84c17": {
+      "approved_head": "b920270794c3a60cebf13529dcc9bb9e05aef21d",
+      "authority_state": "RECONCILED",
+      "calls": [
+        [
+          "GET",
+          "prettybusysolutions-eng/proofrail/pulls/37",
+          200
+        ],
+        [
+          "PUT",
+          "prettybusysolutions-eng/proofrail/pulls/37/merge",
+          200
+        ],
+        [
+          "GET",
+          "prettybusysolutions-eng/proofrail/pulls/37",
+          200
+        ]
+      ],
+      "foreign_head": "a760b37ecd222036e3ad324c2a1485f8028c3fad",
+      "foreign_merge_sha": "9ff46ee3026b7431d1b245532459596ae4607c65",
+      "foreign_merge_status": 200,
+      "github_head_after_merge": "a760b37ecd222036e3ad324c2a1485f8028c3fad",
+      "github_merged": true,
+      "pr": 37,
+      "reason": null,
+      "receipt_status": "success",
+      "side_effect_confirmed": true
+    },
+    "D_replay": {
+      "github_calls": 0,
+      "outcome": "permit_replayed",
+      "pr": 34
+    }
+  }
+}

@@ -31,9 +31,19 @@
     execution rather than supporting concurrent authority consumption.
 15. The committed reproduction bundle is independently replayable but
     internally authored. External identity requires obtaining anchor and
-    manifest public keys through an independently trusted channel.
+    manifest public keys through an independently trusted channel and
+    supplying them with `proofrail reproduce --trusted-keys DIR`. Without
+    pinned keys, verification is `self_asserted` and a re-signed bundle
+    verifies. The committed demo keys are derived from fixed byte patterns
+    and must never be trusted for real evidence.
 16. Database migration schema observation proves structural state and target
     version, not application-level data correctness or backward compatibility.
 17. The local database-instance fingerprint is host-specific. In-place content
     replacement that preserves the same path, device, inode, schema, and
     version is outside schema-root reconciliation.
+18. The pilot rechecks role, policy, and identity after acquiring its local
+    execution lock. This rejects changes completed while waiting for that
+    lock, but does not make governance changes and an external provider write
+    atomic. A later revocation cannot cancel an already dispatched request.
+    Multi-process fencing and provider-enforced revocation require additional
+    design and evidence; the local lock is not a distributed revocation barrier.

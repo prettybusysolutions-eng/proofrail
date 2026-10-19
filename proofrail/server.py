@@ -381,13 +381,18 @@ class PilotControlPlane:
             "evaluation",
             _required_text(constraints, "evaluation_id"),
         )
-        active_policy = self.control.get_active_policy(
-            tenant_id=principal.tenant_id,
-            principal_id=principal.principal_id,
-            policy_name=evaluation["policy_name"],
-        )
-        current_identity_root = self.control.identity_root(principal.tenant_id)
         with self._trust_lock:
+            # Request-time identity and policy can become stale while waiting
+            # for another execution. Recheck after admission to this section.
+            self.control.authorize(
+                principal.tenant_id, principal.principal_id, "action:execute"
+            )
+            active_policy = self.control.get_active_policy(
+                tenant_id=principal.tenant_id,
+                principal_id=principal.principal_id,
+                policy_name=evaluation["policy_name"],
+            )
+            current_identity_root = self.control.identity_root(principal.tenant_id)
             trust_checkpoint = read_trust_checkpoint(self._trust_checkpoint_path())
             result = execute_github_merge(
                 permit,
@@ -485,8 +490,14 @@ class PilotControlPlane:
         observed_merged = observation.get("merged") is True
         observed_merge_sha = observation.get("merge_commit_sha")
         claimed_sha = adapter_result.get("remote_operation_id")
+        observed_head_sha = observation.get("head_sha")
+        if observed_head_sha is None and isinstance(observation.get("pull"), Mapping):
+            observed_head_sha = observation["pull"].get("head_sha")
+        # A merge reconciles as this permit's effect only at the approved head.
+        head_matches = observed_head_sha == effect["expected_head_sha"]
         confirmed = (
             observed_merged
+            and head_matches
             and adapter_result.get("side_effect_confirmed") is True
             and isinstance(observed_merge_sha, str)
             and observed_merge_sha == claimed_sha
@@ -504,6 +515,8 @@ class PilotControlPlane:
             "state": state,
             "observed_merged": observed_merged,
             "observed_merge_sha": observed_merge_sha,
+            "observed_head_sha": observed_head_sha,
+            "expected_head_sha": effect["expected_head_sha"],
             "executor_claim_sha": claimed_sha,
             "provider_observation": observation,
         }

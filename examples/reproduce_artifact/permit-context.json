@@ -2,7 +2,7 @@
   "approval_digest": "5555555555555555555555555555555555555555555555555555555555555555",
   "effect": {
     "action_type": "github_merge",
-    "expected_head_sha": "abcdef1234567890",
+    "expected_head_sha": "abcdef1234567890abcdef1234567890abcdef12",
     "merge_method": "squash",
     "pull_number": 42,
     "repository": "example/repository"
