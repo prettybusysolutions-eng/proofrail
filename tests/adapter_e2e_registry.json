@@ -28,6 +28,15 @@
       "tests": [
         "tests/test_rbac_control_plane.py::RBACControlPlaneTests::test_http_control_plane_enforces_full_role_separation"
       ]
+    },
+    "integrations/openclaw/repository_change.py:XzeniaCoderRepositoryAdapter": {
+      "real_component": "Real scripts/xzenia-coder-dispatch, a real worker process and a real git repository",
+      "tests": [
+        "tests/test_governed_coder_repository_change.py::GovernedCoderRepositoryChangeTests::test_b1_real_adapter_drives_real_dispatcher_and_binds_worker",
+        "tests/test_governed_coder_repository_change.py::GovernedCoderRepositoryChangeTests::test_b2_consumption_grant_cannot_start_the_worker_twice",
+        "tests/test_governed_coder_repository_change.py::GovernedCoderRepositoryChangeTests::test_b3_worker_fsmonitor_is_never_executed_by_the_reconciler",
+        "tests/test_governed_coder_repository_change.py::GovernedCoderRepositoryChangeTests::test_b4_runtime_limit_kills_the_worker"
+      ]
     }
   },
   "excluded": {
