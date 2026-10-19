@@ -20,6 +20,24 @@ class OperationalBoundaryTests(unittest.TestCase):
         self.assertEqual(result['status'],'failed')
         self.assertFalse(result['side_effect_confirmed'])
 
+    def test_head_moved_and_merged_during_attempt_is_not_our_success(self):
+        # Preflight sees the approved head; another actor then pushes and merges
+        # a different head; GitHub rejects our exact-SHA merge; reconciliation
+        # must not attribute the foreign merge to this permit.
+        class Transport:
+            def __init__(self): self.gets=0
+            def request(self, method, path, **kwargs):
+                if method=='PUT':
+                    return 409,{},{'message':'Head branch was modified'}
+                self.gets+=1
+                if self.gets==1:
+                    return 200,{},{'merged':False,'mergeable':True,'head':{'sha':'a'*40}}
+                return 200,{},{'merged':True,'merge_commit_sha':'c'*40,'head':{'sha':'b'*40}}
+        result=GitHubMergeAdapter(Transport()).execute({'execution':{'owner':'fixture','repo':'fixture','pull_number':1,'expected_head_sha':'a'*40}},idempotency_key='test')
+        self.assertEqual(result['status'],'failed')
+        self.assertFalse(result['side_effect_confirmed'])
+        self.assertEqual(result['receipt_evidence']['reason'],'merged_head_mismatch')
+
     def test_concurrent_distinct_permits_cannot_spend_same_checkpoint(self):
         now=datetime.now(timezone.utc)
         key=Ed25519PrivateKey.generate();trust_key=Ed25519PrivateKey.generate()

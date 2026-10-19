@@ -53,7 +53,7 @@ def run() -> list[dict]:
             approval_digest=ROOTS[4],
             repository="owner/repo",
             pull_number=42,
-            expected_head_sha="abcdef1234567890",
+            expected_head_sha="abcdef1234567890abcdef1234567890abcdef12",
             merge_method="squash",
             nonce="validation-replay-nonce-0001",
             expires_at=NOW + timedelta(minutes=5),

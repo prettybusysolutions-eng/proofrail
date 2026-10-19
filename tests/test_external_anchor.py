@@ -116,6 +116,69 @@ class ExternalAnchorTests(unittest.TestCase):
             with self.assertRaisesRegex(ProofRailError, "unsafe entries"):
                 reproduce_artifact(artifact)
 
+    def _resigned_forgery(self, artifact: Path) -> None:
+        """Alter a declared file and re-sign the manifest with a fresh key."""
+        import hashlib
+
+        from proofrail.anchor import encode_public_key
+        from proofrail.crypto import sign_record
+
+        transcript = artifact / "TRANSCRIPT.md"
+        transcript.write_text("# forged claim\n" + transcript.read_text(encoding="utf-8"), encoding="utf-8")
+        attacker = Ed25519PrivateKey.generate()
+        (artifact / "manifest-public-key.txt").write_text(
+            encode_public_key(attacker.public_key()) + "\n", encoding="utf-8"
+        )
+        manifest_path = artifact / "reproduction-manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        for name in manifest["files"]:
+            manifest["files"][name] = hashlib.sha256((artifact / name).read_bytes()).hexdigest()
+        manifest.pop("signature", None)
+        manifest.pop("record_hash", None)
+        manifest_path.write_text(
+            json.dumps(sign_record(manifest, attacker, key_id="reproduce-manifest"), indent=2),
+            encoding="utf-8",
+        )
+
+    def test_unpinned_reproduction_only_proves_self_consistency(self):
+        # Documents the boundary: without pinned keys, a re-signed bundle verifies.
+        source = Path(__file__).resolve().parents[1] / "examples" / "reproduce_artifact"
+        with TemporaryDirectory() as directory:
+            artifact = Path(directory) / "artifact"
+            shutil.copytree(source, artifact)
+            self._resigned_forgery(artifact)
+            result = reproduce_artifact(artifact)
+            self.assertTrue(result["valid"])
+            self.assertEqual(result["key_trust"], "self_asserted")
+
+    def test_pinned_keys_reject_resigned_forgery(self):
+        from proofrail.reproduce import KEY_FILES
+
+        source = Path(__file__).resolve().parents[1] / "examples" / "reproduce_artifact"
+        pinned = {name: (source / name).read_text(encoding="utf-8") for name in KEY_FILES}
+        with TemporaryDirectory() as directory:
+            artifact = Path(directory) / "artifact"
+            shutil.copytree(source, artifact)
+            self._resigned_forgery(artifact)
+            result = reproduce_artifact(artifact, trusted_keys=pinned)
+            self.assertFalse(result["valid"])
+            self.assertEqual(result["key_trust"], "pinned")
+            failed = {check["name"] for check in result["checks"] if not check["passed"]}
+            self.assertIn("pinned_key:manifest-public-key.txt", failed)
+            self.assertIn("manifest_signature", failed)
+
+    def test_pinned_keys_accept_authentic_bundle_and_require_every_key(self):
+        from proofrail.reproduce import KEY_FILES
+
+        source = Path(__file__).resolve().parents[1] / "examples" / "reproduce_artifact"
+        pinned = {name: (source / name).read_text(encoding="utf-8") for name in KEY_FILES}
+        result = reproduce_artifact(source, trusted_keys=pinned)
+        self.assertTrue(result["valid"])
+        partial = dict(pinned)
+        partial.pop("executor-public-key.txt")
+        missing = reproduce_artifact(source, trusted_keys=partial)
+        self.assertFalse(missing["valid"])
+
     def test_reproduction_detects_replay_registry_loss(self):
         source = Path(__file__).resolve().parents[1] / "examples" / "reproduce_artifact"
         with TemporaryDirectory() as directory:

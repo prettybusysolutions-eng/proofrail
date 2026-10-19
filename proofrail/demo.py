@@ -23,7 +23,7 @@ ROOTS = {
     "state": "4" * 64,
 }
 APPROVAL_DIGEST = "5" * 64
-HEAD_SHA = "abcdef1234567890"
+HEAD_SHA = "abcdef1234567890abcdef1234567890abcdef12"
 
 
 class _RecordingAdapter:
