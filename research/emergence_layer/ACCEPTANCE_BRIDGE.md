@@ -75,8 +75,12 @@ python -m pytest -q tests/test_acceptance_bridge.py
 
 ## Remaining execution gate
 
-Connect a verifier result to the existing installed ProofRail admission and
-single-use consumption path, bind observations to the actual consumed execution,
-and observe an external artifact through an enrolled provider adapter. Prove
-that neither a read-only MATCH result nor replayed evidence can authorize a new
-effect. Preserve ambiguous outcomes and the existing non-retry rules.
+The separate `execution_binding.py` research extension now implements local
+consumption, single dispatch, and destination-recorded provenance; see
+EXECUTION_ATTRIBUTION.md. The read-only bridge above retains its original scope.
+
+Remaining: connect the reference behavior to the installed ProofRail consumption
+path and a separately authenticated external provider. The research registry is
+not shared with production ProofRail. It cannot establish globally single-use
+authority across separate registries, administrative rollback, or provider-side
+revocation. Preserve ambiguous outcomes and existing non-retry rules.

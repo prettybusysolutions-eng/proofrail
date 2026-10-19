@@ -13,8 +13,7 @@ from smatp import make_envelope, new_identity, sign, unsigned
 NOW = 1792406400
 
 
-@pytest.fixture
-def fixture():
+def make_fixture(expected_sha256='a' * 64):
     sender, sender_pub = new_identity()
     authority_key = Ed25519PrivateKey.generate()
     observer_key = Ed25519PrivateKey.generate()
@@ -24,7 +23,7 @@ def fixture():
         'sender': 'requester', 'recipient': 'executor', 'capability': 'publish-artifact',
         'task_digest': full_digest(task), 'action_type': 'artifact_write',
         'target': 'fixture:artifact-1', 'parameters': {'version': 1},
-        'expected_sha256': 'a' * 64, 'observer': 'provider-observer',
+        'expected_sha256': expected_sha256, 'observer': 'provider-observer',
         'observer_key_id': 'observer-key', 'max_observation_age_seconds': 60,
     }
     roots = {name: str(i) * 64 for i, name in enumerate(('identity', 'evidence', 'policy', 'state'), 1)}
@@ -51,8 +50,11 @@ def fixture():
         'target': contract['target'], 'observer': contract['observer'],
         'contract_digest': full_digest(contract), 'handoff_digest': full_digest(handoff),
         'authority_digest': full_digest(authority), 'observed_at': NOW,
-        'status': 'present', 'content_sha256': 'a' * 64}, observer_key, key_id='observer-key')
+        'status': 'present', 'content_sha256': expected_sha256}, observer_key, key_id='observer-key')
     return handoff, contract, trust, observation, sender, authority_key, observer_key
+
+
+fixture = pytest.fixture(make_fixture)
 
 
 def check(f, observation=None, now=NOW):

@@ -1,5 +1,10 @@
 # Relationship to ProofRail
 
+The execution-attribution extension described in EXECUTION_ATTRIBUTION.md uses
+a dedicated research consumption registry and SQLite destination. It does not
+modify or silently replace the installed ProofRail registry. Its local
+consume/dispatch behavior is separate from the read-only acceptance bridge.
+
 This is an isolated research module, not an alternative ProofRail runtime.
 No ProofRail permit, reconciliation, canonicalization, or retry rule changes.
 No ESRM conformance, independent semantic review, or production gate is closed.

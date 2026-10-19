@@ -41,7 +41,7 @@ jobs:
       - name: Install research dependencies
         run: python -m pip install ../.. -r requirements-dev.txt
       - name: Run signed-handoff and crash regression tests
-        run: python -m pytest -q tests/
+        run: python -m pytest -q tests/ --junitxml=execution-test-results.xml
       - name: Reproduce all counterfactual observations
         run: |
           python counterfactual_lab.py --output reproduced-results.json
@@ -49,6 +49,8 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: emergence-evidence-python-${{ matrix.python-version }}
-          path: research/emergence_layer/reproduced-results.json
+          path: |
+            research/emergence_layer/reproduced-results.json
+            research/emergence_layer/execution-test-results.xml
           if-no-files-found: error
           retention-days: 30

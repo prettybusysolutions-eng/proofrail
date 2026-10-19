@@ -32,6 +32,15 @@ the authority's existing `success_predicate_digest` to commit to that contract.
 See [ACCEPTANCE_BRIDGE.md](ACCEPTANCE_BRIDGE.md) for trust inputs, result meanings,
 tests, and the execution boundary. This is a read-only verifier, not a dispatcher.
 
+## Execution attribution extension
+
+`execution_binding.py` adds a separate, experimental local consumption ledger,
+one-dispatch boundary, and transactional SQLite artifact destination. Its
+execution verifier requires destination-recorded run identity and a digest of
+the consumed authority record. See [EXECUTION_ATTRIBUTION.md](EXECUTION_ATTRIBUTION.md)
+for the reproduced two-run counterexample, mutation control, and crash results.
+This does not alter ProofRail's production registry or enable a remote adapter.
+
 **Status: local prototype, not a production-ready protocol or new standard.**
 
 Replaces the claimed token-interception/vector-bus bootstrap with a concrete, permissioned agent handoff and verifiable receipt ledger. Preserves authorization and continuity *between* agents, not hidden LLM reasoning.
