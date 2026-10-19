@@ -3,10 +3,47 @@ from collections import defaultdict
 from datetime import datetime
 import re
 
+from .core import digest_ledger_entry
+
+
+def _hash_chain(events, flag):
+    """Check entry_hash/previous_hash links when the export carries them.
+
+    Pilot exports are hash-chained; hand-built inputs may carry no hashes.
+    A consistent chain shows the supplied events were not individually edited
+    or reordered. It does not detect a full rewrite or tail truncation; that
+    needs an independently retained checkpoint or external anchor.
+    """
+    records = [(line, e) for line, e in enumerate(events, 1) if isinstance(e, dict)]
+    hashed = [(line, e) for line, e in records if 'entry_hash' in e]
+    if not hashed:
+        return 'NOT_CHECKED', None
+    if len(hashed) != len(records):
+        line, event = next((l, e) for l, e in records if 'entry_hash' not in e)
+        flag('partial_hash_chain', event, line,
+             'Some events carry entry_hash and others do not; obtain a complete hash-chained export.')
+        return 'HASH_CHAIN_INVALID', {'starts_at_genesis': None, 'entries': len(hashed)}
+    consistent = True
+    previous = None
+    for line, event in records:
+        if event.get('entry_hash') != digest_ledger_entry(event):
+            consistent = False
+            flag('hash_chain_invalid', event, line,
+                 'Event content does not match its entry_hash; it was altered after recording.')
+        if previous is not None and event.get('previous_hash') != previous:
+            consistent = False
+            flag('hash_chain_broken', event, line,
+                 'previous_hash does not link to the preceding event; events were removed, inserted or reordered.')
+        previous = event.get('entry_hash')
+    detail = {'starts_at_genesis': records[0][1].get('previous_hash') == 'GENESIS',
+              'entries': len(records)}
+    return ('HASH_CHAIN_CONSISTENT' if consistent else 'HASH_CHAIN_INVALID'), detail
+
 
 def review_events(events, *, tenant_id):
     if not isinstance(tenant_id, str) or not tenant_id.strip():
         raise ValueError('tenant_id is required')
+    events = list(events)
     findings, grouped, seen_ids, seen_sequences = [], defaultdict(list), set(), set()
     count, previous = 0, None
 
@@ -15,6 +52,8 @@ def review_events(events, *, tenant_id):
                          'event_id': event.get('event_id'),
                          'permit_hash': event.get('permit_hash'),
                          'explanation': explanation})
+
+    authenticity, chain = _hash_chain(events, flag)
 
     for line, event in enumerate(events, 1):
         count += 1
@@ -107,8 +146,10 @@ def review_events(events, *, tenant_id):
     return {'kind': 'proofrail.audit-review.v1', 'tenant_id': tenant_id,
             'status': 'NEEDS_REVIEW' if findings else 'NO_FINDINGS_IN_SUPPLIED_EVENTS',
             'event_count': count, 'permit_count': len(grouped), 'findings': findings,
-            'authenticity': 'NOT_CHECKED', 'authorization_proven': False,
+            'authenticity': authenticity, 'hash_chain': chain,
+            'authorization_proven': False,
             'provider_effect_proven': False,
             'limits': ['Audit claims only; inspect permits, policies and raw provider observations separately.',
+                       'A consistent hash chain does not detect a full rewrite or tail truncation without an external anchor.',
                        'No completeness, freshness, independent observation or universal revocation guarantee.',
                        'No findings is not approval to execute, retry or certify an action.']}
