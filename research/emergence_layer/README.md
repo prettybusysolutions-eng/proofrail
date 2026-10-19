@@ -39,7 +39,10 @@ one-dispatch boundary, and transactional SQLite artifact destination. Its
 execution verifier requires destination-recorded run identity and a digest of
 the consumed authority record. See [EXECUTION_ATTRIBUTION.md](EXECUTION_ATTRIBUTION.md)
 for the reproduced two-run counterexample, mutation control, and crash results.
-This does not alter ProofRail's production registry or enable a remote adapter.
+The follow-up now shares ProofRail's replay-table format and uniqueness boundary
+when configured with the same registry file. See [LIVE_GITHUB.md](LIVE_GITHUB.md)
+for bidirectional replay tests and a completed real GitHub artifact-write trial.
+No deployed registry was migrated. Checkpoint-bearing authority is rejected.
 
 **Status: local prototype, not a production-ready protocol or new standard.**
 

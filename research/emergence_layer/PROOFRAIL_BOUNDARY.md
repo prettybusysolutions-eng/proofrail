@@ -1,9 +1,11 @@
 # Relationship to ProofRail
 
-The execution-attribution extension described in EXECUTION_ATTRIBUTION.md uses
-a dedicated research consumption registry and SQLite destination. It does not
-modify or silently replace the installed ProofRail registry. Its local
-consume/dispatch behavior is separate from the read-only acceptance bridge.
+The execution-attribution extension now uses the existing permit_claims and
+permit_events replay schema plus namespaced emergence_executions records in
+the same database. Tests exercise the installed consume_permit API against that
+same file. No deployed registry was changed. The live GitHub integration is
+operator-mediated through the authenticated connector; see LIVE_GITHUB.md.
+Its consume/dispatch behavior is separate from the read-only acceptance bridge.
 
 This is an isolated research module, not an alternative ProofRail runtime.
 No ProofRail permit, reconciliation, canonicalization, or retry rule changes.

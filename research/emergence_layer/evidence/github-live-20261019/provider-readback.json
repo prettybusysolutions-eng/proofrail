@@ -1,0 +1,24 @@
+{
+  "repository": "prettybusysolutions-eng/proofrail",
+  "path": "evidence/emergence-live-artifact.json",
+  "observed_ref": "6446d19bb3c9a777af602e100a30a9ecc65924d1",
+  "branch_head": "6446d19bb3c9a777af602e100a30a9ecc65924d1",
+  "commit": {
+    "sha": "6446d19bb3c9a777af602e100a30a9ecc65924d1",
+    "parents": [
+      {
+        "sha": "64db77e963eb6844a2d6282aa70fdc3563f1a252"
+      }
+    ],
+    "tree": {
+      "sha": "ddf295b1bb704b112f1166d7c27bdc9435a8b46c",
+      "url": "https://api.github.com/repos/prettybusysolutions-eng/proofrail/git/trees/ddf295b1bb704b112f1166d7c27bdc9435a8b46c"
+    }
+  },
+  "file_content": "{\n  \"artifact\": \"Emergence live GitHub artifact: exact authorized bytes, one consumed execution.\",\n  \"consumption_digest\": \"94f06da1855a17c3d8a39f1219e92a26787c1995db614a2e045b0dfcc62e81a1\",\n  \"execution_id\": \"e5d92ee2-d4bc-4001-8f61-4d86f229bef5\",\n  \"kind\": \"emergence.github-artifact.v1\",\n  \"task_id\": \"github-trial-7deb5f96b75ce236\",\n  \"tenant\": \"prettybusysolutions-eng\"\n}\n",
+  "source_urls": [
+    "https://github.com/prettybusysolutions-eng/proofrail/blob/6446d19bb3c9a777af602e100a30a9ecc65924d1/evidence/emergence-live-artifact.json",
+    "https://api.github.com/repos/prettybusysolutions-eng/proofrail/git/commits/6446d19bb3c9a777af602e100a30a9ecc65924d1"
+  ],
+  "captured_at": "2026-10-19T21:47:45.284Z"
+}

@@ -214,7 +214,7 @@ def test_consumption_database_tampering_is_detected(setup):
     claim = consume(setup)
     with sqlite3.connect(setup[1].path) as db:
         claim['target'] = 'fixture:other'
-        db.execute('UPDATE executions SET body=?', (json.dumps(claim),))
+        db.execute('UPDATE emergence_executions SET body=?', (json.dumps(claim),))
     with pytest.raises(ValueError):
         verify(setup, claim['execution_id'])
 
@@ -234,3 +234,43 @@ def test_actual_content_tamper_is_diverged(setup):
     with sqlite3.connect(setup[2].path) as db:
         db.execute("UPDATE artifacts SET content='wrong'")
     assert verify(setup, claim['execution_id'], observe(setup))['outcome'] == 'DIVERGED'
+
+
+def production_claim(setup):
+    from datetime import datetime, timedelta, timezone
+    from proofrail.permit import mint_permit, consume_permit
+    f, ledger, _ = setup
+    roots = f[2].roots
+    now = datetime.fromtimestamp(NOW, timezone.utc)
+    effect = dict(repository='fixture/repo', pull_number=1, expected_head_sha='a' * 40,
+                  merge_method='squash')
+    permit = mint_permit(**{name + '_root': value for name, value in roots.items()},
+        approval_digest=f[2].approval_digest, **effect,
+        nonce=f[0]['payload']['authority']['nonce'], expires_at=now + timedelta(minutes=5),
+        issuer_principal_id='governor', issuer_role='verifier', private_key=f[5],
+        key_id='authority-key', now=now)
+    return consume_permit(permit, registry_path=ledger.path, public_key=f[5].public_key(),
+        **{'expected_' + name + '_root': value for name, value in roots.items()},
+        expected_approval_digest=f[2].approval_digest, **effect, executor_id='executor', now=now)
+
+
+def test_existing_proofrail_consumer_rejects_emergence_nonce(setup):
+    from proofrail.trust import replay_claim_exists
+    consume(setup)
+    assert replay_claim_exists(setup[1].path, setup[0][0]['payload']['authority']['record_hash'])
+    with pytest.raises(ValueError, match='permit_replayed'):
+        production_claim(setup)
+
+
+def test_emergence_consumer_rejects_existing_proofrail_nonce(setup):
+    production_claim(setup)
+    with pytest.raises(BindingError, match='already_consumed'):
+        consume(setup)
+
+
+def test_shared_claim_removal_blocks_verification(setup):
+    claim = consume(setup)
+    with sqlite3.connect(setup[1].path) as db:
+        db.execute('DELETE FROM permit_claims')
+    with pytest.raises(BindingError, match='shared_claim_missing'):
+        verify(setup, claim['execution_id'])

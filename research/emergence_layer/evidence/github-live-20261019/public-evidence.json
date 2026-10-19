@@ -1,0 +1,161 @@
+{
+  "handoff": {
+    "version": "smatp/0.1",
+    "message_id": "ebc53ee8-b675-46b6-987d-9bf8b4de2680",
+    "sender": "requester",
+    "recipient": "executor",
+    "sender_key_id": "5ae9cef5b86543dfc2649b31",
+    "capability": "publish-artifact",
+    "payload": {
+      "task": {
+        "artifact": "Emergence live GitHub artifact: exact authorized bytes, one consumed execution."
+      },
+      "contract": {
+        "kind": "emergence.acceptance.v1",
+        "tenant": "prettybusysolutions-eng",
+        "task_id": "github-trial-7deb5f96b75ce236",
+        "sender": "requester",
+        "recipient": "executor",
+        "capability": "publish-artifact",
+        "task_digest": "d7992afc5010aa179a69db840d939c1eb7f30678fad9509ea781c5f331f10e08",
+        "action_type": "github_artifact_commit",
+        "target": "github:prettybusysolutions-eng/proofrail:trial/emergence-live-20261019:evidence/emergence-live-artifact.json",
+        "parameters": {
+          "repository": "prettybusysolutions-eng/proofrail",
+          "branch": "trial/emergence-live-20261019",
+          "parent_sha": "64db77e963eb6844a2d6282aa70fdc3563f1a252",
+          "base_tree": "8122aee952ced969893b725dbe1206a0b87037e9",
+          "path": "evidence/emergence-live-artifact.json"
+        },
+        "expected_sha256": "196bc3807ec5022a03a2c12d3204143b7bf55b0e441429601d36f41ea8d9e572",
+        "observer": "github-connector-readback",
+        "observer_key_id": "observer-key",
+        "max_observation_age_seconds": 3600
+      },
+      "authority": {
+        "kind": "proofrail.action-authority-envelope.v1",
+        "envelope_id": "faaa4e8f-6309-4282-88da-ef8e65194799",
+        "state": "PERMITTED",
+        "issued_at": "2026-10-19T21:47:23Z",
+        "expires_at": "2026-10-19T22:47:23.069780Z",
+        "nonce": "740e80848f213641be8620b20f549e3d9e4349cb271cbeca9f0e83ddaef7ab12",
+        "issuer": {
+          "principal_id": "trial-verifier",
+          "role": "verifier"
+        },
+        "subject": {
+          "principal_id": "executor",
+          "role": "executor"
+        },
+        "roots": {
+          "identity": "2082d343842caa035af0e304e317e43126949671bd2f31f4a38c57599f36e2ec",
+          "evidence": "dcd2613c06f1bc424687f736e84d6c784fffeb16bd99d0469e8c7767f4b79a5b",
+          "policy": "3e97558441b7ad55a43f23089fbf7c1f23cb5cfd1d48407b008903ec3edb6240",
+          "state": "21fb4c8396dcb757332207317048132cd12e20a7d1180ceb5f80040570da8524"
+        },
+        "approval_digest": "ef7fd5dc2655ace376c526c150e7ae7298a41ad1da7568b4afb3517d7037fe32",
+        "effect": {
+          "action_type": "github_artifact_commit",
+          "target": "github:prettybusysolutions-eng/proofrail:trial/emergence-live-20261019:evidence/emergence-live-artifact.json",
+          "parameters": {
+            "repository": "prettybusysolutions-eng/proofrail",
+            "branch": "trial/emergence-live-20261019",
+            "parent_sha": "64db77e963eb6844a2d6282aa70fdc3563f1a252",
+            "base_tree": "8122aee952ced969893b725dbe1206a0b87037e9",
+            "path": "evidence/emergence-live-artifact.json"
+          },
+          "effect_digest": "ac78d4c1f115142ef61d0ce92cd226cbb98f9cb7cacc338fe507d860823aa09b"
+        },
+        "constraints": {},
+        "adapter_contract": {
+          "name": "github-git-data",
+          "version": "v1",
+          "idempotency_required": true
+        },
+        "observation_contract": {
+          "name": "emergence.acceptance",
+          "version": "v1",
+          "minimum_confirmations": 1,
+          "success_predicate_digest": "860d4f4e0a0e1dc52b405a6070cdfe8331eeb3ed48ef0af1fb77da2b59bce3b6"
+        },
+        "failure_semantics": {
+          "consume_before_effect": true,
+          "ambiguous_outcome": "RECONCILIATION_FAILED",
+          "retry": "NEW_AUTHORITY_REQUIRED"
+        },
+        "record_hash": "09f349b9282742ca85351a91b52e0683f2acc66e5a81c01b41e9291bd754386c",
+        "signature": {
+          "algorithm": "ed25519",
+          "key_id": "issuer-key",
+          "value": "pYweW9FCW28eUQ7jrxV5jHRsL9V0qgn4ecr4QbWNPXU-pzL3I1Lkolf-yyo9qq0DF3KiRgl70mj0RjzpxshjCg"
+        }
+      }
+    },
+    "created_at": 1792446443,
+    "expires_at": 1792450043,
+    "nonce": "176f1324ead1d133ebf63d3f0a8338d0",
+    "idempotency_key": "27666c82-812f-4d36-87b0-08bea978d01b",
+    "signature": "BDnH7Cl51EBGbkmTLwC6mS7IPUhD/Mh+y97Ast4SRJAw5Bfmzqm+ekKGJIegiVo5xKYlrM3VZFXsKNYiDUl/DQ=="
+  },
+  "contract": {
+    "kind": "emergence.acceptance.v1",
+    "tenant": "prettybusysolutions-eng",
+    "task_id": "github-trial-7deb5f96b75ce236",
+    "sender": "requester",
+    "recipient": "executor",
+    "capability": "publish-artifact",
+    "task_digest": "d7992afc5010aa179a69db840d939c1eb7f30678fad9509ea781c5f331f10e08",
+    "action_type": "github_artifact_commit",
+    "target": "github:prettybusysolutions-eng/proofrail:trial/emergence-live-20261019:evidence/emergence-live-artifact.json",
+    "parameters": {
+      "repository": "prettybusysolutions-eng/proofrail",
+      "branch": "trial/emergence-live-20261019",
+      "parent_sha": "64db77e963eb6844a2d6282aa70fdc3563f1a252",
+      "base_tree": "8122aee952ced969893b725dbe1206a0b87037e9",
+      "path": "evidence/emergence-live-artifact.json"
+    },
+    "expected_sha256": "196bc3807ec5022a03a2c12d3204143b7bf55b0e441429601d36f41ea8d9e572",
+    "observer": "github-connector-readback",
+    "observer_key_id": "observer-key",
+    "max_observation_age_seconds": 3600
+  },
+  "consumption": {
+    "kind": "emergence.consumption.v1",
+    "execution_id": "e5d92ee2-d4bc-4001-8f61-4d86f229bef5",
+    "tenant": "prettybusysolutions-eng",
+    "task_id": "github-trial-7deb5f96b75ce236",
+    "target": "github:prettybusysolutions-eng/proofrail:trial/emergence-live-20261019:evidence/emergence-live-artifact.json",
+    "executor": "executor",
+    "handoff_digest": "da459db80514be0b1787bc6a06fe67e4edc3c287f05e9b8f53ca97b849486202",
+    "authority_digest": "beecb9ace2d1f69badf565f49f2450385d4fc8bff99a23cf957c23812192ff49",
+    "contract_digest": "860d4f4e0a0e1dc52b405a6070cdfe8331eeb3ed48ef0af1fb77da2b59bce3b6",
+    "consumed_at": 1792446443,
+    "permit_hash": "09f349b9282742ca85351a91b52e0683f2acc66e5a81c01b41e9291bd754386c",
+    "permit_nonce": "740e80848f213641be8620b20f549e3d9e4349cb271cbeca9f0e83ddaef7ab12",
+    "record_hash": "e60de4341e1a8a3787d005867ce054d0eb644f560a1199a2523d1ddfd661e2b4",
+    "signature": {
+      "algorithm": "ed25519",
+      "key_id": "consumer-key",
+      "value": "JmJ6uDtxAgPslY6l6t3np-b5d5sQ6mZJB3QXO0TJcLOb5MZmNcyl_S9SAsWZ4PVbg2Xnl8bB4d4HMuU5XGMTBg"
+    }
+  },
+  "public_keys": {
+    "sender": "6SBQQ+Xlm6KdtoXRoBLO7/+ThMZdXkVnxzW284zf99Q=",
+    "issuer": "LpmrI2Dc5iB5VvkBziAF25S2wrQKpx2JXZQeTROzMcs=",
+    "consumer": "ObwNLKQWR0SEpQRfjyMB/enK/1gvKbUOzCdkFTNayEU=",
+    "observer": "k/cUn+Q/7M1JWLu2D2ffWC14pfnsC+BGWykU3qi0SA0="
+  },
+  "shared_claim_visible": true,
+  "replay_root": "4ade378e062b2abfd416b5ffea57888ea3dad4a6f0ed820e092ef628f5d8a0b8",
+  "request": {
+    "repository": "prettybusysolutions-eng/proofrail",
+    "branch": "trial/emergence-live-20261019",
+    "parent_sha": "64db77e963eb6844a2d6282aa70fdc3563f1a252",
+    "base_tree": "8122aee952ced969893b725dbe1206a0b87037e9",
+    "path": "evidence/emergence-live-artifact.json",
+    "content": "{\n  \"artifact\": \"Emergence live GitHub artifact: exact authorized bytes, one consumed execution.\",\n  \"consumption_digest\": \"94f06da1855a17c3d8a39f1219e92a26787c1995db614a2e045b0dfcc62e81a1\",\n  \"execution_id\": \"e5d92ee2-d4bc-4001-8f61-4d86f229bef5\",\n  \"kind\": \"emergence.github-artifact.v1\",\n  \"task_id\": \"github-trial-7deb5f96b75ce236\",\n  \"tenant\": \"prettybusysolutions-eng\"\n}\n",
+    "content_sha256": "dea2c926fd2eb791e8f4030244da48457093d0ae6fe1d2bc57be4e2e70798663",
+    "execution_id": "e5d92ee2-d4bc-4001-8f61-4d86f229bef5",
+    "consumption_digest": "94f06da1855a17c3d8a39f1219e92a26787c1995db614a2e045b0dfcc62e81a1"
+  }
+}

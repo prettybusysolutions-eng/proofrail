@@ -2,6 +2,10 @@
 
 Date: 2026-10-19. Scope: local research integration on PR #29.
 
+Historical stage report: the subsequent shared-registry and real GitHub trial
+are recorded in LIVE_GITHUB.md. The local findings below remain reproducible;
+statements about the then-separate registry describe the earlier stage.
+
 ## Reproduced counterexample
 
 The original read-only acceptance bridge returns MATCH for a valid, freshly

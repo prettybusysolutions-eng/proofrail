@@ -79,8 +79,10 @@ The separate `execution_binding.py` research extension now implements local
 consumption, single dispatch, and destination-recorded provenance; see
 EXECUTION_ATTRIBUTION.md. The read-only bridge above retains its original scope.
 
-Remaining: connect the reference behavior to the installed ProofRail consumption
-path and a separately authenticated external provider. The research registry is
-not shared with production ProofRail. It cannot establish globally single-use
-authority across separate registries, administrative rollback, or provider-side
-revocation. Preserve ambiguous outcomes and existing non-retry rules.
+Follow-up: the experimental consumer now writes the same permit_claims and
+permit_events tables used by existing ProofRail consumers, in the same
+transaction as its namespaced execution record. Bidirectional nonce tests call
+the actual consume_permit API. A real GitHub artifact-write/readback trial is
+recorded in LIVE_GITHUB.md. This does not migrate a deployed registry or add a
+checkpoint advancement coordinator. Cross-registry replay, administrative
+rollback, and provider-side permit enforcement remain open.
