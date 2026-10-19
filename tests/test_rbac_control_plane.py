@@ -17,6 +17,8 @@ class ConfirmedMergeAdapter:
         self.calls = 0
         self.observed_merged = True
         self.observed_merge_sha = "merge123"
+        # None means "GitHub reports the head that was requested" (the approved head).
+        self.observed_head_sha = None
 
     def execute(self, action, *, idempotency_key):
         self.calls += 1
@@ -45,6 +47,11 @@ class ConfirmedMergeAdapter:
                 "number": action["execution"]["pull_number"],
                 "merged": self.observed_merged,
                 "merge_commit_sha": self.observed_merge_sha,
+                "head_sha": (
+                    self.observed_head_sha
+                    if self.observed_head_sha is not None
+                    else action["execution"]["expected_head_sha"]
+                ),
             },
         }
 
@@ -239,6 +246,19 @@ class RBACControlPlaneTests(unittest.TestCase):
             self.assertEqual(replay_status, 400)
             self.assertIn("permit_replayed", replay["error"])
             self.assertEqual(adapter.calls, 1)
+
+            # A merge observed at a different head is not this permit's effect.
+            adapter.observed_head_sha = "f" * 16
+            status, wrong_head, _ = app.request(
+                "POST",
+                "/reconcile/github-merge",
+                headers=reconciler,
+                body={"execution_id": execution["execution_id"]},
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(wrong_head["state"], "RECONCILIATION_FAILED")
+            self.assertEqual(wrong_head["observed_head_sha"], "f" * 16)
+            adapter.observed_head_sha = None
 
             status, reconciliation, _ = app.request(
                 "POST",

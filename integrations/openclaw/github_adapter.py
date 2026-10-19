@@ -207,6 +207,9 @@ class GitHubMergeAdapter:
             "merge_commit_sha": (
                 current.get("merge_commit_sha") if status == 200 else None
             ),
+            "head_sha": (
+                ((current.get("head") or {}).get("sha")) if status == 200 else None
+            ),
             "pull": _pull_evidence(current) if status == 200 else current,
         }
 
@@ -229,6 +232,29 @@ class GitHubMergeAdapter:
                     "phase": "reconciliation",
                     "trigger": trigger,
                     "reconciliation_error": type(exc).__name__,
+                },
+            )
+        merged_head_sha = ((current.get("head") or {}).get("sha")) if status == 200 else None
+        if (
+            status == 200
+            and current.get("merged") is True
+            and merged_head_sha != expected_head_sha
+        ):
+            # The pull request was merged, but not at the approved head. The
+            # provider rejected (or never received) our exact-head merge, so
+            # this side effect is someone else's and must not reconcile as ours.
+            return self._receipt(
+                idempotency_key=idempotency_key,
+                status="failed",
+                confirmed=False,
+                retry_safe=False,
+                evidence={
+                    "phase": "reconciliation",
+                    "reason": "merged_head_mismatch",
+                    "trigger": trigger,
+                    "expected_head_sha": expected_head_sha,
+                    "actual_head_sha": merged_head_sha,
+                    "pull": _pull_evidence(current),
                 },
             )
         if status == 200 and current.get("merged") is True and current.get("merge_commit_sha"):

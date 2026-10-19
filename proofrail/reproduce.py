@@ -21,8 +21,17 @@ def reproduce_artifact(
     artifact_dir: str | Path,
     *,
     schemas_dir: str | Path | None = None,
+    trusted_keys: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Independently verify one portable ProofRail reproduction bundle."""
+    """Independently verify one portable ProofRail reproduction bundle.
+
+    ``trusted_keys`` maps each ``*-public-key.txt`` filename to an encoded
+    public key obtained through a channel independent of the bundle. Without
+    it, every key is read from the bundle itself ("self_asserted"): the bundle
+    is then only proven internally consistent, and anyone who can generate a
+    key can produce a bundle that verifies. With it, each in-bundle key must
+    equal its pinned value or verification fails.
+    """
     artifact = Path(artifact_dir)
     if artifact.is_symlink() or not artifact.is_dir():
         raise ProofRailError("Reproduction artifact must be a real directory")
@@ -39,9 +48,7 @@ def reproduce_artifact(
     checks: list[dict[str, Any]] = []
 
     manifest = _read_json(artifact / "reproduction-manifest.json")
-    manifest_key = decode_public_key(
-        (artifact / "manifest-public-key.txt").read_text(encoding="utf-8")
-    )
+    manifest_key = _trusted_key(artifact, "manifest-public-key.txt", trusted_keys, checks)
     checks.append(_signature_check("manifest_signature", manifest, manifest_key))
     checks.extend(_inventory_checks(artifact, manifest))
     checks.append(_undeclared_files_check(artifact, manifest))
@@ -64,9 +71,7 @@ def reproduce_artifact(
 
     trust_checkpoint = _read_json(artifact / "trust-checkpoint.json")
     permit_trust_checkpoint = _read_json(artifact / "permit-trust-checkpoint.json")
-    trust_key = decode_public_key(
-        (artifact / "trust-checkpoint-public-key.txt").read_text(encoding="utf-8")
-    )
+    trust_key = _trusted_key(artifact, "trust-checkpoint-public-key.txt", trusted_keys, checks)
     checks.append(_signature_check("trust_checkpoint_signature", trust_checkpoint, trust_key))
     checks.append(
         _signature_check(
@@ -95,9 +100,7 @@ def reproduce_artifact(
     checks.append(_check("ledger_verifies", ledger["valid"], ",".join(ledger["errors"])))
 
     checkpoint = _read_json(artifact / "proofrail-checkpoint.json")
-    checkpoint_key = decode_public_key(
-        (artifact / "checkpoint-public-key.txt").read_text(encoding="utf-8")
-    )
+    checkpoint_key = _trusted_key(artifact, "checkpoint-public-key.txt", trusted_keys, checks)
     checkpoint_result = verify_checkpoint(checkpoint, ledger_path, public_key=checkpoint_key)
     checks.append(
         _check(
@@ -138,9 +141,7 @@ def reproduce_artifact(
     )
 
     anchor = _read_json(artifact / "anchor.json")
-    anchor_key = decode_public_key(
-        (artifact / "anchor-public-key.txt").read_text(encoding="utf-8")
-    )
+    anchor_key = _trusted_key(artifact, "anchor-public-key.txt", trusted_keys, checks)
     anchor_result = verify_anchor(
         anchor,
         ledger_path,
@@ -153,9 +154,7 @@ def reproduce_artifact(
     checks.append(_schema_check("anchor_schema", anchor, schemas["external_anchor.schema.json"]))
 
     context = _read_json(artifact / "permit-context.json")
-    verifier_key = decode_public_key(
-        (artifact / "verifier-public-key.txt").read_text(encoding="utf-8")
-    )
+    verifier_key = _trusted_key(artifact, "verifier-public-key.txt", trusted_keys, checks)
     valid_permit = _read_json(artifact / "valid-permit.json")
     checks.append(_schema_check("valid_permit_schema", valid_permit, schemas["permit.schema.json"]))
     checks.append(
@@ -185,9 +184,7 @@ def reproduce_artifact(
             schemas["consumption_receipt.schema.json"],
         )
     )
-    executor_key = decode_public_key(
-        (artifact / "executor-public-key.txt").read_text(encoding="utf-8")
-    )
+    executor_key = _trusted_key(artifact, "executor-public-key.txt", trusted_keys, checks)
     receipt_signature = _signature_check(
         "consumption_receipt_signature",
         consumption_receipt,
@@ -252,8 +249,59 @@ def reproduce_artifact(
     return {
         "valid": all(check["passed"] for check in checks),
         "artifact": str(artifact),
+        "key_trust": "pinned" if trusted_keys is not None else "self_asserted",
         "checks": checks,
     }
+
+
+KEY_FILES = (
+    "manifest-public-key.txt",
+    "trust-checkpoint-public-key.txt",
+    "checkpoint-public-key.txt",
+    "anchor-public-key.txt",
+    "verifier-public-key.txt",
+    "executor-public-key.txt",
+)
+
+
+def _trusted_key(
+    artifact: Path,
+    filename: str,
+    trusted_keys: Mapping[str, str] | None,
+    checks: list[dict[str, Any]],
+) -> Any:
+    bundled = (artifact / filename).read_text(encoding="utf-8").strip()
+    if trusted_keys is None:
+        return decode_public_key(bundled)
+    pinned = trusted_keys.get(filename)
+    if pinned is None:
+        checks.append(_check(f"pinned_key:{filename}", False, "no pinned key supplied"))
+        return decode_public_key(bundled)
+    pinned = pinned.strip()
+    checks.append(
+        _check(
+            f"pinned_key:{filename}",
+            pinned == bundled,
+            "matches pinned key" if pinned == bundled else "bundle key differs from pinned key",
+        )
+    )
+    # Always verify against the independently obtained key.
+    return decode_public_key(pinned)
+
+
+def load_trusted_keys(directory: str | Path) -> dict[str, str]:
+    """Read pinned ``*-public-key.txt`` files from a directory outside the bundle."""
+    root = Path(directory)
+    if not root.is_dir():
+        raise ProofRailError(f"Trusted key directory not found: {root}")
+    keys = {}
+    for name in KEY_FILES:
+        path = root / name
+        if path.is_file():
+            keys[name] = path.read_text(encoding="utf-8").strip()
+    if not keys:
+        raise ProofRailError(f"No *-public-key.txt files found in {root}")
+    return keys
 
 
 def _inventory_checks(artifact: Path, manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
