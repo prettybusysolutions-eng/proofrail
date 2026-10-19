@@ -1,0 +1,49 @@
+name: Cross-runner operational restoration
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  create-backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python -m pip install .
+      - name: Commit authority, crash worker, and create verified backup
+        run: python scripts/operational_recovery_drill.py prepare --bundle "$RUNNER_TEMP/recovery-bundle"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: replay-backup-${{ github.sha }}
+          path: ${{ runner.temp }}/recovery-bundle/
+          retention-days: 30
+  restore-backup:
+    needs: create-backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python -m pip install .
+      - uses: actions/download-artifact@v8
+        with:
+          name: replay-backup-${{ github.sha }}
+          path: ${{ runner.temp }}/recovery-bundle
+      - name: Restore on a new runner and reject rollback/replay
+        run: python scripts/operational_recovery_drill.py restore --bundle "$RUNNER_TEMP/recovery-bundle" --output "$RUNNER_TEMP/restored-state"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: recovery-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/restored-state/recovery-evidence.json
+          retention-days: 30

@@ -35,3 +35,15 @@ ProofRail is an open protocol draft and reference implementation. It is not:
 The public evidence is independently replayable. Independent authorship,
 cross-implementation conformance, and production hardening remain future
 evidence gates.
+
+## Pilot artifact publication
+
+The pilot publication workflow builds a wheel and source distribution from one
+exact main commit, repeats the source suite, and verifies installed-wheel
+reproduction and tamper rejection before creating a prerelease. Assets include
+SHA256SUMS and unsigned workflow provenance containing the source commit and run.
+An existing release is never replaced automatically. Verify checksums before
+installation; provenance metadata is not a signature or independent review.
+
+Publishing the pilot does not satisfy independent semantic review or external
+reproduction. Both remain distinct, externally supplied evidence gates.

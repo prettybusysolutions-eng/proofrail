@@ -69,8 +69,24 @@ Expected results:
 - all tests pass
 - a modified declared artifact file exits `4`
 
+By default `reproduce` verifies against the public keys shipped inside the
+bundle (`key_trust: self_asserted`). That proves the bundle is internally
+consistent, not who produced it: a bundle altered and re-signed with any new
+key also exits `0`. To verify origin, obtain the six `*-public-key.txt` files
+through a channel independent of the bundle and pin them:
+
+```bash
+.venv/bin/proofrail reproduce examples/reproduce_artifact/ --trusted-keys /path/to/pinned-keys/
+```
+
+With pinned keys, any in-bundle key that differs from its pinned value fails
+verification (exit `4`). Copying the keys from the same download as the bundle
+is not an independent channel.
+
 See [docs/QUICKSTART.md](docs/QUICKSTART.md) for the complete ten-minute
 verification and break-test sequence.
+
+Release status and gates are documented in [RELEASING.md](RELEASING.md).
 
 ## Evidence Included
 
