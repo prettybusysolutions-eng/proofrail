@@ -23,9 +23,79 @@ def lifecycle():
                  state='RECONCILED', metadata={'execution_id': 'x1'}, reason_codes=['provider_outcome_confirmed'])]
 
 
+def chained(events):
+    """Hash-chain events exactly as PilotControlPlane._audit does."""
+    from proofrail.core import digest_ledger_entry
+
+    previous, out = 'GENESIS', []
+    for event in copy.deepcopy(events):
+        event['previous_hash'] = previous
+        event['entry_hash'] = digest_ledger_entry(event)
+        previous = event['entry_hash']
+        out.append(event)
+    return out
+
+
 class AuditReviewTests(unittest.TestCase):
     def codes(self, events):
         return {f['code'] for f in review_events(events, tenant_id='tenant-a')['findings']}
+
+    def test_intact_hash_chain_is_consistent_not_certified(self):
+        result = review_events(chained(lifecycle()), tenant_id='tenant-a')
+        self.assertEqual(result['status'], 'NO_FINDINGS_IN_SUPPLIED_EVENTS')
+        self.assertEqual(result['authenticity'], 'HASH_CHAIN_CONSISTENT')
+        self.assertEqual(result['hash_chain'], {'starts_at_genesis': True, 'entries': 3})
+        self.assertFalse(result['authorization_proven'])
+
+    def test_edited_event_breaks_hash_chain(self):
+        # The original gap: a claim edited after recording still triaged clean.
+        events = chained(lifecycle())
+        events[1]['metadata']['adapter_status'] = 'success'
+        events[1]['outcome'] = 'success'
+        events[1]['reason_codes'] = ['edited']
+        result = review_events(events, tenant_id='tenant-a')
+        self.assertEqual(result['authenticity'], 'HASH_CHAIN_INVALID')
+        self.assertIn('hash_chain_invalid', {f['code'] for f in result['findings']})
+        self.assertEqual(result['status'], 'NEEDS_REVIEW')
+
+    def test_removed_or_reordered_event_breaks_links(self):
+        events = chained(lifecycle())
+        self.assertIn('hash_chain_broken', self.codes([events[0], events[2]]))
+        self.assertIn('hash_chain_broken', self.codes([events[1], events[0], events[2]]))
+
+    def test_rehashing_an_edit_still_breaks_the_next_link(self):
+        events = chained(lifecycle())
+        from proofrail.core import digest_ledger_entry
+        events[1]['metadata']['adapter_status'] = 'failed'
+        events[1]['entry_hash'] = digest_ledger_entry(events[1])
+        codes = self.codes(events)
+        self.assertNotIn('hash_chain_invalid', codes)
+        self.assertIn('hash_chain_broken', codes)
+
+    def test_partially_hashed_export_is_invalid(self):
+        events = chained(lifecycle())
+        events[2].pop('entry_hash')
+        result = review_events(events, tenant_id='tenant-a')
+        self.assertEqual(result['authenticity'], 'HASH_CHAIN_INVALID')
+        self.assertIn('partial_hash_chain', {f['code'] for f in result['findings']})
+
+    def test_cli_exits_4_on_tampered_chained_export(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / 'events.jsonl'
+            events = chained(lifecycle())
+            path.write_text(''.join(json.dumps(e) + '\n' for e in events))
+            ok = subprocess.run([sys.executable, '-m', 'proofrail.cli', 'audit-review',
+                                 '--events', str(path), '--tenant', 'tenant-a'],
+                                capture_output=True, text=True)
+            self.assertEqual(ok.returncode, 0, ok.stderr)
+            self.assertEqual(json.loads(ok.stdout)['authenticity'], 'HASH_CHAIN_CONSISTENT')
+            events[0]['object_id'] = 'p-forged'
+            path.write_text(''.join(json.dumps(e) + '\n' for e in events))
+            bad = subprocess.run([sys.executable, '-m', 'proofrail.cli', 'audit-review',
+                                  '--events', str(path), '--tenant', 'tenant-a'],
+                                 capture_output=True, text=True)
+            self.assertEqual(bad.returncode, 4)
+            self.assertEqual(json.loads(bad.stdout)['authenticity'], 'HASH_CHAIN_INVALID')
 
     def test_consistent_claims_are_not_certification(self):
         result = review_events(lifecycle(), tenant_id='tenant-a')
