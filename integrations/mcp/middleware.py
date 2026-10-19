@@ -99,7 +99,8 @@ class MCPAuthorityMiddleware:
         try:
             frozen_envelope = canonical_json(dict(envelope))
             frozen_arguments = canonical_json(dict(arguments))
-        except (ProofRailError, TypeError, ValueError):
+        except (ProofRailError, TypeError, ValueError, RecursionError):
+            # RecursionError: cyclic or extremely deep input.
             return MCPAuthorityResult("denied", "non_canonical_input", "")
         envelope = _thaw(frozen_envelope)
         envelope_digest = str(envelope.get("record_hash", ""))
@@ -261,9 +262,22 @@ class MCPAuthorityMiddleware:
             connection.close()
 
 
+_MAX_SAFE_INTEGER = 2**53
+
+
 def _thaw(frozen: bytes) -> dict[str, Any]:
-    """Decode an independent copy of a canonical JSON snapshot."""
-    return json.loads(frozen)
+    """Decode an independent copy of a canonical JSON snapshot.
+
+    RFC 8785 writes a large float such as 1.2345678901234568e20 as
+    123456789012345680000. Decoding that as an int would exceed the canonical
+    integer range and could not be re-canonicalised, so integers beyond
+    2**53 decode as floats, which reproduce the identical canonical bytes.
+    """
+    def parse_int(text: str) -> int | float:
+        value = int(text)
+        return float(value) if abs(value) > _MAX_SAFE_INTEGER else value
+
+    return json.loads(frozen, parse_int=parse_int)
 
 
 def validate_observation_receipt(

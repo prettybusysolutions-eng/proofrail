@@ -269,6 +269,26 @@ class MCPAuthorityMiddlewareTests(unittest.TestCase):
         self.assertEqual((result.status, result.reason), ("denied", "invalid_envelope"))
 
 
+    # Second review of #1: inputs the canonical snapshot must handle.
+
+    def test_cyclic_arguments_are_denied_not_raised(self):
+        cyclic = {"ticket_id": "INC-42"}
+        cyclic["self"] = cyclic
+        with TemporaryDirectory() as directory:
+            result = self.invoke(self.middleware(directory), self.envelope(), arguments=cyclic)
+        self.assertEqual((result.status, result.reason), ("denied", "non_canonical_input"))
+
+    def test_signed_large_float_round_trips_and_executes(self):
+        # Previously denied as invalid_envelope: 1.2345678901234568e20 is written
+        # canonically as 123456789012345680000 and decoded back as an int.
+        self.arguments = {"ticket_id": "INC-42", "amount": 1.2345678901234568e20}
+        recorder = RecordingAdapter()
+        with TemporaryDirectory() as directory:
+            result = self.invoke(self.middleware(directory, adapter=recorder), self.envelope())
+        self.assertEqual(result.status, "success", result.reason)
+        self.assertEqual(recorder.seen, [self.arguments])
+
+
 class RecordingAdapter(ToolAdapter):
     def __init__(self):
         super().__init__()
