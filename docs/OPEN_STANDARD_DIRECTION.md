@@ -120,6 +120,11 @@ Exit evidence: all existing tests pass, plus cross-domain conformance tests.
 Exit evidence: portable adversarial artifact independently reproduced by
 someone outside the authoring environment.
 
+Author-controlled implementation status: complete. The provider-neutral
+middleware, deterministic adversarial artifact, and conformance tests are
+present and reproducible. Independent reproduction by someone outside the
+authoring environment remains the sole Gate 2 exit condition.
+
 ### Gate 3: A2A Delegation Profile
 
 - Demonstrate that an agent can delegate a task without transferring broader
@@ -151,7 +156,7 @@ The strongest defensible milestone is:
 
 ## Immediate Work Boundary
 
-The next implementation step is Gate 1 only: design and test the neutral
-authority-envelope schema while preserving every current ProofRail control.
-Do not publish adoption, production-readiness, or category-leadership claims
-before independent evidence exists.
+Gate 1 and the author-controlled portion of Gate 2 are implemented. The next
+evidence step is an independent Gate 2 reproduction. Do not claim Gate 2 exit,
+adoption, production-readiness, or category leadership until that outside
+evidence exists.
