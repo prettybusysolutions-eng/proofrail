@@ -87,16 +87,30 @@ dispatcher is a child subreaper, so descendants that leave the worker's process
 group (`setsid`, `setpgid`, double fork) are killed before reconciliation; files
 are hashed in chunks, so large files cannot exhaust memory.
 
+Environment: the dispatcher, reconciler and acceptance tests never use the
+caller's `PATH`; `git` is resolved from a fixed trusted path
+(`/usr/local/bin:/usr/bin:/bin`). The worker receives only that `PATH`,
+`HOME`, `LANG`, `LC_ALL`, `TMPDIR`, and the variable names its registry entry
+lists under `environment`. Provider credentials therefore reach a worker only
+as an explicit installation decision.
+
+Acceptance tests run worker-written code. Each command runs in its own session
+with the minimal environment (no caller secrets, no bytecode writes), within
+the signed `max_runtime_seconds`; its process group is killed afterwards and on
+timeout, which is recorded as a failed test. The working tree is re-snapshotted
+after the tests: any change fails reconciliation
+(`acceptance_tests_modified_repository`), so the attested final state cannot be
+stale.
+
 Not enforced by this pilot: outside Linux, descendants that leave the process
-group are not contained (that needs an OS boundary such as a cgroup, container
-or separate user). The dispatcher and reconciler still inherit the
-caller's environment and resolve `git`/`python3` through `PATH`; run them from a
-trusted environment. Signed `allowed_commands` are bound into authority but
-not enforced: the only record of the commands a worker ran is its own
+group are not contained. Acceptance tests and the worker still run as the same
+OS user as the reconciler, without a filesystem or network sandbox; containing
+code that runs as that user needs an OS boundary (container, separate user,
+namespaces). Signed `allowed_commands` are bound into authority but not
+enforced: the only record of the commands a worker ran is its own
 `commands.jsonl`, which the reconciler hashes as untrusted evidence, and a
 check against a worker-written log would only trust the worker. Enforcing
-commands needs an execution boundary that observes them. Acceptance tests
-execute worker-written code with the reconciler's privileges.
+commands needs an execution boundary that observes them.
 
 `forbidden_paths` are enforced: an entry covers that exact path and, as a
 directory, everything beneath it. A job whose `allowed_paths` include a

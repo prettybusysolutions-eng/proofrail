@@ -34,6 +34,7 @@ from integrations.openclaw.repository_change import (
     read_canonical_job_file,
     record_dispatch_claim,
     verify_consumption_grant,
+    worker_environment,
 )
 
 
@@ -131,6 +132,9 @@ def main() -> int:
             stdout=out,
             stderr=err,
             start_new_session=True,
+            # Never the caller's environment: trusted PATH, base variables,
+            # and only names the installation registry allows for this worker.
+            env=worker_environment(worker_spec.get("environment", [])),
         )
         assert proc.stdin is not None
         proc.stdin.write(verified_job_bytes)
@@ -162,6 +166,7 @@ def main() -> int:
         "resolved_executor_identity": worker_spec["executor_id"],
         "resolved_executor_contract_version": worker_spec["contract_version"],
         "resolved_executor_fingerprint": worker_spec["executable_identity_digest"],
+        "worker_environment_names": sorted(worker_environment(worker_spec.get("environment", []))),
         "authority_digest": consumption.get("authority_digest"),
         "consumption_grant_digest": record_digest(consumption),
         "stdout_log": str(stdout),

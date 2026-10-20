@@ -1167,6 +1167,152 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             self.assertIn("forbidden_path_changed", rec["errors"])
             self.assertEqual(rec["forbidden_changes"], ["secrets/key.pem"])
 
+    # --- S1: trusted environment ------------------------------------------
+
+    def _grant_for(self, repo, job, worker, *, environment=None):
+        if environment is None:
+            fingerprint = self._write_installation_worker_registry(worker)
+        else:
+            fingerprint = executable_fingerprint(worker)
+            write_worker_registry(self.installation_worker_registry, workers={"xzenia-coder": {
+                "path": str(Path(worker).resolve()), "contract_version": DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                "executable_identity_digest": fingerprint, "environment": environment}})
+        return mint_consumption_grant(
+            authority_digest="c1" * 32, authority_nonce="s1-environment-nonce",
+            parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+            executor_id="xzenia-coder", consumed_at=NOW.isoformat(),
+            expires_at=(datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat(),
+            private_key=self.consumption_private_key, key_id="execution-key",
+            executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+            executable_identity_digest=fingerprint)
+
+    def test_fake_git_first_on_caller_path_cannot_hide_base_drift(self):
+        # Previously: a fake git reporting the old HEAD let a drifted repo pass.
+        with TemporaryDirectory() as directory:
+            repo, job = _repo(directory), None
+            job = _job(repo)
+            worker = _scripted_worker(directory, "(repo.parent/'spawned').write_text('1')\n")
+            grant = self._grant_for(repo, job, worker)
+            base = _head(repo)
+            (repo / "other.py").write_text("x = 1\n")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-qm", "drift"], cwd=repo, check=True)
+            fake = Path(directory) / "fakebin"
+            fake.mkdir()
+            (fake / "git").write_text(f"#!/bin/sh\necho {base}\n")
+            os.chmod(fake / "git", 0o755)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            env = dict(os.environ, PATH=f"{fake}:{os.environ['PATH']}")
+            completed = _direct_dispatch(directory, repo, job, output, grant, env=env)
+            time.sleep(0.5)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("base_commit_mismatch", completed.stderr)
+            self.assertFalse((Path(directory) / "spawned").exists())
+
+    def test_worker_does_not_inherit_caller_secrets(self):
+        # Previously: worker saw FAKE_PROVIDER_TOKEN from the dispatcher's environment.
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            worker = _scripted_worker(directory,
+                "import os\n(repo.parent/'env.json').write_text(json.dumps(dict(os.environ)))\n")
+            grant = self._grant_for(repo, job, worker)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            env = dict(os.environ, FAKE_PROVIDER_TOKEN="sk-secret-123", PYTHONPATH="/attacker")
+            completed = _direct_dispatch(directory, repo, job, output, grant, env=env)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            seen = json.loads((Path(directory) / "env.json").read_text())
+            self.assertNotIn("FAKE_PROVIDER_TOKEN", seen)
+            self.assertNotIn("PYTHONPATH", seen)
+            self.assertEqual(seen["PATH"], "/usr/local/bin:/usr/bin:/bin")
+
+    def test_registry_allowlist_is_the_only_way_to_pass_a_variable(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            worker = _scripted_worker(directory,
+                "import os\n(repo.parent/'env.json').write_text(json.dumps(dict(os.environ)))\n")
+            grant = self._grant_for(repo, job, worker, environment=["PROVIDER_API_KEY"])
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            env = dict(os.environ, PROVIDER_API_KEY="admin-provisioned", OTHER_SECRET="x")
+            completed = _direct_dispatch(directory, repo, job, output, grant, env=env)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            seen = json.loads((Path(directory) / "env.json").read_text())
+            self.assertEqual(seen.get("PROVIDER_API_KEY"), "admin-provisioned")
+            self.assertNotIn("OTHER_SECRET", seen)
+
+    def test_reconciler_never_runs_git_from_the_caller_path(self):
+        with TemporaryDirectory() as directory:
+            marker = Path(directory) / "fake-git-ran"
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            fake = Path(directory) / "fakebin"
+            fake.mkdir()
+            (fake / "git").write_text(f"#!/bin/sh\necho ran >> {marker}\nexec /usr/bin/git \"$@\"\n")
+            os.chmod(fake / "git", 0o755)
+            old_path = os.environ["PATH"]
+            os.environ["PATH"] = f"{fake}:{old_path}"
+            try:
+                receipt = adapter.execute(action, idempotency_key="c2" * 32)
+            finally:
+                os.environ["PATH"] = old_path
+            self.assertEqual(receipt["status"], "success")
+            self.assertFalse(marker.exists(), "reconciler or dispatcher used git from the caller's PATH")
+
+    # --- S3: contained acceptance-test execution ----------------------------
+
+    def test_acceptance_tests_that_modify_the_repository_fail_reconciliation(self):
+        # Previously: a file written by worker-authored test code after the
+        # repository was observed went unrecorded in the attested final state.
+        with TemporaryDirectory() as directory:
+            plant = ("(repo/'test_allowed.py').write_text(\"import unittest, pathlib\\n"
+                     "pathlib.Path('planted_by_test.py').write_text('x=1')\\n"
+                     "from allowed import value\\n"
+                     "class T(unittest.TestCase):\\n    def test_value(self):\\n        self.assertEqual(value(), 2)\\n\")\n")
+            report = _PASS_REPORT.replace("'changed_files':['allowed.py']",
+                                          "'changed_files':['allowed.py','test_allowed.py']")
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + plant + report)
+            job = json.loads(Path(action["execution"]["job_file"]).read_text())
+            job["allowed_paths"] = ["allowed.py", "test_allowed.py"]
+            Path(action["execution"]["job_file"]).write_text(json.dumps(job, sort_keys=True))
+            action["execution"]["job"] = job
+            action["execution"]["authority"] = self._authority(job, repo)
+            rec = adapter.execute(action, idempotency_key="e1" * 32)["receipt_evidence"]["reconciliation"]
+            self.assertEqual(rec["state"], "RECONCILIATION_FAILED")
+            self.assertIn("acceptance_tests_modified_repository", rec["errors"])
+
+    def test_hanging_acceptance_test_is_killed_and_recorded_as_failed(self):
+        from integrations.openclaw.repository_change import run_acceptance_tests
+        with TemporaryDirectory() as directory:
+            marker = Path(directory) / "survived"
+            child = f"import time, pathlib; time.sleep(3); pathlib.Path({str(marker)!r}).write_text('x')"
+            parent = f"import subprocess, sys, time\nsubprocess.Popen([sys.executable, '-c', {child!r}])\ntime.sleep(30)"
+            hang = [sys.executable, "-c", parent]
+            started = time.monotonic()
+            results = run_acceptance_tests(directory, [hang], timeout_seconds=1)
+            self.assertLess(time.monotonic() - started, 5)
+            self.assertTrue(results[0]["timed_out"])
+            self.assertIsNone(results[0]["returncode"])
+            time.sleep(4)
+            self.assertFalse(marker.exists(), "a process started by the acceptance test survived")
+
+    def test_acceptance_tests_do_not_see_caller_secrets_or_crash_on_bytes(self):
+        from integrations.openclaw.repository_change import run_acceptance_tests
+        with TemporaryDirectory() as directory:
+            probe = [sys.executable, "-c",
+                     "import os, sys\n"
+                     "sys.stdout.buffer.write(b'\\xff\\xfe')\n"
+                     "sys.exit(0 if 'FAKE_PROVIDER_TOKEN' not in os.environ else 7)"]
+            os.environ["FAKE_PROVIDER_TOKEN"] = "sk-secret-123"
+            try:
+                results = run_acceptance_tests(directory, [probe], timeout_seconds=10)
+            finally:
+                os.environ.pop("FAKE_PROVIDER_TOKEN", None)
+            self.assertEqual(results[0]["returncode"], 0, "acceptance test saw the caller's secret")
+            self.assertEqual(len(results[0]["stdout_sha256"]), 64)
+
     def _registered_worker(self):
         """The installed worker the governor's authority must name.
 

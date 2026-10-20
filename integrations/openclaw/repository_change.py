@@ -4,6 +4,8 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import signal
 import sqlite3
 import subprocess
 import time
@@ -370,16 +372,19 @@ def write_worker_registry(
             worker_path = Path(_required_text(value, "path")).resolve()
             contract_version = str(value.get("contract_version") or DEFAULT_EXECUTOR_CONTRACT_VERSION)
             fingerprint = str(value.get("executable_identity_digest") or executable_fingerprint(worker_path))
+            environment = sorted({str(name) for name in value.get("environment", [])})
         else:
             worker_path = Path(value).resolve()
             contract_version = DEFAULT_EXECUTOR_CONTRACT_VERSION
             fingerprint = executable_fingerprint(worker_path)
+            environment = []
         _require_digest(fingerprint, "executable_identity_digest")
         entries.append({
             "executor_id": str(executor_id),
             "contract_version": contract_version,
             "path": str(worker_path),
             "executable_identity_digest": fingerprint,
+            "environment": environment,
         })
     registry = {"kind": WORKER_REGISTRY_KIND, "workers": entries}
     target = Path(path)
@@ -418,11 +423,17 @@ def load_worker_registry_executor(
     actual = executable_fingerprint(worker_path)
     if actual != entry_fingerprint:
         raise RepositoryAuthorityError("installed_worker_fingerprint_mismatch")
+    environment = entry.get("environment", [])
+    if not isinstance(environment, list) or not all(
+        isinstance(name, str) and name and "=" not in name for name in environment
+    ):
+        raise RepositoryAuthorityError("worker_registry_invalid")
     return {
         "executor_id": executor_id,
         "contract_version": entry_contract_version,
         "path": str(worker_path.resolve()),
         "executable_identity_digest": entry_fingerprint,
+        "environment": list(environment),
     }
 
 
@@ -762,7 +773,7 @@ def observe_repository(
         ):
             changed_files.update(_git_lines(repo, args))
     diff = subprocess.run(
-        ["git", *_HARDENED_GIT, "diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=all", "--binary",
+        [_git_executable(), *_HARDENED_GIT, "diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=all", "--binary",
          *([base_commit_sha] if base_commit_sha else [])],
         cwd=repo,
         env=_git_env(),
@@ -798,9 +809,38 @@ _HARDENED_GIT = (
 )
 
 
+# Installation-trusted search path for git and worker interpreters. The
+# caller's PATH is never used: a writable directory placed first in it could
+# substitute `git` (defeating the live-base and reconciliation checks).
+TRUSTED_PATH = "/usr/local/bin:/usr/bin:/bin"
+# Variables a worker always receives; anything else must be named by the
+# installation's worker registry entry ("environment").
+WORKER_BASE_ENVIRONMENT = ("HOME", "LANG", "LC_ALL", "TMPDIR")
+
+
+def _git_executable() -> str:
+    found = shutil.which("git", path=TRUSTED_PATH)
+    if not found:
+        raise RepositoryAuthorityError("trusted_git_missing")
+    return found
+
+
+def worker_environment(allowed_names: list[str] | tuple[str, ...] = ()) -> dict[str, str]:
+    """Minimal worker environment: trusted PATH, base locale/home/tmp, and only
+    the extra variable names the installation registry allows."""
+    env = {"PATH": TRUSTED_PATH}
+    for name in (*WORKER_BASE_ENVIRONMENT, *allowed_names):
+        if name in os.environ and name != "PATH":
+            env[name] = os.environ[name]
+    return env
+
+
 def _git_env() -> dict[str, str]:
-    """Environment for reconciler git calls: no system/global config, no prompts."""
-    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    """Environment for reconciler git calls: trusted PATH, no system/global
+    config, no prompts, no replacement objects."""
+    env = {key: value for key, value in os.environ.items()
+           if not key.startswith("GIT_") and key not in ("PATH",)}
+    env["PATH"] = TRUSTED_PATH
     env.update({"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
                 "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0",
                 "GIT_NO_REPLACE_OBJECTS": "1"})
@@ -888,13 +928,21 @@ def reconcile_repository_change(
     missing_artifacts = [name for name in REQUIRED_WORKER_ARTIFACTS if not (Path(output_dir) / name).exists()]
     worker_hash_errors = verify_hashes_json(Path(output_dir))
     control_tampered = after.get("control_tampered") is True
+    tests_modified_repository = False
     independent_tests = []
     if control_tampered:
         # Do not execute anything in a repository whose git control files the
         # worker changed (hooks, fsmonitor, filters, excludes).
         independent_tests = []
     elif repo_path is not None:
-        independent_tests = run_acceptance_tests(repo_path, job.get("acceptance_tests", []))
+        independent_tests = run_acceptance_tests(
+            repo_path, job.get("acceptance_tests", []),
+            timeout_seconds=int(job.get("max_runtime_seconds", 60)),
+        )
+        # Acceptance tests run worker-written code after the repository was
+        # observed; they must not change it, or the attested final state is stale.
+        if "tree" in after and _tree_snapshot(Path(repo_path).resolve()) != after["tree"]:
+            tests_modified_repository = True
     else:
         tests = _read_json(Path(output_dir) / "tests.json", default={"final": []})
         independent_tests = tests.get("final", [])
@@ -917,6 +965,8 @@ def reconcile_repository_change(
         errors.append("repository_control_tampered")
     if forbidden_changes:
         errors.append("forbidden_path_changed")
+    if tests_modified_repository:
+        errors.append("acceptance_tests_modified_repository")
     if worker_report.get("status") != "PASS":
         errors.append("worker_status_not_pass")
     if unauthorized:
@@ -995,29 +1045,61 @@ def reconciled_artifact_manifest(
     return manifest
 
 
-def run_acceptance_tests(repo_path: str | Path, commands: Any) -> list[dict[str, Any]]:
+def run_acceptance_tests(
+    repo_path: str | Path,
+    commands: Any,
+    *,
+    timeout_seconds: int = 60,
+) -> list[dict[str, Any]]:
+    """Run the signed acceptance tests with contained execution.
+
+    The commands execute worker-written code, so each runs in its own session
+    with a minimal environment (no caller secrets, trusted PATH, no bytecode
+    writes), within the signed runtime limit; its whole process group is
+    killed when it finishes or times out. A timeout is a failed test, not an
+    exception. Output is hashed as bytes.
+    """
+    env = worker_environment(())
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     results = []
     for command in commands:
         argv = _canonical_command(command)
         start = time.time()
-        completed = subprocess.run(
+        timed_out = False
+        proc = subprocess.Popen(
             argv,
             cwd=Path(repo_path),
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            start_new_session=True,
         )
+        try:
+            stdout, stderr = proc.communicate(timeout=max(1, int(timeout_seconds)))
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            _kill_process_group(proc.pid)
+            stdout, stderr = proc.communicate()
+        _kill_process_group(proc.pid)
         results.append(
             {
                 "command": argv,
-                "returncode": completed.returncode,
-                "stdout_sha256": _sha256_text(completed.stdout),
-                "stderr_sha256": _sha256_text(completed.stderr),
+                "returncode": None if timed_out else proc.returncode,
+                "timed_out": timed_out,
+                "stdout_sha256": _sha256_bytes(stdout or b""),
+                "stderr_sha256": _sha256_bytes(stderr or b""),
                 "duration_ms": int((time.time() - start) * 1000),
             }
         )
     return results
+
+
+def _kill_process_group(pid: int) -> None:
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
 
 
 def verify_hashes_json(output_dir: Path) -> list[str]:
@@ -1036,7 +1118,7 @@ def verify_hashes_json(output_dir: Path) -> list[str]:
 
 def git_head(repo_path: str | Path) -> str:
     return subprocess.run(
-        ["git", *_HARDENED_GIT, "rev-parse", "HEAD"],
+        [_git_executable(), *_HARDENED_GIT, "rev-parse", "HEAD"],
         cwd=Path(repo_path),
         env=_git_env(),
         capture_output=True,
@@ -1192,7 +1274,7 @@ def _public_key_hex(value: Ed25519PublicKey | bytes) -> str:
 
 def _git_lines(repo_path: Path, args: list[str]) -> list[str]:
     result = subprocess.run(
-        ["git", *_HARDENED_GIT, *args],
+        [_git_executable(), *_HARDENED_GIT, *args],
         cwd=repo_path,
         env=_git_env(),
         capture_output=True,
