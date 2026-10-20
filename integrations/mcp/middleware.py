@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
@@ -17,6 +18,14 @@ from proofrail.envelope import effect_digest, verify_action_authority_envelope
 from proofrail.permit import PermitError
 
 MCP_ACTION_TYPE = "mcp.tool_call"
+ROOT_NAMES = ("identity", "evidence", "policy", "state")
+
+
+def _valid_identifier(value: Any) -> bool:
+    return (isinstance(value, str) and
+            re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", value) is not None and
+            ".." not in value)
+
 
 # Trusted, server-side view of current authority state for one effect:
 # {"roots": {identity, evidence, policy, state}, "approval_digest": str}.
@@ -29,6 +38,8 @@ def mcp_target(server_id: str, tool_name: str) -> str:
     Binding the server means an envelope minted for one server's tool is not
     valid on another server that exposes a tool with the same name.
     """
+    if not _valid_identifier(server_id) or not _valid_identifier(tool_name):
+        raise ProofRailError("invalid_mcp_identifier")
     return f"mcp://{server_id}/{tool_name}"
 
 
@@ -114,8 +125,8 @@ class MCPAuthorityMiddleware:
             of one server must use the same store, or authority is single-use
             per replica rather than per server.
         """
-        if not isinstance(server_id, str) or not server_id.strip() or "/" in server_id:
-            raise ProofRailError("server_id must be a non-empty identifier without '/'")
+        if not _valid_identifier(server_id):
+            raise ProofRailError("server_id must match the strict MCP identifier grammar; rejected '/'")
         if (consumption_store is None) == (state_db is None):
             raise ProofRailError("Provide exactly one of consumption_store or state_db")
         if not callable(trusted_state):
@@ -143,6 +154,8 @@ class MCPAuthorityMiddleware:
             return MCPAuthorityResult("denied", "invalid_envelope", "")
         if not isinstance(arguments, Mapping) or not isinstance(tool_name, str):
             return MCPAuthorityResult("denied", "invalid_arguments", "")
+        if not _valid_identifier(tool_name):
+            return MCPAuthorityResult("denied", "invalid_tool_name", "")
         try:
             frozen_envelope = canonical_json(dict(envelope))
             frozen_arguments = canonical_json(dict(arguments))
@@ -177,7 +190,8 @@ class MCPAuthorityMiddleware:
             current = self._trusted(computed_effect)
             if current is None:
                 return "trusted_state_unavailable"
-            if dict(current["roots"]) != dict(envelope.get("roots", {})):
+            if any(current["roots"][name] != envelope.get("roots", {}).get(name)
+                   for name in ROOT_NAMES):
                 return "state_changed_before_consumption"
             if current["approval_digest"] != envelope.get("approval_digest"):
                 return "approval_changed_before_consumption"
@@ -259,12 +273,18 @@ class MCPAuthorityMiddleware:
     def _trusted(self, computed_effect: str) -> Mapping[str, Any] | None:
         try:
             state = self.trusted_state(computed_effect)
+            if not isinstance(state, Mapping) or not isinstance(state.get("roots"), Mapping) \
+                    or not isinstance(state.get("approval_digest"), str):
+                return None
+            # Snapshot only the four protocol roots. Provider metadata does not
+            # alter authority, and mapping access failures are denials too.
+            roots = {name: state["roots"][name] for name in ROOT_NAMES}
+            if not all(isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value)
+                       for value in roots.values()):
+                return None
+            return {"roots": roots, "approval_digest": state["approval_digest"]}
         except Exception:
             return None
-        if not isinstance(state, Mapping) or not isinstance(state.get("roots"), Mapping) \
-                or not isinstance(state.get("approval_digest"), str):
-            return None
-        return state
 
     def _finish(
         self,

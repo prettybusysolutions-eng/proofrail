@@ -384,6 +384,39 @@ class MCPAuthorityMiddlewareTests(unittest.TestCase):
                 with self.subTest(server_id=bad), self.assertRaises(Exception):
                     self.middleware(directory, server_id=bad)
 
+    def test_ambiguous_identifiers_are_rejected_before_execution(self):
+        bad_names = ("a/b", "a..b", "a%b", "a?b", "a#b", "a:b", " a", "a\n", "a\x00", "a" * 129)
+        with TemporaryDirectory() as directory:
+            adapter = ToolAdapter()
+            middleware = self.middleware(directory, adapter=adapter)
+            for value in bad_names:
+                with self.subTest(value=value):
+                    with self.assertRaises(Exception):
+                        self.middleware(directory, server_id=value)
+                    result = middleware.invoke(tool_name=value, arguments=self.arguments, envelope=self.envelope())
+                    self.assertEqual(result.reason, "invalid_tool_name")
+            self.assertEqual(adapter.calls, 0)
+
+    def test_provider_root_metadata_does_not_change_authority(self):
+        with TemporaryDirectory() as directory:
+            provider = TrustedState({**ROOTS, "metadata": "not a protocol root"})
+            self.assertEqual(self.invoke(self.middleware(directory, trusted=provider), self.envelope()).status, "success")
+
+    def test_provider_mapping_failure_in_transaction_is_denial(self):
+        class Broken(dict):
+            def __getitem__(self, key):
+                raise RuntimeError("unavailable")
+        calls = 0
+        def provider(effect):
+            nonlocal calls
+            calls += 1
+            return {"roots": ROOTS if calls == 1 else Broken(ROOTS), "approval_digest": APPROVAL}
+        with TemporaryDirectory() as directory:
+            adapter = ToolAdapter()
+            middleware = self.middleware(directory, trusted=provider, adapter=adapter)
+            self.assertEqual(self.invoke(middleware, self.envelope()).reason, "trusted_state_unavailable")
+            self.assertEqual(adapter.calls, 0)
+
 
 class RecordingAdapter(ToolAdapter):
     def __init__(self):
