@@ -1313,6 +1313,69 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             self.assertEqual(results[0]["returncode"], 0, "acceptance test saw the caller's secret")
             self.assertEqual(len(results[0]["stdout_sha256"]), 64)
 
+
+    def test_adapter_ignores_fake_python_on_path(self):
+        from unittest.mock import patch
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            fake = Path(directory) / "fakebin"
+            fake.mkdir()
+            marker = Path(directory) / "fake-python-ran"
+            (fake / "python3").write_text(f"#!/bin/sh\necho ran > {marker}\nexit 97\n")
+            (fake / "python3").chmod(0o755)
+            with patch.dict(os.environ, {"PATH": str(fake) + ":" + os.environ["PATH"]}):
+                self.assertEqual(adapter.execute(action, idempotency_key="d1" * 32)["status"], "success")
+            self.assertFalse(marker.exists())
+
+    def test_registry_rejects_runtime_environment_controls(self):
+        from integrations.openclaw.repository_change import worker_environment
+        for name in ("LD_PRELOAD", "LD_LIBRARY_PATH", "PYTHONPATH", "PYTHONHOME", "HOME",
+                     "TMPDIR", "PATH", "GIT_CONFIG_COUNT", "BASH_ENV", "NODE_OPTIONS",
+                     "GCONV_PATH", "x=y", "PROVIDER_TOKEN\n"):
+            with self.subTest(name=name), self.assertRaises(RepositoryAuthorityError):
+                worker_environment([name])
+        with TemporaryDirectory() as directory:
+            worker = _scripted_worker(directory, "pass\n")
+            self._write_installation_worker_registry(worker)
+            registry = json.loads(self.installation_worker_registry.read_text())
+            # Match the actual installed registry structure, then attempt load.
+            for entry in registry["workers"]:
+                entry["environment"] = ["LD_PRELOAD"]
+            self.installation_worker_registry.write_text(json.dumps(registry))
+            with self.assertRaises(RepositoryAuthorityError):
+                load_worker_registry_executor("xzenia-coder")
+
+    def test_fresh_home_tmp_and_minimal_git_environment(self):
+        from unittest.mock import patch
+        from integrations.openclaw.repository_change import execution_environment, _git_env
+        with TemporaryDirectory() as directory:
+            with patch.dict(os.environ, {"HOME": directory, "TMPDIR": directory,
+                                        "LD_PRELOAD": "caller.so", "PYTHONPATH": directory}):
+                with execution_environment() as first:
+                    home = Path(first["HOME"])
+                    self.assertNotEqual(home, Path(directory))
+                    self.assertEqual(list(home.iterdir()), [])
+                    self.assertNotEqual(first["TMPDIR"], directory)
+                    with execution_environment() as second:
+                        self.assertNotEqual(first["HOME"], second["HOME"])
+                    self.assertNotIn("LD_PRELOAD", _git_env())
+                    self.assertNotIn("PYTHONPATH", _git_env())
+                self.assertFalse(home.exists())
+
+    def test_acceptance_git_control_mutation_is_rejected(self):
+        from unittest.mock import patch
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            def mutate(*args, **kwargs):
+                with (repo / ".git" / "config").open("a") as stream:
+                    stream.write("\n# changed by acceptance test\n")
+                return []
+            with patch("integrations.openclaw.repository_change.run_acceptance_tests", side_effect=mutate):
+                receipt = adapter.execute(action, idempotency_key="d2" * 32)
+            self.assertNotEqual(receipt["status"], "success")
+            # The receipt itself must expose a failed reconciliation; no git call
+            # is needed to detect the changed control file.
+
     def _registered_worker(self):
         """The installed worker the governor's authority must name.
 
@@ -1561,9 +1624,5 @@ def _scripted_worker(directory, body):
 
 
 def _real_dispatcher(directory):
-    """Run the repository's real dispatcher under this test interpreter."""
-    real = Path(__file__).resolve().parents[1] / "scripts" / "xzenia-coder-dispatch"
-    wrapper = Path(directory) / "real-dispatch.sh"
-    wrapper.write_text(f'#!/bin/sh\nexec "{sys.executable}" "{real}" "$@"\n', encoding="utf-8")
-    os.chmod(wrapper, 0o755)
-    return wrapper
+    """Exercise the actual adapter interpreter selection, without a shell wrapper."""
+    return Path(__file__).resolve().parents[1] / "scripts" / "xzenia-coder-dispatch"

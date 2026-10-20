@@ -8,6 +8,9 @@ import shutil
 import signal
 import sqlite3
 import subprocess
+import sys
+from contextlib import contextmanager
+from tempfile import TemporaryDirectory
 import time
 from collections.abc import Mapping
 from datetime import datetime, timezone
@@ -424,10 +427,9 @@ def load_worker_registry_executor(
     if actual != entry_fingerprint:
         raise RepositoryAuthorityError("installed_worker_fingerprint_mismatch")
     environment = entry.get("environment", [])
-    if not isinstance(environment, list) or not all(
-        isinstance(name, str) and name and "=" not in name for name in environment
-    ):
+    if not isinstance(environment, list):
         raise RepositoryAuthorityError("worker_registry_invalid")
+    _validate_environment_names(environment)
     return {
         "executor_id": executor_id,
         "contract_version": entry_contract_version,
@@ -815,7 +817,14 @@ _HARDENED_GIT = (
 TRUSTED_PATH = "/usr/local/bin:/usr/bin:/bin"
 # Variables a worker always receives; anything else must be named by the
 # installation's worker registry entry ("environment").
-WORKER_BASE_ENVIRONMENT = ("HOME", "LANG", "LC_ALL", "TMPDIR")
+def _validate_environment_names(names):
+    # Registry additions are application credentials, never runtime controls.
+    # Restrict the grammar rather than trying to enumerate every loader variable.
+    for name in names:
+        if (not isinstance(name, str) or
+                not re.fullmatch(r"[A-Z][A-Z0-9_]*_(?:API_KEY|TOKEN|SECRET)", name) or
+                name.startswith(("LD_", "DYLD_", "PYTHON", "GIT_", "BASH_"))):
+            raise RepositoryAuthorityError("worker_environment_name_forbidden")
 
 
 def _git_executable() -> str:
@@ -826,24 +835,34 @@ def _git_executable() -> str:
 
 
 def worker_environment(allowed_names: list[str] | tuple[str, ...] = ()) -> dict[str, str]:
-    """Minimal worker environment: trusted PATH, base locale/home/tmp, and only
-    the extra variable names the installation registry allows."""
-    env = {"PATH": TRUSTED_PATH}
-    for name in (*WORKER_BASE_ENVIRONMENT, *allowed_names):
-        if name in os.environ and name != "PATH":
+    """Fixed runtime settings plus explicitly enrolled application credentials."""
+    _validate_environment_names(allowed_names)
+    env = {"PATH": TRUSTED_PATH, "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8",
+           "PYTHONNOUSERSITE": "1", "PYTHONDONTWRITEBYTECODE": "1",
+           "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
+           "GIT_TERMINAL_PROMPT": "0"}
+    for name in allowed_names:
+        if name in os.environ:
             env[name] = os.environ[name]
     return env
 
 
+@contextmanager
+def execution_environment(allowed_names=()):
+    # Fixed parent; tempfile must not honor the caller's TMPDIR.
+    with TemporaryDirectory(prefix="proofrail-execution-", dir="/tmp") as root:
+        home, temporary = Path(root) / "home", Path(root) / "tmp"
+        home.mkdir(mode=0o700)
+        temporary.mkdir(mode=0o700)
+        env = worker_environment(allowed_names)
+        env.update(HOME=str(home), TMPDIR=str(temporary), TMP=str(temporary), TEMP=str(temporary))
+        yield env
+
+
 def _git_env() -> dict[str, str]:
-    """Environment for reconciler git calls: trusted PATH, no system/global
-    config, no prompts, no replacement objects."""
-    env = {key: value for key, value in os.environ.items()
-           if not key.startswith("GIT_") and key not in ("PATH",)}
-    env["PATH"] = TRUSTED_PATH
-    env.update({"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
-                "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0",
-                "GIT_NO_REPLACE_OBJECTS": "1"})
+    """No caller loader, interpreter, git config or credential variables."""
+    env = worker_environment(())
+    env.update({"GIT_OPTIONAL_LOCKS": "0", "GIT_NO_REPLACE_OBJECTS": "1"})
     return env
 
 
@@ -943,6 +962,10 @@ def reconcile_repository_change(
         # observed; they must not change it, or the attested final state is stale.
         if "tree" in after and _tree_snapshot(Path(repo_path).resolve()) != after["tree"]:
             tests_modified_repository = True
+        # Never run git here: the acceptance tests may have planted executable
+        # configuration after the initial control snapshot.
+        if _control_snapshot(Path(repo_path).resolve()) != after.get("control"):
+            control_tampered = True
     else:
         tests = _read_json(Path(output_dir) / "tests.json", default={"final": []})
         independent_tests = tests.get("final", [])
@@ -1051,7 +1074,10 @@ def run_acceptance_tests(
     *,
     timeout_seconds: int = 60,
 ) -> list[dict[str, Any]]:
-    """Run the signed acceptance tests with contained execution.
+    """Run signed acceptance tests with best-effort process-group cleanup.
+
+    NOT an external sandbox. Detached descendants can hold output pipes open
+    beyond the timeout and mutate files after return. See the containment design.
 
     The commands execute worker-written code, so each runs in its own session
     with a minimal environment (no caller secrets, trusted PATH, no bytecode
@@ -1059,29 +1085,28 @@ def run_acceptance_tests(
     killed when it finishes or times out. A timeout is a failed test, not an
     exception. Output is hashed as bytes.
     """
-    env = worker_environment(())
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
     results = []
     for command in commands:
         argv = _canonical_command(command)
         start = time.time()
         timed_out = False
-        proc = subprocess.Popen(
-            argv,
-            cwd=Path(repo_path),
-            env=env,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            start_new_session=True,
-        )
-        try:
-            stdout, stderr = proc.communicate(timeout=max(1, int(timeout_seconds)))
-        except subprocess.TimeoutExpired:
-            timed_out = True
+        with execution_environment() as env:
+            proc = subprocess.Popen(
+                argv,
+                cwd=Path(repo_path),
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                start_new_session=True,
+            )
+            try:
+                stdout, stderr = proc.communicate(timeout=max(1, int(timeout_seconds)))
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                _kill_process_group(proc.pid)
+                stdout, stderr = proc.communicate()
             _kill_process_group(proc.pid)
-            stdout, stderr = proc.communicate()
-        _kill_process_group(proc.pid)
         results.append(
             {
                 "command": argv,
@@ -1186,25 +1211,28 @@ def _run_dispatcher(
     consumption_file: Path,
     timeout: int,
 ) -> dict[str, Any]:
-    completed = subprocess.run(
-        [
-            str(dispatcher_path),
-            "--job-file",
-            str(job_file),
-            "--repo-path",
-            str(repo_path),
-            "--output-dir",
-            str(output_dir),
-            "--proofrail-consumption-file",
-            str(consumption_file),
-        ],
-        capture_output=True,
-        text=True,
-        # The dispatcher supervises the worker for up to `timeout` seconds and
-        # then kills its process group; allow it time to finish doing so.
-        timeout=timeout + DISPATCH_SUPERVISION_GRACE_SECONDS,
-        check=False,
-    )
+    worker = load_worker_registry_executor("xzenia-coder")
+    with execution_environment(worker.get("environment", [])) as env:
+        completed = subprocess.run(
+            [
+                sys.executable, "-I", str(dispatcher_path),
+                "--job-file",
+                str(job_file),
+                "--repo-path",
+                str(repo_path),
+                "--output-dir",
+                str(output_dir),
+                "--proofrail-consumption-file",
+                str(consumption_file),
+            ],
+            env=env,
+            capture_output=True,
+            text=True,
+            # The dispatcher supervises the worker for up to `timeout` seconds and
+            # then kills its process group; allow it time to finish doing so.
+            timeout=timeout + DISPATCH_SUPERVISION_GRACE_SECONDS,
+            check=False,
+        )
     try:
         parsed = json.loads(completed.stdout)
     except json.JSONDecodeError:

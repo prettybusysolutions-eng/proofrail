@@ -12,7 +12,7 @@ single-use ProofRail `repository_change` authority.
 5. The adapter atomically consumes the authority in SQLite and emits a signed `proofrail.execution-consumption-grant.v1` using a role-separated consumption signing key.
 6. `xzenia-coder-dispatch` verifies the signed consumption grant against the canonical job digest, live repo base, and the installation-owned consumption trust store before resolving the worker. It does not accept a caller-supplied public key, CLI-selected trust store, environment-selected trust store, CLI-selected worker, or environment-selected worker.
 7. The dispatcher resolves the worker from an installation-owned registry, verifies the installed executable fingerprint against the signed consumption grant, atomically records the grant in `config/proofrail-dispatch-claims.sqlite3` (a grant already recorded is refused: `consumption_grant_replayed`), and sends the verified canonical job bytes to the worker over stdin. The worker does not reopen a caller-writable verified-job path after verification.
-8. The dispatcher supervises the worker: it waits up to the signed `max_runtime_seconds`, kills the worker's process group on timeout (exit 3, `worker_runtime_exceeded`), and after the worker exits kills its process group and, on Linux as a child subreaper, every remaining descendant (including ones that left the group), so reconciliation observes a repository nothing the worker started is still writing. A nonzero dispatcher exit fails the adapter immediately.
+8. The dispatcher supervises the worker: it waits up to the signed `max_runtime_seconds`, kills the worker's process group on timeout (exit 3, `worker_runtime_exceeded`), and after the worker exits kills its process group and, on Linux as a child subreaper, every remaining descendant (including ones that left the group), as best-effort cleanup; this does not establish an external containment boundary. A nonzero dispatcher exit fails the adapter immediately.
 9. The reconciler first snapshots git's control files (`.git/config`, `hooks/`, `info/`, `modules/`) and the whole working tree from the filesystem, without running git. If any control file changed, reconciliation fails (`repository_control_tampered`) without running git or the acceptance tests in that repository, because hooks, `core.fsmonitor`, filters and excludes there are worker-chosen. Otherwise it runs git with system/global config disabled, fsmonitor and hooks off and no external diff or textconv, and combines git's view with the filesystem comparison, which still sees files hidden from git. It then reruns the signed acceptance tests locally.
 10. Replay, drift, split-job execution, forged consumption grants, signer substitution, worker substitution, verified-input replacement, scope expansion, false worker success, and failed tests produce explicit denial or reconciliation failure.
 
@@ -83,34 +83,37 @@ Also covered: replace refs and shallow grafts are control surfaces and the
 reconciler's git ignores replacement objects (a committed file cannot be hidden
 from it); a nested `.git` or an `include`/`includeIf` in the repository config
 is refused (before consuming authority when present up front); on Linux the
-dispatcher is a child subreaper, so descendants that leave the worker's process
-group (`setsid`, `setpgid`, double fork) are killed before reconciliation; files
-are hashed in chunks, so large files cannot exhaust memory.
+dispatcher uses child-subreaper cleanup tested against selected descendant
+patterns; this is not proof that arbitrary descendants cannot outlive the job.
+Files are hashed in chunks rather than read entirely into memory.
 
-Environment: the dispatcher, reconciler and acceptance tests never use the
-caller's `PATH`; `git` is resolved from a fixed trusted path
-(`/usr/local/bin:/usr/bin:/bin`). The worker receives only that `PATH`,
-`HOME`, `LANG`, `LC_ALL`, `TMPDIR`, and the variable names its registry entry
-lists under `environment`. Provider credentials therefore reach a worker only
-as an explicit installation decision.
+Environment hardening (2026-10-20): the adapter starts the dispatcher with its
+own `sys.executable -I`, not the script's `/usr/bin/env python3` shebang. Git uses
+a fixed trusted path and a minimal environment. Every worker and acceptance
+invocation gets fresh private HOME/TMPDIR directories under a fixed /tmp parent,
+fixed locale and disabled user-site loading/global git config. Registry additions
+must be uppercase application credential names ending `_API_KEY`, `_TOKEN` or
+`_SECRET`; loader/interpreter/git prefixes are refused. This narrows the registry
+contract: arbitrary runtime variables are no longer supported. Credential values
+still come from the trusted invoking service's environment.
 
-Acceptance tests run worker-written code. Each command runs in its own session
-with the minimal environment (no caller secrets, no bytecode writes), within
-the signed `max_runtime_seconds`; its process group is killed afterwards and on
-timeout, which is recorded as a failed test. The working tree is re-snapshotted
-after the tests: any change fails reconciliation
-(`acceptance_tests_modified_repository`), so the attested final state cannot be
-stale.
+Acceptance tests remain untrusted code. Git control files and the working tree
+are checked after they return, without running git to check control files.
+A control change fails with `repository_control_tampered`; a tree change fails
+with `acceptance_tests_modified_repository`.
 
-Not enforced by this pilot: outside Linux, descendants that leave the process
-group are not contained. Acceptance tests and the worker still run as the same
-OS user as the reconciler, without a filesystem or network sandbox; containing
-code that runs as that user needs an OS boundary (container, separate user,
-namespaces). Signed `allowed_commands` are bound into authority but not
-enforced: the only record of the commands a worker ran is its own
-`commands.jsonl`, which the reconciler hashes as untrusted evidence, and a
-check against a worker-written log would only trust the worker. Enforcing
-commands needs an execution boundary that observes them.
+**Two blockers remain OPEN on Linux and other platforms:** a detached descendant
+can hold captured output pipes open beyond the nominal timeout; it can also write
+after the final snapshot. We reproduced both with finite-lived children in a
+disposable fixture. Group cleanup and the additional environment hardening do not
+close these blockers. Do not deploy this path for untrusted jobs or treat a passing
+reconciliation as proof that no future write can occur.
+
+Worker and acceptance tests currently share OS privileges with the reconciler.
+The external design and required acceptance probes are in
+[GOVERNED_CODER_CONTAINMENT.md](GOVERNED_CODER_CONTAINMENT.md). Signed
+`allowed_commands` are bound but not enforced by an independent execution boundary;
+the worker's own command log cannot establish that property.
 
 `forbidden_paths` are enforced: an entry covers that exact path and, as a
 directory, everything beneath it. A job whose `allowed_paths` include a
