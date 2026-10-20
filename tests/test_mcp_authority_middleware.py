@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from integrations.mcp.middleware import MCPAuthorityMiddleware
+from integrations.mcp.middleware import MCPAuthorityMiddleware, SQLiteConsumptionStore, mcp_target
 from proofrail.envelope import mint_action_authority_envelope
 
 
@@ -17,6 +17,18 @@ ROOTS = {
     "state": "4" * 64,
 }
 APPROVAL = "5" * 64
+SERVER_ID = "support-server-1"
+
+
+class TrustedState:
+    """Server-side authority state; tests change it to model governance changes."""
+
+    def __init__(self, roots=None, approval=APPROVAL):
+        self.roots, self.approval, self.calls = dict(roots or ROOTS), approval, 0
+
+    def __call__(self, effect_digest):
+        self.calls += 1
+        return {"roots": dict(self.roots), "approval_digest": self.approval}
 
 
 class ToolAdapter:
@@ -70,7 +82,7 @@ class MCPAuthorityMiddlewareTests(unittest.TestCase):
             roots=ROOTS,
             approval_digest=APPROVAL,
             action_type="mcp.tool_call",
-            target="support.close_ticket",
+            target=mcp_target(SERVER_ID, "support.close_ticket"),
             parameters=self.arguments,
             subject_principal_id="agent:operator",
             subject_role="executor",
@@ -93,21 +105,23 @@ class MCPAuthorityMiddlewareTests(unittest.TestCase):
             key_id="verifier-key",
         )
 
-    def middleware(self, directory, adapter=None, observer=None):
+    def middleware(self, directory, adapter=None, observer=None, trusted=None,
+                   server_id=SERVER_ID, store=None):
         return MCPAuthorityMiddleware(
-            state_db=Path(directory) / "mcp-authority.sqlite3",
+            server_id=server_id,
+            trusted_state=trusted or TrustedState(),
             adapter=adapter or ToolAdapter(),
             observer=observer or Observer(),
             issuer_public_key=self.public_key,
+            **({"consumption_store": store} if store is not None
+               else {"state_db": Path(directory) / "mcp-authority.sqlite3"}),
         )
 
-    def invoke(self, middleware, envelope, arguments=None, roots=None):
+    def invoke(self, middleware, envelope, arguments=None):
         return middleware.invoke(
             tool_name="support.close_ticket",
             arguments=arguments or self.arguments,
             envelope=envelope,
-            expected_roots=roots or ROOTS,
-            expected_approval_digest=APPROVAL,
         )
 
     def test_success_requires_valid_authority_consumption_and_observation(self):
@@ -130,10 +144,11 @@ class MCPAuthorityMiddlewareTests(unittest.TestCase):
     def test_stale_state_is_denied_before_tool_execution(self):
         adapter = ToolAdapter()
         with TemporaryDirectory() as directory:
+            # The server's own state has moved on since the envelope was minted.
             result = self.invoke(
-                self.middleware(directory, adapter=adapter),
+                self.middleware(directory, adapter=adapter,
+                                trusted=TrustedState(roots={**ROOTS, "state": "8" * 64})),
                 self.envelope(),
-                roots={**ROOTS, "state": "8" * 64},
             )
         self.assertEqual(result.reason, "state_root_changed")
         self.assertEqual(adapter.calls, 0)
@@ -287,6 +302,87 @@ class MCPAuthorityMiddlewareTests(unittest.TestCase):
             result = self.invoke(self.middleware(directory, adapter=recorder), self.envelope())
         self.assertEqual(result.status, "success", result.reason)
         self.assertEqual(recorder.seen, [self.arguments])
+
+
+    # Review of #1, blockers 2 and 3.
+
+    def test_caller_can_no_longer_supply_roots(self):
+        # Previously: passing a stale envelope's own roots succeeded.
+        with TemporaryDirectory() as directory:
+            with self.assertRaises(TypeError):
+                self.middleware(directory).invoke(
+                    tool_name="support.close_ticket", arguments=self.arguments,
+                    envelope=self.envelope(), expected_roots=ROOTS,
+                    expected_approval_digest=APPROVAL)
+
+    def test_revocation_between_verification_and_consumption_stops_execution(self):
+        class RevokedAfterVerify(TrustedState):
+            def __call__(inner, effect_digest):
+                state = super().__call__(effect_digest)
+                if inner.calls >= 2:  # second read happens inside the consume transaction
+                    state["roots"]["policy"] = "9" * 64
+                return state
+
+        adapter = ToolAdapter()
+        with TemporaryDirectory() as directory:
+            result = self.invoke(self.middleware(directory, adapter=adapter,
+                                                 trusted=RevokedAfterVerify()), self.envelope())
+        self.assertEqual((result.status, result.reason),
+                         ("denied", "state_changed_before_consumption"))
+        self.assertEqual(adapter.calls, 0)
+
+    def test_approval_withdrawn_before_consumption_stops_execution(self):
+        class Withdrawn(TrustedState):
+            def __call__(inner, effect_digest):
+                state = super().__call__(effect_digest)
+                if inner.calls >= 2:
+                    state["approval_digest"] = "0" * 64
+                return state
+
+        adapter = ToolAdapter()
+        with TemporaryDirectory() as directory:
+            result = self.invoke(self.middleware(directory, adapter=adapter, trusted=Withdrawn()),
+                                 self.envelope())
+        self.assertEqual(result.reason, "approval_changed_before_consumption")
+        self.assertEqual(adapter.calls, 0)
+
+    def test_unavailable_trusted_state_fails_closed(self):
+        def broken(effect_digest):
+            raise RuntimeError("governance store offline")
+
+        adapter = ToolAdapter()
+        with TemporaryDirectory() as directory:
+            result = self.invoke(self.middleware(directory, adapter=adapter, trusted=broken),
+                                 self.envelope())
+        self.assertEqual((result.status, result.reason), ("denied", "trusted_state_unavailable"))
+        self.assertEqual(adapter.calls, 0)
+
+    def test_envelope_for_another_server_is_denied(self):
+        # Previously: target was the bare tool name, valid on any server.
+        adapter = ToolAdapter()
+        with TemporaryDirectory() as directory:
+            result = self.invoke(self.middleware(directory, adapter=adapter,
+                                                 server_id="other-server"), self.envelope())
+        self.assertEqual(result.reason, "target_changed")
+        self.assertEqual(adapter.calls, 0)
+
+    def test_replicas_sharing_one_store_execute_once(self):
+        # Previously: two instances with separate stores both executed.
+        adapter = ToolAdapter()
+        with TemporaryDirectory() as directory:
+            store = SQLiteConsumptionStore(Path(directory) / "shared.sqlite3")
+            envelope = self.envelope()
+            first = self.invoke(self.middleware(directory, adapter=adapter, store=store), envelope)
+            second = self.invoke(self.middleware(directory, adapter=adapter, store=store), envelope)
+        self.assertEqual(first.status, "success")
+        self.assertEqual(second.reason, "authority_already_consumed")
+        self.assertEqual(adapter.calls, 1)
+
+    def test_server_id_must_be_a_plain_identifier(self):
+        with TemporaryDirectory() as directory:
+            for bad in ("", "a/b", None):
+                with self.subTest(server_id=bad), self.assertRaises(Exception):
+                    self.middleware(directory, server_id=bad)
 
 
 class RecordingAdapter(ToolAdapter):

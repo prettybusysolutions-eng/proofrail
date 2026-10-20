@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from integrations.mcp.middleware import MCPAuthorityMiddleware
+from integrations.mcp.middleware import MCPAuthorityMiddleware, mcp_target
 from proofrail.core import ProofRailError
 from proofrail.crypto import canonical_json, sign_record, verify_signature
 from proofrail.envelope import mint_action_authority_envelope
@@ -27,6 +27,7 @@ ROOTS = {
     "state": "4" * 64,
 }
 APPROVAL = "5" * 64
+SERVER_ID = "reference-support-server"
 PRIVATE_KEY_BYTES = bytes.fromhex("42" * 32)
 NOW = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)
 
@@ -75,7 +76,7 @@ def build_report() -> dict[str, Any]:
             roots=ROOTS,
             approval_digest=APPROVAL,
             action_type="mcp.tool_call",
-            target="support.close_ticket",
+            target=mcp_target(SERVER_ID, "support.close_ticket"),
             parameters=arguments,
             subject_principal_id="agent:operator",
             subject_role="executor",
@@ -115,7 +116,12 @@ def build_report() -> dict[str, Any]:
         tool_adapter = adapter or Adapter()
         authority = envelope(f"mcp-artifact-nonce-{suffix}")
         with tempfile.TemporaryDirectory() as directory:
+            current_roots = dict(roots or ROOTS)
             middleware = MCPAuthorityMiddleware(
+                server_id=SERVER_ID,
+                # Server-side authority state; the "stale state" scenario models
+                # the server's state having moved on since minting.
+                trusted_state=lambda effect: {"roots": current_roots, "approval_digest": APPROVAL},
                 state_db=Path(directory) / "state.sqlite3",
                 adapter=tool_adapter,
                 observer=observer or Observer(),
@@ -125,16 +131,12 @@ def build_report() -> dict[str, Any]:
                 tool_name="support.close_ticket",
                 arguments=call_arguments or arguments,
                 envelope=authority,
-                expected_roots=roots or ROOTS,
-                expected_approval_digest=APPROVAL,
             )
             if replay:
                 result = middleware.invoke(
                     tool_name="support.close_ticket",
                     arguments=arguments,
                     envelope=authority,
-                    expected_roots=ROOTS,
-                    expected_approval_digest=APPROVAL,
                 )
         scenarios.append(
             {
