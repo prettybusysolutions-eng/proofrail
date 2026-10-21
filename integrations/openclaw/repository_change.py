@@ -551,6 +551,7 @@ class XzeniaCoderRepositoryAdapter:
         parameters = parameters_from_job(
             job, repo_path=repo_path, base_commit_sha=current_base, worker=worker,
         )
+        _preflight_descendant_containment()
         claim = consume_repository_change_authority(
             authority,
             registry_path=self.registry_path,
@@ -1200,6 +1201,23 @@ def _insert_consumption_claim(
             time.sleep(0.05)
         finally:
             database.close()
+
+
+def _preflight_descendant_containment() -> None:
+    # Trusted installed helper, same interpreter and clean environment as the
+    # actual dispatcher. Never probe by executing caller-provided job code.
+    probe = Path(__file__).resolve().parents[2] / "proofrail" / "runtime_capability.py"
+    try:
+        with execution_environment() as env:
+            result = subprocess.run(
+                [sys.executable, "-I", str(probe)], env=env,
+                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, timeout=5, check=False,
+            )
+    except (OSError, subprocess.TimeoutExpired):
+        raise RepositoryAuthorityError("descendant_containment_unavailable") from None
+    if result.returncode != 0:
+        raise RepositoryAuthorityError("descendant_containment_unavailable")
 
 
 def _run_dispatcher(

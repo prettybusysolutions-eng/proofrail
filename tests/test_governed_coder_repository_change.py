@@ -1122,7 +1122,8 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             except RepositoryAuthorityError as exc:
                 # Unsupported hosts must explicitly refuse, not skip the test
                 # or run with weaker containment. No other error is accepted.
-                self.assertEqual(str(exc), "dispatcher_failed:descendant_containment_unavailable")
+                self.assertIn(str(exc), ("descendant_containment_unavailable",
+                                          "dispatcher_failed:descendant_containment_unavailable"))
                 self.assertEqual((repo / "allowed.py").read_text(), "def value():\n    return 1\n")
                 self.assertFalse((repo / "late_child.py").exists())
                 return
@@ -1131,6 +1132,34 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
             dispatch = receipt["receipt_evidence"]["dispatch"]["result"]
             self.assertEqual(dispatch.get("descendant_containment"), "subreaper")
             self.assertGreaterEqual(dispatch["escaped_descendants_killed"], 1)
+
+    def test_adapter_preflight_denial_preserves_permit(self):
+        from unittest.mock import patch
+        from integrations.openclaw import repository_change as rc
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            with patch.object(rc, "_preflight_descendant_containment",
+                    side_effect=RepositoryAuthorityError("descendant_containment_unavailable")), \
+                    patch.object(rc, "consume_repository_change_authority") as consume, \
+                    patch.object(rc, "_run_dispatcher") as dispatch:
+                with self.assertRaisesRegex(RepositoryAuthorityError, "^descendant_containment_unavailable$"):
+                    adapter.execute(action, idempotency_key="f1" * 32)
+                consume.assert_not_called()
+                dispatch.assert_not_called()
+            self.assertFalse(adapter.registry_path.exists())
+            self.assertEqual((repo / "allowed.py").read_text(), "def value():\n    return 1\n")
+
+    def test_preflight_probe_errors_fail_closed(self):
+        from unittest.mock import patch
+        from integrations.openclaw.repository_change import _preflight_descendant_containment
+        for failure in (OSError("unavailable"), subprocess.TimeoutExpired("probe", 5)):
+            with self.subTest(failure=type(failure).__name__), \
+                    patch("subprocess.run", side_effect=failure):
+                with self.assertRaisesRegex(RepositoryAuthorityError, "^descendant_containment_unavailable$"):
+                    _preflight_descendant_containment()
+        with patch("subprocess.run", return_value=subprocess.CompletedProcess([], 1)):
+            with self.assertRaisesRegex(RepositoryAuthorityError, "^descendant_containment_unavailable$"):
+                _preflight_descendant_containment()
 
     def test_subreaper_requires_matching_proc_pid_namespace(self):
         import runpy

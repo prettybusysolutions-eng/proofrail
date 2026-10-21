@@ -24,6 +24,8 @@ INSTALL_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(INSTALL_ROOT) not in sys.path:
     sys.path.insert(0, str(INSTALL_ROOT))
 
+from proofrail.runtime_capability import become_subreaper as _become_subreaper
+
 from integrations.openclaw.repository_change import (
     RepositoryAuthorityError,
     canonical_job_digest,
@@ -185,26 +187,6 @@ def main() -> int:
         print("worker_runtime_exceeded", file=sys.stderr)
         return 3
     return 0
-
-
-def _become_subreaper() -> bool:
-    """Linux: adopt orphaned descendants so none can outlive supervision.
-
-    Descendants that leave the worker's process group (setsid, setpgid,
-    double fork) re-parent to this dispatcher instead of init, so
-    _kill_descendants can find and remove them before reconciliation.
-    """
-    try:
-        import ctypes
-
-        # _children() scans numeric /proc entries against os.getpid(). A proc
-        # mount from another PID namespace cannot support that supervision.
-        if int(pathlib.Path("/proc/self/stat").read_text().split(" ", 1)[0]) != os.getpid():
-            return False
-        libc = ctypes.CDLL(None, use_errno=True)
-        return libc.prctl(36, 1, 0, 0, 0) == 0  # PR_SET_CHILD_SUBREAPER
-    except (OSError, AttributeError, ValueError):
-        return False
 
 
 def _children(pid: int) -> list[int]:

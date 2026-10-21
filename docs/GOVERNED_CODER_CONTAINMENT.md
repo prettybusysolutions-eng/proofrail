@@ -116,3 +116,14 @@ worker spawn on denial, and require the existing descendant test to either prove
 cleanup or observe the exact refusal with an unchanged repository. Other errors
 remain failures. The two external sandbox blockers remain open; this guard is
 necessary host validation, not a replacement for the containment design.
+
+## Adapter preflight before consumption
+
+The adapter now invokes the same host-capability helper in an isolated, bounded
+subprocess before consuming authority. A failed probe, timeout or launch error
+returns `descendant_containment_unavailable` without spending the permit or
+starting the dispatcher. The probe uses the adapter's interpreter, installed
+helper path and fresh environment; it does not execute the job or change the
+adapter process's subreaper state. The dispatcher still repeats the actual setup
+before dispatch. A capability loss after preflight can therefore still leave an
+already consumed permit spent; the preflight is not a reservation or retry grant.
