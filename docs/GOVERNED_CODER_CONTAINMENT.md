@@ -127,3 +127,34 @@ helper path and fresh environment; it does not execute the job or change the
 adapter process's subreaper state. The dispatcher still repeats the actual setup
 before dispatch. A capability loss after preflight can therefore still leave an
 already consumed permit spent; the preflight is not a reservation or retry grant.
+
+## Host inspection for implementation (2026-10-21) — STOPPED at step 1
+
+Baseline: 6ed04c27fa6fd0b153073ebc63460aac607e9a09. Read-only inspection of a
+second execution host; no host setting was changed and no daemon was started.
+
+| Check | Command | Observed |
+|---|---|---|
+| OS / kernel | `uname -srm`; `/etc/os-release` | Linux 6.18.44-fc-v139 x86_64; Ubuntu 24.04.5 LTS |
+| Identity | `id` | uid=0 gid=0 (root); single OS identity for every process |
+| cgroup layout | `stat -f /sys/fs/cgroup`; `/proc/self/mountinfo` | `/sys/fs/cgroup` is tmpfs with v1 hierarchies (cpu, cpuacct, cpuset, memory, pids, freezer, blkio, devices, systemd) |
+| cgroup v2 | mount of `/sys/fs/cgroup/unified` | cgroup2 mounted (hybrid); `cgroup.controllers` = `hugetlb` only; `cgroup.subtree_control` empty |
+| v2 kill/empty confirmation | `cgroup.kill`, `cgroup.events` | absent at the available v2 root; cpu/memory/pids not delegated to v2 |
+| Container runtime | `command -v docker dockerd containerd ctr runc podman crun bwrap` | docker client 29.8.2, dockerd, containerd v2.3.6, ctr, runc 1.5.1 installed; podman, crun, bwrap absent |
+| Runtime daemon / socket | `docker version`; socket paths | no running dockerd/containerd; no `/var/run/docker.sock` or containerd socket |
+| systemd | `systemctl is-system-running` | offline (PID 1 is the host process API) |
+
+Outcome: required isolation cannot be enforced here. The design needs cgroup v2
+resource controllers with `cgroup.kill`/`cgroup.events`, an independently
+controlled runtime, and a controller under a different OS identity. This host
+provides v1-bound controllers, no running runtime, and a single root identity.
+Starting a daemon in the same root container, remounting cgroups, or creating
+identities would weaken or alter host controls, and a boundary validated under
+those conditions would not close either blocker. Steps 2–6 were not started;
+no containment code was added and no test was skipped or relaxed.
+
+Prerequisites for a validation host: unified cgroup v2 with cpu, memory and pids
+delegated to the controller's subtree (`cgroup.kill`, `cgroup.events`
+available); a container runtime whose socket is owned by the controller
+identity and inaccessible to the sandbox; a distinct unprivileged identity for
+sandbox processes; and a filesystem supporting output-byte quotas.
