@@ -94,3 +94,25 @@ with a late child write on BOTH pristine 42e3c1a and the hardened version. This
 runtime therefore cannot validate the old subreaper claim. The test is retained,
 not skipped or relaxed. Full closure requires external containment and rerunning
 the unchanged failure probes on the dedicated host.
+
+## Interim fail-closed guard (2026-10-21)
+
+The dispatcher now requires successful subreaper setup before recording a dispatch
+claim or starting a worker. It also requires /proc/self/stat's PID to match
+os.getpid(): the existing descendant scanner cannot work correctly against a proc
+mount from a different PID namespace. Either failure exits with
+`descendant_containment_unavailable`; there is no process_group_only fallback.
+Authority already consumed by the adapter remains spent; this refusal does not
+authorize an automatic retry.
+
+A direct capability probe in the author runtime returned successful prctl setup,
+but os.getpid() and /proc/self/stat reported different PIDs (5 and 3933 in that
+probe). This corrects the earlier suggestion that denied subreaper setup alone
+explained the observed failure. The mismatch invalidates the scanner's PID
+comparison and is now explicitly rejected.
+
+Tests force failed setup and mismatched PID views, assert no dispatch claim or
+worker spawn on denial, and require the existing descendant test to either prove
+cleanup or observe the exact refusal with an unchanged repository. Other errors
+remain failures. The two external sandbox blockers remain open; this guard is
+necessary host validation, not a replacement for the containment design.

@@ -101,6 +101,10 @@ def main() -> int:
         raise SystemExit(str(exc)) from exc
 
     worker_spec = resolve_worker(consumption)
+    # A process group alone cannot contain detached descendants. Refuse before
+    # recording a dispatch claim or starting any worker; never silently degrade.
+    if not _become_subreaper():
+        raise SystemExit("descendant_containment_unavailable")
     # Single-use at dispatch: record this grant before any worker starts.
     try:
         record_dispatch_claim(
@@ -118,7 +122,6 @@ def main() -> int:
     stderr = dispatch_dir / "worker.stderr.log"
     started_ms = int(time.time() * 1000)
     with execution_environment(worker_spec.get("environment", [])) as env, stdout.open("w", encoding="utf-8") as out, stderr.open("w", encoding="utf-8") as err:
-        subreaper = _become_subreaper()
         proc = subprocess.Popen(
             [
                 worker_spec["path"],
@@ -151,7 +154,7 @@ def main() -> int:
             _kill_group(proc.pid)
             exit_code = proc.wait()
         _kill_group(proc.pid)
-        escaped = _kill_descendants() if subreaper else None
+        escaped = _kill_descendants()
     result = {
         "job_id": job_id,
         "status": "TIMED_OUT" if timed_out else "COMPLETED",
@@ -173,7 +176,7 @@ def main() -> int:
         "stdout_log": str(stdout),
         "stderr_log": str(stderr),
         "gateway_blocking": True,
-        "descendant_containment": "subreaper" if subreaper else "process_group_only",
+        "descendant_containment": "subreaper",
         "escaped_descendants_killed": escaped,
     }
     write_json(dispatch_dir / "dispatch.json", result)
@@ -194,9 +197,13 @@ def _become_subreaper() -> bool:
     try:
         import ctypes
 
+        # _children() scans numeric /proc entries against os.getpid(). A proc
+        # mount from another PID namespace cannot support that supervision.
+        if int(pathlib.Path("/proc/self/stat").read_text().split(" ", 1)[0]) != os.getpid():
+            return False
         libc = ctypes.CDLL(None, use_errno=True)
         return libc.prctl(36, 1, 0, 0, 0) == 0  # PR_SET_CHILD_SUBREAPER
-    except (OSError, AttributeError):
+    except (OSError, AttributeError, ValueError):
         return False
 
 

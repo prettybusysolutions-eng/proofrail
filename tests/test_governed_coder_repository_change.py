@@ -1117,12 +1117,59 @@ class GovernedCoderRepositoryChangeTests(unittest.TestCase):
                      "time.sleep(1.0); pathlib.Path(sys.argv[1], 'late_child.py').write_text('x = 1')\", "
                      "str(repo)], process_group=0)\n")
             repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT + child)
-            receipt = self._reconcile(adapter, action, "a4" * 32)
+            try:
+                receipt = self._reconcile(adapter, action, "a4" * 32)
+            except RepositoryAuthorityError as exc:
+                # Unsupported hosts must explicitly refuse, not skip the test
+                # or run with weaker containment. No other error is accepted.
+                self.assertEqual(str(exc), "dispatcher_failed:descendant_containment_unavailable")
+                self.assertEqual((repo / "allowed.py").read_text(), "def value():\n    return 1\n")
+                self.assertFalse((repo / "late_child.py").exists())
+                return
             time.sleep(2.0)
             self.assertFalse((repo / "late_child.py").exists(), "escaped descendant outlived supervision")
             dispatch = receipt["receipt_evidence"]["dispatch"]["result"]
-            if dispatch.get("descendant_containment") == "subreaper":
-                self.assertGreaterEqual(dispatch["escaped_descendants_killed"], 1)
+            self.assertEqual(dispatch.get("descendant_containment"), "subreaper")
+            self.assertGreaterEqual(dispatch["escaped_descendants_killed"], 1)
+
+    def test_subreaper_requires_matching_proc_pid_namespace(self):
+        import runpy
+        from unittest.mock import patch
+        script = Path(__file__).resolve().parents[1] / "scripts" / "xzenia-coder-dispatch"
+        become = runpy.run_path(str(script))["_become_subreaper"]
+        with patch.object(Path, "read_text", return_value=f"{os.getpid() + 1000} (fixture) S 0"), \
+                patch("ctypes.CDLL", side_effect=AssertionError("must fail before prctl")):
+            self.assertFalse(become())
+
+    def test_missing_subreaper_denies_before_claim_and_worker_spawn(self):
+        import runpy
+        from unittest.mock import patch, Mock
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            worker = _scripted_worker(directory, "raise AssertionError('must not start')\n")
+            grant = self._grant_for(repo, job, worker)
+            job_file = Path(directory) / "job.json"
+            grant_file = Path(directory) / "grant.json"
+            job_file.write_text(json.dumps(job))
+            grant_file.write_text(json.dumps(grant))
+            script = Path(__file__).resolve().parents[1] / "scripts" / "xzenia-coder-dispatch"
+            main = runpy.run_path(str(script))["main"]
+            claim = Mock(side_effect=AssertionError("claim before capability check"))
+            argv = [str(script), "--job-file", str(job_file), "--repo-path", str(repo),
+                    "--output-dir", str(Path(directory) / "output"),
+                    "--proofrail-consumption-file", str(grant_file)]
+            with patch.object(sys, "argv", argv), patch.dict(main.__globals__,
+                    {"_become_subreaper": lambda: False, "record_dispatch_claim": claim}):
+                # git_head uses subprocess.run/Popen too; verify it first, then
+                # patch that read so any remaining Popen would be a worker.
+                head = _head(repo)
+                with patch.dict(main.__globals__, {"git_head": lambda _: head}), \
+                        patch("subprocess.Popen", side_effect=AssertionError("worker spawned")) as spawn:
+                    with self.assertRaisesRegex(SystemExit, "^descendant_containment_unavailable$"):
+                        main()
+                    spawn.assert_not_called()
+            claim.assert_not_called()
 
     def test_tree_snapshot_hashes_large_files_without_reading_them_whole(self):
         from unittest.mock import patch
