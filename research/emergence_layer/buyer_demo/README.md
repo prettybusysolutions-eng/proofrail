@@ -73,6 +73,14 @@ on it without any of your files. The verifier checks:
   on the approved parent, changing only the approved path, with exactly the
   approved bytes.
 
+The verifier also requires the artifact's Git entry to be a `100644` regular
+file. Byte equality alone cannot distinguish that file from an executable or
+symlink. Regression probes rewrite the bundle with modes `100755` and `120000`,
+update the unsigned summary and checksums, and require verification to fail
+without changing any signed record. Both probes falsely passed at `8da1041`;
+the mode check closes that evidence-verification gap. This finding concerns the
+offline verifier, not a demonstrated bypass of the dispatcher's write controls.
+
 If someone alters the signed records, the approved text or a bundle, verification
 fails even if `SHA256SUMS` is regenerated, because the signatures and the git objects
 no longer agree. `tests/test_buyer_demo.py` covers this. `summary.json` is different:

@@ -112,6 +112,15 @@ def verify_run(root, name, keys, summary, steps, scratch):
           and git(git_dir, 'rev-parse', p['parent_sha'] + '^{tree}').decode().strip() == p['base_tree'])
     changed = git(git_dir, 'diff-tree', '--no-commit-id', '--name-only', '-r', p['parent_sha'], commit).decode().split()
     check(f'{name}: dispatcher commit changes only the approved path', changed == [p['path']], str(changed))
+    entry = git(git_dir, 'ls-tree', '-z', commit, '--', p['path'])
+    entries = entry.rstrip(b'\0').split(b'\0') if entry else []
+    regular_file = False
+    if len(entries) == 1:
+        metadata, entry_path = entries[0].split(b'\t', 1)
+        mode, kind, _ = metadata.split()
+        regular_file = (mode == b'100644' and kind == b'blob'
+                        and entry_path == p['path'].encode())
+    check(f'{name}: approved artifact is a non-executable regular file', regular_file)
     expected = json.dumps({'kind': 'emergence.github-artifact.v1', 'execution_id': consumption['execution_id'],
                            'consumption_digest': full_digest(consumption), 'tenant': contract['tenant'],
                            'task_id': contract['task_id'], 'artifact': approved['text']},

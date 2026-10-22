@@ -111,3 +111,38 @@ def test_unlisted_file_fails(evidence, tmp_path):
     shutil.copytree(evidence, copy)
     (copy / 'extra.txt').write_text('x')
     assert run(DEMO / 'verify_evidence.py', copy).returncode == 1
+
+
+@pytest.mark.parametrize('mode', ['100755', '120000'])
+def test_rewritten_file_mode_fails(evidence, tmp_path, mode):
+    """Unsigned narrative/checksums cannot authorize a different Git entry type."""
+    from buyer_demo.local_git_provider import GIT_ENV
+    copy = tmp_path / 'evidence'
+    shutil.copytree(evidence, copy)
+    folder = copy / 'recovery'
+    repo = tmp_path / 'rewrite.git'
+    def git(*args, input=None):
+        return subprocess.run(['git', '--git-dir', str(repo), *args], input=input,
+                              capture_output=True, check=True, env=GIT_ENV).stdout.decode().strip()
+    subprocess.run(['git', 'clone', '--bare', str(folder / 'repository.bundle'), str(repo)],
+                   capture_output=True, check=True, env=GIT_ENV)
+    contract = json.loads((folder / 'approval' / 'contract.json').read_text())
+    p = contract['parameters']
+    ref = 'refs/heads/' + p['branch']
+    old = git('rev-parse', ref)
+    blob = git('rev-parse', old + ':' + p['path'])
+    git('read-tree', old)
+    git('update-index', '--cacheinfo', mode + ',' + blob + ',' + p['path'])
+    tree = git('write-tree')
+    new = git('commit-tree', tree, '-p', p['parent_sha'], '-m', git('log', '-1', '--format=%s', old))
+    git('update-ref', ref, new)
+    (folder / 'repository.bundle').unlink()
+    git('bundle', 'create', str(folder / 'repository.bundle'), ref)
+    summary_path = copy / 'summary.json'
+    summary = json.loads(summary_path.read_text())
+    # The summary is explicitly unsigned: keep it consistent with the forged history.
+    summary_path.write_text(json.dumps(summary).replace(old, new))
+    resum(copy)
+    result = run(DEMO / 'verify_evidence.py', copy, '--json')
+    assert result.returncode == 1, result.stdout
+    assert json.loads(result.stdout)['verdict'] == 'FAIL'
