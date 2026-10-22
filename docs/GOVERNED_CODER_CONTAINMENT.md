@@ -158,3 +158,105 @@ delegated to the controller's subtree (`cgroup.kill`, `cgroup.events`
 available); a container runtime whose socket is owned by the controller
 identity and inaccessible to the sandbox; a distinct unprivileged identity for
 sandbox processes; and a filesystem supporting output-byte quotas.
+
+## Emulated validation guest (2026-10-22) — PARTIAL, STOPPED
+
+Baseline: 4014d0c (containment code unchanged since 6ed04c2). This attempt
+established a disposable guest and checked kernel/runtime prerequisites. It did
+**not** implement or validate containment. Timings below are **emulated**
+(QEMU TCG, no hardware acceleration) and say nothing about production
+performance.
+
+### Outer host and guest construction
+
+- Outer host: Linux 6.18.44-fc-v140 x86_64 (itself a VM; no `/dev/kvm`, no
+  vmx/svm flags), 2 vCPUs, 7 GiB RAM. QEMU 8.2.2 (Ubuntu 1:8.2.2+ds-0ubuntu1.18).
+- Image: `ubuntu-24.04-minimal-cloudimg-amd64.img` from
+  `https://cloud-images.ubuntu.com/minimal/releases/noble/release/`,
+  SHA-256 `b3296484e362ba2e713489a5de6225c719d9500962bde25d15f2f21e512c7658`,
+  matched against the published `SHA256SUMS` (fetched over HTTPS; its GPG
+  signature was not verified).
+- Disk: qcow2 overlay (20 GiB virtual) on the unmodified base image.
+- cloud-init seed: user `controller` (uid 1000, SSH key auth only, password
+  login disabled), proxy CA bundle installed via `update-ca-certificates`,
+  apt/environment proxy pointing at the outer host's egress proxy.
+- Boot command:
+
+```
+qemu-system-x86_64 -name proofrail-validation -machine q35,accel=tcg -cpu max \
+  -smp 2 -m 4096 -nographic -serial file:serial.log -monitor none \
+  -drive file=guest.qcow2,if=virtio,format=qcow2 \
+  -drive file=seed.img,if=virtio,format=raw \
+  -netdev user,id=n0,hostfwd=tcp:127.0.0.1:2222-:22 \
+  -device virtio-net-pci,netdev=n0
+```
+
+- Boot to SSH + cloud-init completion: 202 s (emulated).
+- The egress proxy rejects plain-HTTP forwarding (405), so the guest's apt
+  sources were switched from `http://` to `https://archive.ubuntu.com`
+  (apt signature verification unchanged). Package install: 6 min 42 s (emulated).
+
+### Guest facts (queried from the guest)
+
+| Item | Value |
+|---|---|
+| Kernel / OS | Linux 6.8.0-147-generic x86_64; Ubuntu 24.04.5 LTS |
+| Resources | 2 vCPUs; 3914 MiB visible |
+| Init | systemd 255 (255.4-1ubuntu8.18), state `running` |
+| cgroup filesystem | `cgroup2fs` (unified, no v1 hierarchies) |
+| Root `cgroup.controllers` | cpuset cpu io memory hugetlb pids rdma misc |
+| Root `cgroup.subtree_control` | `cpu memory pids` before runtime install; `cpuset cpu io memory pids` after |
+| `system.slice` controllers | cpuset cpu io memory pids |
+| `cgroup.kill` / `cgroup.events` in a child cgroup | present / present |
+| Runtime | podman 4.9.3 (rootful), crun 1.14.1 |
+| Tools | git 2.43.0, Python 3.12.3 |
+| Image | `docker.io/library/python:3.12-slim`, digest `sha256:cb33f7f771ecec2ef1225cf39b159591a040391bd73e4c01f00fdfc4c47611d2`, image ID `a33c10a97f11005523814c6eee013986119fe41f3122f444518117536675c8e1` |
+
+### Prerequisite status
+
+| Prerequisite | Status |
+|---|---|
+| Unified cgroup v2 with cpu, memory, pids delegated to child cgroups | VERIFIED (kernel/systemd level only) |
+| `cgroup.kill` and `cgroup.events` available in child cgroups | VERIFIED (presence only; not exercised) |
+| Container runtime installed, image pinned by digest | VERIFIED (installed and pulled; no container run) |
+| Runtime socket owned by controller identity, inaccessible to sandbox | UNVERIFIED |
+| Separate unprivileged sandbox identity; no access to controller secrets or state | UNVERIFIED |
+| Restricted mounts (read-only root, disposable scratch only) | UNVERIFIED |
+| Network denied by default | UNVERIFIED |
+| CPU, memory and PID limits actually enforced | UNVERIFIED |
+| Output-byte limits enforced on regular files | UNVERIFIED |
+| Whole-boundary termination with confirmed populated=0 | UNVERIFIED |
+| All failure probes in "Required validation" above | NOT RUN |
+
+### Stopping point
+
+The session's response was stopped by a safety classifier while it was
+proceeding from the image pull toward the remaining checks. The image pull had
+completed. The only explanation provided was this notice, quoted exactly:
+
+> Your response above was stopped by a safety classifier — this is not a tool or
+> API error. The rest of it was withheld, and tool calls in it that had not
+> finished did not run.
+
+No reason was given. An earlier response in this PR's work (2026-10-20, while
+drafting an in-process supervisor helper) was stopped with the same notice and
+no reason. Neither withheld output was reconstructed or retried in another form.
+A reviewer should decide whether a materially different validation method
+addresses whatever the rejection concerned.
+
+### Shutdown
+
+`sudo systemctl poweroff` in the guest; the serial log shows
+`Reached target poweroff.target` and `reboot: Power down` (856 s guest uptime,
+emulated). The QEMU process (PID 849) exited with status 0 after 10 s; no
+process with executable `qemu-system-x86_64` remained. No guest state is kept
+for later runs.
+
+### Conclusion
+
+A software-emulated Ubuntu 24.04 guest provides the kernel facilities the design
+requires (unified cgroup v2 with delegated cpu/memory/pids, `cgroup.kill`,
+`cgroup.events`) and a rootful container runtime. That shows suitable
+facilities are available; it does **not** demonstrate containment. No
+containment code was written, no probe was run, and both PR #11 blockers remain
+open. PR #11 stays draft.
