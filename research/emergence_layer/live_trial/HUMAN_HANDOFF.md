@@ -1,7 +1,7 @@
 # Human handoff: prepare the witnessed GitHub trial
 
 Status: setup instructions only. No live run or independent approval is recorded.
-Code baseline: d95438033e01502c0bf4a989ab0ec63129fa026e (PR #40, draft).
+Code baseline: 8faabe9cfbc15ac1c58869c3652c0e50d7bd96ac (PR #40, draft).
 This trial does not execute untrusted worker code and does not close #11's sandbox gate.
 
 ## Marcus: three decisions, no credentials in chat
@@ -74,7 +74,7 @@ python3 -m venv proofrail-gate3-venv          # OUTSIDE the checkout
 . proofrail-gate3-venv/bin/activate
 cd proofrail-gate3-source
 git fetch origin pilot/buyer-demo
-git checkout --detach d95438033e01502c0bf4a989ab0ec63129fa026e
+git checkout --detach 8faabe9cfbc15ac1c58869c3652c0e50d7bd96ac
 python -m pip install . -r research/emergence_layer/requirements-dev.txt
 cd research/emergence_layer
 python -m pytest -q tests/test_gate3_trial.py
