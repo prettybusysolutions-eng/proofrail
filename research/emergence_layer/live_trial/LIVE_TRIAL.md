@@ -56,6 +56,33 @@ and the expected replay refusal. Scenario C requires the specific missing-execut
 refusal after restoration, not an arbitrary exception. A disabled fault must fail
 the trial even if all writes and subsequent recovery otherwise succeed.
 
+The scenario results are the run's own observations. They come from the call log
+it wraps around the client and from the dispatcher's own `recover()`, which is the
+code under test. They cannot show what else happened on the branch. So, after the
+scenarios, the runner reads the branch back from the provider (GET only) and
+requires all of the following:
+
+- exactly three new commits since the starting head: A, then B, then C;
+- one linear chain, each commit with one parent;
+- each commit's tree equal to the previous tree plus only the approved regular
+  file;
+- file bytes matching the digests recorded during the run.
+
+An unapproved commit in the trial window, a double write, a later edit, or a
+look-alike commit replacing a trial commit each produce `verdict: FAIL`.
+`provider_end_state` in the summary holds the chain, so a witness can compare it
+with the repository's history.
+
+Before this check, a run in which someone else committed to the branch between
+scenarios A and B still exported `verdict: PASS`. `tests/test_gate3_trial.py` now
+covers that case and the two others.
+
+All three scenarios share one service: one registry and one retained journal,
+reopened for each step as a restarted process would. Scenario C therefore restores
+an older registry that still holds A and B and lacks only C. The block has to come
+from C's missing record, not from an empty registry. The summary records this
+under `restored_registry_holds`.
+
 ## Running the self-test (no network)
 
 ```sh
@@ -104,7 +131,8 @@ This uses a disposable local git repository through
 |---|---|
 | A | `MATCH`; the branch advances by one commit; read-back confirms the approved tree |
 | B | dispatch raises `provider_outcome_unknown`; recovery `MATCH` with 0 write calls; reuse refused (`retained_authority_already_reserved`) |
-| C | first dispatch `MATCH`; after rollback the next dispatch is blocked (`execution_not_found`) with 0 provider write calls |
+| C | first dispatch `MATCH`; restored registry holds A and B but not C; the next dispatch is blocked (`execution_not_found`) with 0 provider calls |
+| End state | branch history since the start is exactly A → B → C, each adding only the approved file with the recorded bytes; 0 write calls |
 
 ## Limits (do not overstate)
 
@@ -117,3 +145,7 @@ This uses a disposable local git repository through
   administrator who can rewind the branch is outside this trial's model, as in #29.
 - **One transport, one provider.** GitHub only; no claim about other providers.
 - **Transport interruption uncovered**, as above.
+- **End-state check is not fully independent.** It uses the same GitHub client and
+  the same tree-comparison helper as the dispatcher. The witness should also
+  inspect the branch history directly, for example `git log` on a fresh clone,
+  and compare it with `provider_end_state.chain`.

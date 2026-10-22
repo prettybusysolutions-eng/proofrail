@@ -33,6 +33,7 @@ This substitution does not cover transport-level interruption (see LIVE_TRIAL.md
 and running it does not by itself close gate 3.
 """
 import argparse
+import base64
 import hashlib
 import json
 import platform
@@ -86,19 +87,35 @@ def build(keys, repository, branch, path, parent_sha, base_tree, task_id, artifa
                         base_tree=base_tree, task_id=task_id)
 
 
-def make_dispatcher(workdir, name, keys, trust, client, repository, branch, path):
-    root = workdir / name
-    (root / 'retained').mkdir(parents=True)
-    ledger = ExecutionLedger(root / 'registry.db', keys['consumer'], 'consumer-key')
-    journal = Journal.initialize(root / 'retained' / 'journal.db')
-    return Dispatcher(ledger, journal, client, repository=repository, branch=branch,
-                      path=path, trust=trust), ledger, journal
+class Service:
+    """One dispatcher installation: a registry and a separately retained journal that
+    persist across every scenario, as on a deployed service. The pilot pins one
+    authority per configuration, so each approval gets its own Dispatcher over the
+    same two stores (the operator re-pinning the config between approvals)."""
+
+    def __init__(self, workdir, keys, repository, branch, path):
+        root = workdir / 'service'
+        (root / 'retained').mkdir(parents=True)
+        self.keys, self.repository, self.branch, self.path = keys, repository, branch, path
+        self.registry_path = root / 'registry.db'
+        self.journal_path = root / 'retained' / 'journal.db'
+        Journal.initialize(self.journal_path)
+
+    def ledger(self):
+        return ExecutionLedger(self.registry_path, self.keys['consumer'], 'consumer-key')
+
+    def dispatcher(self, trust, client):
+        """Reopen both stores, as a restarted service process would."""
+        return Dispatcher(self.ledger(), Journal(self.journal_path), client,
+                          repository=self.repository, branch=self.branch, path=self.path, trust=trust)
 
 
 def run(workdir, evidence, repository, branch, path, make_client, source_commit, mode):
+    import sqlite3
     keys = {n: Ed25519PrivateKey.generate() for n in ('agent', 'approver', 'consumer', 'observer')}
     artifact = ('# Gate-3 trial artifact\n\nApproved exact bytes for one dispatcher '
                 'execution against ' + repository + '.\n')
+    service = Service(workdir, keys, repository, branch, path)
     scenarios = []
 
     def record(name, **fields):
@@ -107,46 +124,42 @@ def run(workdir, evidence, repository, branch, path, make_client, source_commit,
 
     # Scenario A: real write and read-back.
     client_a = CallLog(make_client())
-    head, tree = head_and_tree(client_a, repository, branch)
-    handoff, contract, trust = build(keys, repository, branch, path, head, tree, 'gate3-write', artifact)
-    disp_a, _, _ = make_dispatcher(workdir, 'a', keys, trust, client_a, repository, branch, path)
-    result_a = disp_a.dispatch(handoff, contract)
-    record('A real write and readback', outcome=result_a['outcome'], parent_sha=head,
+    start_head, tree = head_and_tree(client_a, repository, branch)
+    handoff, contract, trust = build(keys, repository, branch, path, start_head, tree, 'gate3-write', artifact)
+    result_a = service.dispatcher(trust, client_a).dispatch(handoff, contract)
+    record('A real write and readback', outcome=result_a['outcome'], parent_sha=start_head,
            commit_sha=result_a['commit_sha'], file_sha256=result_a['file_sha256'],
-           write_calls=client_a.write_count())
+           execution_id=result_a['execution_id'], write_calls=client_a.write_count())
 
     # Scenario B: application-level response loss, then read-only recovery.
-    base_client_b = make_client()
-    fault = ResponseLostAfterCall(base_client_b)
+    fault = ResponseLostAfterCall(make_client())
     client_b = CallLog(fault)
     head_b, tree_b = head_and_tree(client_b, repository, branch)
     handoff_b, contract_b, trust_b = build(keys, repository, branch, path, head_b, tree_b,
                                            'gate3-lost', artifact)
-    disp_b, ledger_b, journal_b = make_dispatcher(workdir, 'b', keys, trust_b, client_b,
-                                                  repository, branch, path)
     lost_error = None
     try:
-        disp_b.dispatch(handoff_b, contract_b)
+        service.dispatcher(trust_b, client_b).dispatch(handoff_b, contract_b)
     except RuntimeError as exc:
         lost_error = str(exc)
     writes_during_loss = client_b.write_count()
     discarded = sum(event.get('response_discarded') is True
                     for event in getattr(fault, 'events', []))
-    # Operator restart: reopen the journal, swap in a clean counting client (no fault).
-    disp_b.journal = Journal(journal_b.path)
+    # Operator restart: fresh process view of both stores, clean client (no fault).
     recovery_client = CallLog(make_client())
-    disp_b.api = recovery_client
-    result_b = disp_b.recover(handoff_b, contract_b)
+    recovering = service.dispatcher(trust_b, recovery_client)
+    result_b = recovering.recover(handoff_b, contract_b)
     reuse_refused = None
     try:
-        disp_b.dispatch(handoff_b, contract_b)
+        recovering.dispatch(handoff_b, contract_b)
     except Exception as exc:  # noqa: BLE001 - the refusal reason is the evidence
         reuse_refused = type(exc).__name__ + ': ' + str(exc)
     record('B lost response then read-only recovery',
            dispatch_error=lost_error, lost_response_was_unknown=(lost_error == UNKNOWN),
-           discarded_responses=discarded,
+           discarded_responses=discarded, parent_sha=head_b,
            write_calls_including_lost_write=writes_during_loss,
            recovery_outcome=result_b['outcome'], recovery_commit_sha=result_b['commit_sha'],
+           file_sha256=result_b['file_sha256'], execution_id=result_b['execution_id'],
            recovery_write_calls=recovery_client.write_count(),
            recovery_calls=recovery_client.paths(), reuse_refused=reuse_refused,
            outcome='MATCH' if lost_error == UNKNOWN and discarded == 1
@@ -155,53 +168,104 @@ def run(workdir, evidence, repository, branch, path, make_client, source_commit,
                    and reuse_refused == 'ValueError: retained_authority_already_reserved'
                    else 'UNEXPECTED')
 
-    # Scenario C: registry rollback with retained journal blocks admission.
+    # Scenario C: restore an OLDER, non-empty registry (it holds A and B) while the
+    # journal is retained; the next admission must be blocked before any provider call.
     client_c = CallLog(make_client())
     head_c, tree_c = head_and_tree(client_c, repository, branch)
     handoff_c, contract_c, trust_c = build(keys, repository, branch, path, head_c, tree_c,
                                            'gate3-rollback', artifact)
-    disp_c, ledger_c, journal_c = make_dispatcher(workdir, 'c', keys, trust_c, client_c,
-                                                  repository, branch, path)
-    backup = workdir / 'c' / 'registry-before.db'
-    import sqlite3
-    with sqlite3.connect(ledger_c.path) as src, sqlite3.connect(backup) as dst:
-        src.backup(dst)  # registry state that predates the execution below
-    result_c = disp_c.dispatch(handoff_c, contract_c)
+    backup = workdir / 'registry-before-c.db'
+    with sqlite3.connect(service.registry_path) as src, sqlite3.connect(backup) as dst:
+        src.backup(dst)
+    result_c = service.dispatcher(trust_c, client_c).dispatch(handoff_c, contract_c)
     writes_before_rollback = client_c.write_count()
-    with sqlite3.connect(backup) as src, sqlite3.connect(ledger_c.path) as dst:
-        src.backup(dst)  # restore older registry; retained journal untouched
-    # A fresh dispatcher reopens the restored (older) registry and the retained
-    # journal, as a restarted service would. The journal still records the
-    # execution just completed; the older registry has no such record, so the
-    # recovery-state check blocks before any provider write. The same approval is
-    # re-submitted, so this also shows an already-used permit cannot be revived.
+    with sqlite3.connect(backup) as src, sqlite3.connect(service.registry_path) as dst:
+        src.backup(dst)  # registry rolled back; retained journal untouched
+    restored = service.ledger()
+    prior_present = []
+    for execution_id in (result_a['execution_id'], result_b['execution_id'], result_c['execution_id']):
+        try:
+            restored.get(execution_id)
+            prior_present.append(True)
+        except Exception:  # noqa: BLE001
+            prior_present.append(False)
     rollback_client = CallLog(make_client())
-    disp_c2 = Dispatcher(ExecutionLedger(ledger_c.path, keys['consumer'], 'consumer-key'),
-                         Journal(journal_c.path), rollback_client,
-                         repository=repository, branch=branch, path=path, trust=trust_c)
     blocked = None
     try:
-        disp_c2.dispatch(handoff_c, contract_c)
+        service.dispatcher(trust_c, rollback_client).dispatch(handoff_c, contract_c)
     except Exception as exc:  # noqa: BLE001
         blocked = type(exc).__name__ + ': ' + str(exc)
     record('C registry rollback blocks admission',
            first_dispatch_outcome=result_c['outcome'], first_commit_sha=result_c['commit_sha'],
+           parent_sha=head_c, file_sha256=result_c['file_sha256'],
+           execution_id=result_c['execution_id'],
            write_calls_before_rollback=writes_before_rollback,
-           admission_blocked=blocked, provider_write_calls_after_rollback=rollback_client.write_count(),
+           restored_registry_holds=dict(zip(('A', 'B', 'C'), prior_present)),
+           admission_blocked=blocked, provider_calls_after_rollback=len(rollback_client.calls),
            outcome='BLOCKED' if blocked == 'BindingError: execution_not_found'
                    and result_c['outcome'] == 'MATCH' and writes_before_rollback == 3
+                   and prior_present == [True, True, False]
                    and not rollback_client.calls else 'UNEXPECTED')
 
-    export(evidence, repository, branch, path, source_commit, mode, scenarios)
-    return scenarios
+    provider = verify_provider_chain(CallLog(make_client()), repository, branch, path,
+                                     start_head, scenarios)
+    print('[provider end state] %s%s' % (provider['result'],
+          ' (' + provider['reason'] + ')' if provider.get('reason') else ''))
+    export(evidence, repository, branch, path, source_commit, mode, scenarios, provider)
+    return scenarios, provider
 
 
-def export(evidence, repository, branch, path, source_commit, mode, scenarios):
+def verify_provider_chain(client, repository, branch, path, start_head, scenarios):
+    """Read the branch back from the provider (GET only) and require exactly the
+    trial's commits: one chain from the starting head, A then B then C, each adding
+    only the approved file, with the bytes recorded during the run. This checks the
+    run's own observations against the provider instead of trusting them."""
+    from github_artifact import verify_tree_change
+    prefix = '/repos/' + repository
+    expected = [s.get('commit_sha') or s.get('recovery_commit_sha') or s.get('first_commit_sha')
+                for s in scenarios]
+    digests = [s.get('file_sha256') for s in scenarios]
+    chain = []
+    try:
+        cur = client.request('GET', prefix + '/git/ref/heads/' + branch)['object']['sha']
+        while cur != start_head:
+            if len(chain) > len(expected):
+                raise ValueError('more_commits_than_approved_in_trial_window')
+            commit = client.request('GET', prefix + '/git/commits/' + cur)
+            parents = [p['sha'] for p in commit['parents']]
+            if len(parents) != 1:
+                raise ValueError('non_linear_history_in_trial_window')
+            chain.append({'commit': cur, 'parent': parents[0], 'tree': commit['tree']['sha']})
+            cur = parents[0]
+        chain.reverse()
+        if [c['commit'] for c in chain] != expected:
+            raise ValueError('provider_history_differs_from_trial_record')
+        prev_tree = client.request('GET', prefix + '/git/commits/' + start_head)['tree']['sha']
+        for link, digest in zip(chain, digests):
+            served = client.request('GET', prefix + '/contents/' + path + '?ref=' + link['commit'])
+            content = base64.b64decode(''.join(served['content'].split())).decode('utf-8')
+            link['file_sha256'] = hashlib.sha256(content.encode()).hexdigest()
+            if link['file_sha256'] != digest:
+                raise ValueError('provider_bytes_differ_from_trial_record')
+            verify_tree_change(client.request('GET', prefix + '/git/trees/' + prev_tree + '?recursive=1'),
+                               client.request('GET', prefix + '/git/trees/' + link['tree'] + '?recursive=1'),
+                               path, content)
+            prev_tree = link['tree']
+        result, reason = 'PASS', None
+    except Exception as exc:  # noqa: BLE001 - any failure to establish the end state is a FAIL
+        result, reason = 'FAIL', type(exc).__name__ + ': ' + str(exc)
+    if client.write_count():
+        result, reason = 'FAIL', 'end_state_check_issued_writes'
+    return {'result': result, 'reason': reason, 'start_head': start_head, 'chain': chain,
+            'read_calls': len(client.calls), 'write_calls': client.write_count()}
+
+
+def export(evidence, repository, branch, path, source_commit, mode, scenarios, provider):
     evidence.mkdir(parents=True, exist_ok=False)
     summary = {
         'kind': 'proofrail.gate3-live-trial-evidence.v1',
         'mode': mode,
-        'verdict': 'PASS' if trial_passed(scenarios) else 'FAIL',
+        'verdict': 'PASS' if trial_passed(scenarios, provider) else 'FAIL',
         'claim': 'Author-run scenario observations; consult verdict and individual results.',
         'source_commit': source_commit,
         'repository': repository, 'branch': branch, 'path': path,
@@ -212,6 +276,7 @@ def export(evidence, repository, branch, path, source_commit, mode, scenarios):
         'environment': {'python': platform.python_version(), 'platform': platform.platform()},
         'generated_at': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
         'scenarios': scenarios,
+        'provider_end_state': provider,
     }
     (evidence / 'summary.json').write_text(json.dumps(summary, indent=2, sort_keys=True) + '\n')
     sums = {str(p.relative_to(evidence)): hashlib.sha256(p.read_bytes()).hexdigest()
@@ -220,11 +285,12 @@ def export(evidence, repository, branch, path, source_commit, mode, scenarios):
     print('evidence:', evidence)
 
 
-def trial_passed(scenarios):
+def trial_passed(scenarios, provider):
     return (len(scenarios) == 3
             and [s['outcome'] for s in scenarios] == ['MATCH', 'MATCH', 'BLOCKED']
             and scenarios[0]['write_calls'] == 3
-            and scenarios[0]['parent_sha'] != scenarios[0]['commit_sha'])
+            and scenarios[0]['parent_sha'] != scenarios[0]['commit_sha']
+            and provider['result'] == 'PASS' and len(provider['chain']) == 3)
 
 
 def source_commit_of(repo_dir):
@@ -259,15 +325,17 @@ def main():
         git_dir = workdir / 'repo.git'
         create_repository(git_dir, branch, {'README.md': 'Gate-3 local self-test.\n'})
         make_client = lambda: LocalGitProvider(git_dir, repository)  # noqa: E731
-        scenarios = run(workdir, args.evidence, repository, branch, path, make_client, source_commit, 'local-selftest')
+        scenarios, provider = run(workdir, args.evidence, repository, branch, path, make_client,
+                                  source_commit, 'local-selftest')
     else:
         from dispatcher_cli import private_file
         config = json.loads(private_file(args.config))
         repository, branch, path = config['repository'], config['branch'], config['path']
         token_file = config['github_token_file']
         make_client = lambda: GitHubAPI(token_file)  # noqa: E731 - reads the 0600 token each call-set
-        scenarios = run(workdir, args.evidence, repository, branch, path, make_client, source_commit, 'live')
-    return 0 if trial_passed(scenarios) else 1
+        scenarios, provider = run(workdir, args.evidence, repository, branch, path, make_client,
+                                  source_commit, 'live')
+    return 0 if trial_passed(scenarios, provider) else 1
 
 
 if __name__ == '__main__':

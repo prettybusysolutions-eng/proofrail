@@ -41,7 +41,16 @@ def test_runner_local_selftest(tmp_path):
     assert c['outcome'] == 'BLOCKED'
     assert c['first_dispatch_outcome'] == 'MATCH'
     assert c['admission_blocked'].endswith('execution_not_found')
-    assert c['provider_write_calls_after_rollback'] == 0
+    assert c['provider_calls_after_rollback'] == 0
+    # The restored registry is older but not empty: it still holds A and B.
+    assert c['restored_registry_holds'] == {'A': True, 'B': True, 'C': False}
+
+    end = summary['provider_end_state']
+    assert summary['verdict'] == 'PASS'
+    assert end['result'] == 'PASS' and end['write_calls'] == 0
+    assert [link['commit'] for link in end['chain']] == [
+        a['commit_sha'], b['recovery_commit_sha'], c['first_commit_sha']]
+    assert end['chain'][0]['parent'] == a['parent_sha'] == end['start_head']
 
 
 def test_summary_has_no_secret_material(tmp_path):
@@ -100,14 +109,80 @@ def test_runner_rejects_fault_that_never_fires(tmp_path, monkeypatch):
     repo = tmp_path / 'repo.git'
     create_repository(repo, branch, {'README.md': 'fixture\n'})
     monkeypatch.setattr(run_trial, 'ResponseLostAfterCall', lambda client: client)
-    scenarios = run_trial.run(tmp_path / 'work', tmp_path / 'evidence', repository,
-                              branch, 'evidence/report.json',
-                              lambda: LocalGitProvider(repo, repository), 'test', 'local-selftest')
+    scenarios, provider = run_trial.run(tmp_path / 'work', tmp_path / 'evidence', repository,
+                                        branch, 'evidence/report.json',
+                                        lambda: LocalGitProvider(repo, repository), 'test', 'local-selftest')
     assert scenarios[1]['outcome'] == 'UNEXPECTED'
     summary = json.loads((tmp_path / 'evidence' / 'summary.json').read_text())
     assert summary['verdict'] == 'FAIL'
-    monkeypatch.setattr(run_trial, 'run', lambda *args: scenarios)
+    monkeypatch.setattr(run_trial, 'run', lambda *args: (scenarios, provider))
     monkeypatch.setattr(sys, 'argv', ['run_trial.py', '--local', '--evidence',
                                     str(tmp_path / 'cli-evidence'), '--workdir',
                                     str(tmp_path / 'cli-work')])
     assert run_trial.main() == 1
+
+
+def _run_with(tmp_path, monkeypatch, before_scenario_b=None, after_run=None):
+    """Run the trial locally; optionally act on the repository mid-run or afterwards."""
+    import run_trial
+    from local_git_provider import LocalGitProvider, create_repository
+    repository, branch, path = 'demo-team/gate3-local', 'trial/emergence-gate3', 'evidence/report.json'
+    repo = tmp_path / 'repo.git'
+    create_repository(repo, branch, {'README.md': 'fixture\n'})
+    real = run_trial.head_and_tree
+    seen = {'n': 0}
+
+    def head_and_tree(client, repo_name, branch_name):
+        seen['n'] += 1
+        if seen['n'] == 2 and before_scenario_b:
+            before_scenario_b(repo, branch, path)
+        return real(client, repo_name, branch_name)
+    monkeypatch.setattr(run_trial, 'head_and_tree', head_and_tree)
+    if after_run:
+        real_verify = run_trial.verify_provider_chain
+
+        def verify(client, *args):
+            after_run(repo, branch, path)
+            return real_verify(client, *args)
+        monkeypatch.setattr(run_trial, 'verify_provider_chain', verify)
+    scenarios, provider = run_trial.run(tmp_path / 'work', tmp_path / 'evidence', repository, branch, path,
+                                        lambda: LocalGitProvider(repo, repository), 'test', 'local-selftest')
+    summary = json.loads((tmp_path / 'evidence' / 'summary.json').read_text())
+    return scenarios, provider, summary
+
+
+def test_unapproved_commit_in_trial_window_fails(tmp_path, monkeypatch):
+    """Every scenario can look right while someone else commits to the branch mid-run.
+    Before the provider end-state check this exported verdict PASS."""
+    from local_git_provider import commit_file
+    scenarios, provider, summary = _run_with(
+        tmp_path, monkeypatch,
+        before_scenario_b=lambda repo, branch, path: commit_file(
+            repo, branch, 'deploy/run.sh', '#!/bin/sh\necho unapproved\n', 'Unapproved change'))
+    assert [s['outcome'] for s in scenarios] == ['MATCH', 'MATCH', 'BLOCKED']
+    assert provider['result'] == 'FAIL'
+    assert 'provider_history_differs_from_trial_record' in provider['reason']
+    assert summary['verdict'] == 'FAIL'
+
+
+def test_lookalike_replacing_a_trial_commit_fails(tmp_path, monkeypatch):
+    """After the run, the head is replaced by a commit with the same parent and the
+    same file bytes plus an extra file; the end-state check must not accept it."""
+    from local_git_provider import git, replace_with_lookalike
+
+    def swap(repo, branch, path):
+        head = git(repo, 'rev-parse', 'refs/heads/' + branch).decode().strip()
+        parent = git(repo, 'rev-parse', head + '^').decode().strip()
+        data = git(repo, 'cat-file', 'blob', head + ':' + path)
+        replace_with_lookalike(repo, branch, parent, path, data, 'deploy/run.sh', 'echo x\n')
+    scenarios, provider, summary = _run_with(tmp_path, monkeypatch, after_run=swap)
+    assert provider['result'] == 'FAIL'
+    assert summary['verdict'] == 'FAIL'
+
+
+def test_extra_commit_after_run_fails(tmp_path, monkeypatch):
+    from local_git_provider import commit_file
+    _, provider, summary = _run_with(
+        tmp_path, monkeypatch,
+        after_run=lambda repo, branch, path: commit_file(repo, branch, path, 'edited\n', 'Late edit'))
+    assert provider['result'] == 'FAIL' and summary['verdict'] == 'FAIL'
