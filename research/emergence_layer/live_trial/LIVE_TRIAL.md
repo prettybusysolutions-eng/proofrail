@@ -95,6 +95,15 @@ This uses a disposable local git repository through
 
 ## Running the live trial (prerequisites, executed by the operator with a witness)
 
+The work and evidence directories must be separate, with neither inside the other.
+The runner reserves a new evidence directory and writes an `INCOMPLETE` marker
+before any provider call. An existing destination or invalid parent path therefore
+refuses before the trial writes. On completed export, the marker is removed after
+the summary and checksums are written. If it remains, preserve the work stores and
+inspect the provider before deciding how to recover; do not blindly rerun.
+This upfront write check cannot guarantee disk capacity or availability throughout
+the run, and the marker is not a crash-durable transaction journal.
+
 1. Create a dedicated throwaway repository. It must hold nothing else of value.
 2. Configure branch controls on the trial branch and confirm them out of band:
    no force-push, no deletion, writers restricted to the service identity.

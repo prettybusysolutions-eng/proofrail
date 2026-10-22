@@ -112,6 +112,14 @@ class Service:
 
 def run(workdir, evidence, repository, branch, path, make_client, source, mode):
     import sqlite3
+    workdir, evidence = Path(workdir).resolve(), Path(evidence).resolve()
+    if workdir.is_relative_to(evidence) or evidence.is_relative_to(workdir):
+        raise ValueError('work_and_evidence_must_be_separate')
+    # Reserve and test the export destination before consuming authority or
+    # contacting a provider. Existing evidence must never be overwritten.
+    evidence.mkdir(parents=True, exist_ok=False, mode=0o700)
+    (evidence / 'INCOMPLETE').write_text(
+        'Trial incomplete. Preserve work stores and inspect provider history before retrying.\n')
     keys = {n: Ed25519PrivateKey.generate() for n in ('agent', 'approver', 'consumer', 'observer')}
     artifact = ('# Gate-3 trial artifact\n\nApproved exact bytes for one dispatcher '
                 'execution against ' + repository + '.\n')
@@ -261,7 +269,6 @@ def verify_provider_chain(client, repository, branch, path, start_head, scenario
 
 
 def export(evidence, repository, branch, path, source, mode, scenarios, provider):
-    evidence.mkdir(parents=True, exist_ok=False)
     summary = {
         'kind': 'proofrail.gate3-live-trial-evidence.v1',
         'mode': mode,
@@ -281,8 +288,9 @@ def export(evidence, repository, branch, path, source, mode, scenarios, provider
     }
     (evidence / 'summary.json').write_text(json.dumps(summary, indent=2, sort_keys=True) + '\n')
     sums = {str(p.relative_to(evidence)): hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in sorted(evidence.rglob('*')) if p.is_file()}
+            for p in sorted(evidence.rglob('*')) if p.is_file() and p.name != 'INCOMPLETE'}
     (evidence / 'SHA256SUMS').write_text(''.join(f'{d}  {n}\n' for n, d in sums.items()))
+    (evidence / 'INCOMPLETE').unlink()
     print('evidence:', evidence)
 
 

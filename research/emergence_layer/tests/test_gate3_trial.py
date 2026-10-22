@@ -26,6 +26,7 @@ def test_runner_local_selftest(tmp_path):
                              '--evidence', str(evidence), '--workdir', str(tmp_path / 'work')],
                             capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+    assert not (evidence / 'INCOMPLETE').exists()
     summary = json.loads((evidence / 'summary.json').read_text())
     a, b, c = summary['scenarios']
 
@@ -224,3 +225,50 @@ def test_live_mode_refuses_unclean_checkout_before_any_provider_call(tmp_path, m
                                       '--evidence', str(tmp_path / 'e'), '--workdir', str(tmp_path / 'w')])
     assert run_trial.main() == 2
     assert not (tmp_path / 'e').exists()
+
+
+@pytest.mark.parametrize('failure', ['existing', 'parent_is_file'])
+def test_invalid_evidence_destination_refuses_before_provider_calls(tmp_path, failure):
+    import run_trial
+    from local_git_provider import LocalGitProvider, create_repository, git
+    repo = tmp_path / 'repo.git'
+    repository, branch = 'demo-team/gate3-local', 'trial/emergence-gate3'
+    initial, _ = create_repository(repo, branch, {'README.md': 'fixture\n'})
+    client = LocalGitProvider(repo, repository)
+    destination = tmp_path / 'evidence'
+    if failure == 'existing':
+        destination.mkdir()
+        (destination / 'keep.txt').write_text('previous evidence')
+    else:
+        destination.write_text('not a directory')
+        destination = destination / 'child'
+    with pytest.raises(OSError):
+        run_trial.run(tmp_path / 'work', destination, repository, branch,
+                      'evidence/report.json', lambda: client, SOURCE, 'local-selftest')
+    assert client.calls == [], 'invalid evidence destination was detected after provider activity'
+    assert git(repo, 'rev-parse', 'refs/heads/' + branch).decode().strip() == initial
+
+
+def test_provider_failure_leaves_incomplete_marker(tmp_path):
+    import run_trial
+    def unavailable():
+        raise RuntimeError('provider unavailable')
+    with pytest.raises(RuntimeError, match='provider unavailable'):
+        run_trial.run(tmp_path / 'work', tmp_path / 'evidence', 'demo/repo',
+                      'trial/emergence-test', 'evidence/report.json', unavailable,
+                      SOURCE, 'local-selftest')
+    assert (tmp_path / 'evidence' / 'INCOMPLETE').is_file()
+    assert not (tmp_path / 'evidence' / 'summary.json').exists()
+
+
+@pytest.mark.parametrize('nested', ['work', 'evidence', 'same'])
+def test_work_and_evidence_cannot_overlap(tmp_path, nested):
+    import run_trial
+    work = tmp_path / 'work'
+    evidence = work if nested == 'same' else work / 'evidence'
+    if nested == 'work':
+        work, evidence = evidence, work
+    with pytest.raises(ValueError, match='work_and_evidence_must_be_separate'):
+        run_trial.run(work, evidence, 'demo/repo', 'trial/emergence-test',
+                      'evidence/report.json', lambda: pytest.fail('provider constructed'),
+                      SOURCE, 'local-selftest')
