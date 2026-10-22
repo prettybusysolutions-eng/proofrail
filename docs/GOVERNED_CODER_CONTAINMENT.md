@@ -238,7 +238,7 @@ completed. The only explanation provided was this notice, quoted exactly:
 > API error. The rest of it was withheld, and tool calls in it that had not
 > finished did not run.
 
-No reason was given. An earlier response in this PR's work (2026-10-20, while
+No reason was given. An earlier response in this PR's work (while
 drafting an in-process supervisor helper) was stopped with the same notice and
 no reason. Neither withheld output was reconstructed or retried in another form.
 A reviewer should decide whether a materially different validation method
