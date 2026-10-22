@@ -1,0 +1,242 @@
+#!/usr/bin/env python3
+"""Dispatch a ProofRail-consumed xzenia-coder job out of process.
+
+The dispatcher is intentionally small: ProofRail authority verification and
+consumption happen before this program is invoked. This entry point verifies
+the signed consumption grant against installation-owned trust roots, resolves
+an installation-owned worker executable, and writes portable dispatch evidence.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import pathlib
+import signal
+import subprocess
+import sys
+import time
+from typing import Any
+
+INSTALL_ROOT = pathlib.Path(__file__).resolve().parents[1]
+if str(INSTALL_ROOT) not in sys.path:
+    sys.path.insert(0, str(INSTALL_ROOT))
+
+from proofrail.runtime_capability import become_subreaper as _become_subreaper
+
+from integrations.openclaw.repository_change import (
+    RepositoryAuthorityError,
+    canonical_job_digest,
+    canonical_json,
+    git_head,
+    load_worker_registry_executor,
+    parameters_from_job,
+    read_canonical_job_file,
+    record_dispatch_claim,
+    verify_consumption_grant,
+    worker_environment,
+    execution_environment,
+)
+
+
+def read_json(path: pathlib.Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def write_json(path: pathlib.Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def record_digest(record: Any) -> str:
+    return hashlib.sha256(canonical_json(record)).hexdigest()
+
+
+def resolve_worker(consumption: dict[str, Any]) -> dict[str, str]:
+    executor_id = consumption.get("executor_id")
+    contract_version = consumption.get("executor_contract_version")
+    executable_digest = consumption.get("executable_identity_digest")
+    if not isinstance(executor_id, str) or not executor_id:
+        raise SystemExit("executor_identity_missing")
+    if not isinstance(contract_version, str) or not contract_version:
+        raise SystemExit("executor_contract_version_missing")
+    if not isinstance(executable_digest, str) or len(executable_digest) != 64:
+        raise SystemExit("executor_fingerprint_missing")
+    try:
+        return load_worker_registry_executor(
+            executor_id,
+            contract_version=contract_version,
+            executable_identity_digest=executable_digest,
+        )
+    except RepositoryAuthorityError as exc:
+        raise SystemExit(str(exc)) from exc
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="xzenia-coder-dispatch")
+    parser.add_argument("--job-file", required=True, type=pathlib.Path)
+    parser.add_argument("--repo-path", required=True, type=pathlib.Path)
+    parser.add_argument("--output-dir", required=True, type=pathlib.Path)
+    parser.add_argument("--proofrail-consumption-file", required=True, type=pathlib.Path)
+    args = parser.parse_args()
+
+    repo_path = args.repo_path.resolve()
+    job = read_canonical_job_file(args.job_file, expected_repo_path=repo_path)
+    job_id = str(job["job_id"])
+    consumption = read_json(args.proofrail_consumption_file)
+    verified_job_bytes = canonical_json(job)
+    verified_job_digest = canonical_job_digest(job)
+    parameters = parameters_from_job(
+        job,
+        repo_path=repo_path,
+        base_commit_sha=git_head(repo_path),
+    )
+    try:
+        verify_consumption_grant(
+            consumption,
+            parameters=parameters,
+            executor_id="xzenia-coder",
+        )
+    except RepositoryAuthorityError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    worker_spec = resolve_worker(consumption)
+    # A process group alone cannot contain detached descendants. Refuse before
+    # recording a dispatch claim or starting any worker; never silently degrade.
+    if not _become_subreaper():
+        raise SystemExit("descendant_containment_unavailable")
+    # Single-use at dispatch: record this grant before any worker starts.
+    try:
+        record_dispatch_claim(
+            authority_digest=str(consumption.get("authority_digest")),
+            authority_nonce=str(consumption.get("authority_nonce")),
+            grant_digest=record_digest(consumption),
+            executor_id=worker_spec["executor_id"],
+        )
+    except RepositoryAuthorityError as exc:
+        raise SystemExit(str(exc)) from exc
+    runtime_limit = int(job["max_runtime_seconds"])
+    dispatch_dir = args.output_dir.resolve() / "dispatch"
+    dispatch_dir.mkdir(parents=True, exist_ok=True)
+    stdout = dispatch_dir / "worker.stdout.log"
+    stderr = dispatch_dir / "worker.stderr.log"
+    started_ms = int(time.time() * 1000)
+    with execution_environment(worker_spec.get("environment", [])) as env, stdout.open("w", encoding="utf-8") as out, stderr.open("w", encoding="utf-8") as err:
+        proc = subprocess.Popen(
+            [
+                worker_spec["path"],
+                "run",
+                "--job-stdin",
+                "--repo-path",
+                str(repo_path),
+                "--output-dir",
+                str(args.output_dir.resolve()),
+            ],
+            stdin=subprocess.PIPE,
+            stdout=out,
+            stderr=err,
+            start_new_session=True,
+            # Never the caller's environment: trusted PATH, base variables,
+            # and only names the installation registry allows for this worker.
+            env=env,
+        )
+        assert proc.stdin is not None
+        proc.stdin.write(verified_job_bytes)
+        proc.stdin.close()
+        # Own the worker's lifetime: enforce the signed runtime limit, then
+        # remove the whole process group so nothing keeps mutating the
+        # repository after the dispatcher returns and reconciliation begins.
+        timed_out = False
+        try:
+            exit_code = proc.wait(timeout=runtime_limit)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            _kill_group(proc.pid)
+            exit_code = proc.wait()
+        _kill_group(proc.pid)
+        escaped = _kill_descendants()
+    result = {
+        "job_id": job_id,
+        "status": "TIMED_OUT" if timed_out else "COMPLETED",
+        "pid": proc.pid,
+        "worker_exit_code": exit_code,
+        "runtime_limit_seconds": runtime_limit,
+        "started_ms": started_ms,
+        "finished_ms": int(time.time() * 1000),
+        "evidence_directory": str(args.output_dir.resolve()),
+        "original_job_file": str(args.job_file.resolve()),
+        "verified_input_transport": "stdin_pipe",
+        "verified_worker_input_digest": verified_job_digest,
+        "resolved_executor_identity": worker_spec["executor_id"],
+        "resolved_executor_contract_version": worker_spec["contract_version"],
+        "resolved_executor_fingerprint": worker_spec["executable_identity_digest"],
+        "worker_environment_names": sorted(env),
+        "authority_digest": consumption.get("authority_digest"),
+        "consumption_grant_digest": record_digest(consumption),
+        "stdout_log": str(stdout),
+        "stderr_log": str(stderr),
+        "gateway_blocking": True,
+        "descendant_containment": "subreaper",
+        "escaped_descendants_killed": escaped,
+    }
+    write_json(dispatch_dir / "dispatch.json", result)
+    print(json.dumps(result, sort_keys=True))
+    if timed_out:
+        print("worker_runtime_exceeded", file=sys.stderr)
+        return 3
+    return 0
+
+
+def _children(pid: int) -> list[int]:
+    found = []
+    for entry in pathlib.Path("/proc").iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            stat = (entry / "stat").read_text()
+        except OSError:
+            continue
+        # Field 4 (ppid) follows the parenthesised command name.
+        if int(stat.rsplit(")", 1)[1].split()[1]) == pid:
+            found.append(int(entry.name))
+    return found
+
+
+def _kill_descendants(rounds: int = 50) -> int:
+    """SIGKILL and reap every remaining descendant; return how many were found."""
+    me, killed = os.getpid(), 0
+    for _ in range(rounds):
+        children = _children(me)
+        if not children:
+            break
+        for child in children:
+            try:
+                os.kill(child, signal.SIGKILL)
+                killed += 1
+            except ProcessLookupError:
+                pass
+        for child in children:
+            try:
+                os.waitpid(child, 0)
+            except ChildProcessError:
+                pass
+    return killed
+
+
+def _kill_group(pid: int) -> None:
+    """SIGKILL the worker's process group; ignore if already gone.
+
+    Descendants that leave the group are handled by _kill_descendants when
+    the dispatcher is a subreaper (Linux). Elsewhere, containing them
+    requires an OS boundary (cgroup, container, separate user).
+    """
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
+
+
+if __name__ == "__main__":
+    sys.exit(main())

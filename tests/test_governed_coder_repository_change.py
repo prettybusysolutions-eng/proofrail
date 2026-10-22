@@ -1,0 +1,1704 @@
+import copy
+import json
+import os
+import sqlite3
+import subprocess
+import sys
+import threading
+import time
+import unittest
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+from integrations.openclaw.repository_change import (
+    RepositoryAuthorityError,
+    XzeniaCoderRepositoryAdapter,
+    consume_repository_change_authority,
+    DEFAULT_EXECUTOR_CONTRACT_VERSION,
+    default_consumption_trust_store_path,
+    default_dispatch_claims_path,
+    default_worker_registry_path,
+    load_worker_registry_executor,
+    executable_fingerprint,
+    mint_consumption_grant,
+    mint_repository_change_authority,
+    parameters_from_job,
+    reconcile_repository_change,
+    write_consumption_trust_store,
+    write_worker_registry,
+)
+
+
+NOW = datetime(2099, 8, 18, 20, 0, tzinfo=timezone.utc)
+ROOTS = {
+    "identity": "1" * 64,
+    "evidence": "2" * 64,
+    "policy": "3" * 64,
+    "state": "4" * 64,
+}
+APPROVAL = "5" * 64
+
+
+class GovernedCoderRepositoryChangeTests(unittest.TestCase):
+    def setUp(self):
+        self.private_key = Ed25519PrivateKey.generate()
+        self.public_key = self.private_key.public_key()
+        self.consumption_private_key = Ed25519PrivateKey.generate()
+        self.consumption_public_key = self.consumption_private_key.public_key()
+        self.installation_trust_store = default_consumption_trust_store_path()
+        self._existing_trust_store = (
+            self.installation_trust_store.read_bytes()
+            if self.installation_trust_store.exists()
+            else None
+        )
+        self._write_installation_trust_store({"execution-key": self.consumption_public_key})
+        self.installation_worker_registry = default_worker_registry_path()
+        self._existing_worker_registry = (
+            self.installation_worker_registry.read_bytes()
+            if self.installation_worker_registry.exists()
+            else None
+        )
+        self.installation_worker_registry.unlink(missing_ok=True)
+        # Dispatch claims are installation state too; isolate them per test so
+        # fixed fixture digests reused across tests are not cross-test replays.
+        self.installation_dispatch_claims = default_dispatch_claims_path()
+        self._existing_dispatch_claims = (
+            self.installation_dispatch_claims.read_bytes()
+            if self.installation_dispatch_claims.exists()
+            else None
+        )
+        self.installation_dispatch_claims.unlink(missing_ok=True)
+        self._placeholder_dir = TemporaryDirectory()
+
+    def tearDown(self):
+        self._placeholder_dir.cleanup()
+        if self._existing_dispatch_claims is None:
+            self.installation_dispatch_claims.unlink(missing_ok=True)
+        else:
+            self.installation_dispatch_claims.write_bytes(self._existing_dispatch_claims)
+        if self._existing_trust_store is None:
+            self.installation_trust_store.unlink(missing_ok=True)
+        else:
+            self.installation_trust_store.parent.mkdir(parents=True, exist_ok=True)
+            self.installation_trust_store.write_bytes(self._existing_trust_store)
+        if self._existing_worker_registry is None:
+            self.installation_worker_registry.unlink(missing_ok=True)
+        else:
+            self.installation_worker_registry.parent.mkdir(parents=True, exist_ok=True)
+            self.installation_worker_registry.write_bytes(self._existing_worker_registry)
+
+    def _write_installation_trust_store(self, keys):
+        return write_consumption_trust_store(self.installation_trust_store, keys=keys)
+
+    def _write_installation_worker_registry(self, worker, *, fingerprint=None):
+        fingerprint = fingerprint or executable_fingerprint(worker)
+        write_worker_registry(
+            self.installation_worker_registry,
+            workers={
+                "xzenia-coder": {
+                    "path": str(Path(worker).resolve()),
+                    "contract_version": DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                    "executable_identity_digest": fingerprint,
+                }
+            },
+        )
+        return fingerprint
+
+    def test_missing_authority_is_denied_before_worker(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            dispatcher = _dispatcher(directory, "success")
+            adapter = self._adapter(directory, dispatcher)
+            with self.assertRaisesRegex(RepositoryAuthorityError, "authority_missing"):
+                adapter.execute(
+                    _action(job, repo, directory, authority=None),
+                    idempotency_key="x" * 64,
+                )
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_authorized_change_reconciles_and_replay_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            dispatcher = _dispatcher(directory, "success")
+            adapter = self._adapter(directory, dispatcher)
+            first = adapter.execute(
+                _action(job, repo, directory, authority=authority),
+                idempotency_key="x" * 64,
+            )
+            self.assertEqual(first["status"], "success")
+            self.assertEqual(
+                first["receipt_evidence"]["reconciliation"]["state"],
+                "RECONCILED",
+            )
+            manifest = first["receipt_evidence"]["reconciliation"]["artifact_manifest"]
+            self.assertEqual(manifest["kind"], "proofrail.reconciled-artifact-manifest.v1")
+            self.assertTrue(all(item["present"] for item in manifest["artifacts"]))
+            self.assertEqual(
+                first["receipt_evidence"]["reconciliation"]["worker_hashes_json_trust_level"],
+                "untrusted_evidence",
+            )
+            with self.assertRaisesRegex(RepositoryAuthorityError, "authority_replayed"):
+                adapter.execute(
+                    _action(job, repo, directory, authority=authority),
+                    idempotency_key="y" * 64,
+                )
+
+    def test_mutated_scope_and_path_expansion_are_denied_before_worker(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            expanded = copy.deepcopy(job)
+            expanded["allowed_paths"] = ["allowed.py", "escape.py"]
+            dispatcher = _dispatcher(directory, "success")
+            adapter = self._adapter(directory, dispatcher)
+            with self.assertRaisesRegex(Exception, "parameters_changed"):
+                adapter.execute(
+                    _action(expanded, repo, directory, authority=authority),
+                    idempotency_key="z" * 64,
+                )
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_job_object_and_job_file_mismatch_is_denied_before_worker(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            action = _action(job, repo, directory, authority=authority)
+            split_job = copy.deepcopy(job)
+            split_job["allowed_paths"] = ["allowed.py", "escape.py"]
+            Path(action["execution"]["job_file"]).write_text(
+                json.dumps(split_job, sort_keys=True),
+                encoding="utf-8",
+            )
+            dispatcher = _dispatcher(directory, "success")
+            adapter = self._adapter(directory, dispatcher)
+            with self.assertRaisesRegex(RepositoryAuthorityError, "job_file_mismatch"):
+                adapter.execute(action, idempotency_key="split")
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_forged_consumption_receipt_cannot_directly_dispatch(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            job_file = Path(directory) / "job.json"
+            job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
+            output = Path(directory) / "evidence"
+            fake = output / "proofrail-consumption.json"
+            fake.parent.mkdir(parents=True)
+            fake.write_text(
+                json.dumps(
+                    {
+                        "state": "CONSUMED",
+                        "authority_digest": "a" * 64,
+                        "executor_id": "xzenia-coder",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/xzenia-coder-dispatch",
+                    "--job-file",
+                    str(job_file),
+                    "--repo-path",
+                    str(repo),
+                    "--output-dir",
+                    str(output),
+                    "--proofrail-consumption-file",
+                    str(fake),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("consumption_signing_key_missing", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_signer_substitution_is_denied_by_trust_store(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            attacker_key = Ed25519PrivateKey.generate()
+            fake_grant = mint_consumption_grant(
+                authority_digest="a" * 64,
+                authority_nonce="attacker-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=attacker_key,
+                key_id="execution-key",
+            )
+            completed = _direct_dispatch(directory, repo, job, output, fake_grant)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("invalid_consumption_grant", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_legit_consumption_grant_with_wrong_trust_key_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            grant = mint_consumption_grant(
+                authority_digest="b" * 64,
+                authority_nonce="legit-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+            )
+            self._write_installation_trust_store({"execution-key": self.public_key})
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("invalid_consumption_grant", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_unknown_consumption_key_id_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            grant = mint_consumption_grant(
+                authority_digest="c" * 64,
+                authority_nonce="unknown-key-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="unknown-key",
+            )
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("untrusted_consumption_signer", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_modified_trust_store_fingerprint_fails_closed(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            grant = mint_consumption_grant(
+                authority_digest="d" * 64,
+                authority_nonce="fingerprint-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+            )
+            store = self._write_installation_trust_store({"execution-key": self.consumption_public_key})
+            store["keys"][0]["public_key_fingerprint"] = "0" * 64
+            self.installation_trust_store.write_text(json.dumps(store), encoding="utf-8")
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("consumption_trust_store_fingerprint_mismatch", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_environment_selected_trust_store_is_ignored_by_dispatcher(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            attacker_key = Ed25519PrivateKey.generate()
+            attacker_grant = mint_consumption_grant(
+                authority_digest="e" * 64,
+                authority_nonce="env-override-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=attacker_key,
+                key_id="attacker-key",
+            )
+            attacker_store = Path(directory) / "attacker-trust-store.json"
+            write_consumption_trust_store(attacker_store, keys={"attacker-key": attacker_key.public_key()})
+            completed = _direct_dispatch(
+                directory,
+                repo,
+                job,
+                output,
+                attacker_grant,
+                env={**os.environ, "XZENIA_PROOFRAIL_CONSUMPTION_TRUST_STORE": str(attacker_store)},
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("untrusted_consumption_signer", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_missing_installation_trust_store_fails_closed(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            grant = mint_consumption_grant(
+                authority_digest="6" * 64,
+                authority_nonce="missing-config-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+            )
+            self.installation_trust_store.unlink()
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("consumption_trust_store_invalid", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_caller_selected_cli_trust_store_is_impossible(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            attacker_key = Ed25519PrivateKey.generate()
+            attacker_grant = mint_consumption_grant(
+                authority_digest="7" * 64,
+                authority_nonce="cli-override-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=attacker_key,
+                key_id="attacker-key",
+            )
+            attacker_store = Path(directory) / "attacker-trust-store.json"
+            write_consumption_trust_store(attacker_store, keys={"attacker-key": attacker_key.public_key()})
+            job_file = Path(directory) / "job.json"
+            job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
+            consumption_file = output / "proofrail-consumption.json"
+            consumption_file.write_text(json.dumps(attacker_grant, sort_keys=True), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/xzenia-coder-dispatch",
+                    "--job-file",
+                    str(job_file),
+                    "--repo-path",
+                    str(repo),
+                    "--output-dir",
+                    str(output),
+                    "--proofrail-consumption-file",
+                    str(consumption_file),
+                    "--proofrail-consumption-trust-store",
+                    str(attacker_store),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("unrecognized arguments", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_valid_authority_wrong_job_digest_is_denied_before_worker(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            mutated = copy.deepcopy(job)
+            mutated["objective"] = "Change value to 3."
+            dispatcher = _dispatcher(directory, "success")
+            adapter = self._adapter(directory, dispatcher)
+            with self.assertRaisesRegex(Exception, "parameters_changed"):
+                adapter.execute(
+                    _action(mutated, repo, directory, authority=authority),
+                    idempotency_key="digest",
+                )
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_authorized_job_file_modified_after_consumption_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            parameters = parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo),
+                                             worker=self._registered_worker())
+            grant = consume_repository_change_authority(
+                authority,
+                registry_path=Path(directory) / "registry.sqlite3",
+                public_key=self.public_key,
+                expected_roots=ROOTS,
+                expected_approval_digest=APPROVAL,
+                parameters=parameters,
+                executor_id="xzenia-coder",
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+            )
+            job_file = Path(directory) / "job.json"
+            mutated = copy.deepcopy(job)
+            mutated["objective"] = "Do something else."
+            job_file.write_text(json.dumps(mutated, sort_keys=True), encoding="utf-8")
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            consumption_file = output / "proofrail-consumption.json"
+            consumption_file.write_text(json.dumps(grant), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/xzenia-coder-dispatch",
+                    "--job-file",
+                    str(job_file),
+                    "--repo-path",
+                    str(repo),
+                    "--output-dir",
+                    str(output),
+                    "--proofrail-consumption-file",
+                    str(consumption_file),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("job_digest_mismatch", completed.stderr + completed.stdout)
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_worker_receives_verified_job_snapshot_not_original_file(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            job_file = Path(directory) / "job.json"
+            job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
+            worker = _recording_worker(directory, mutate_original_job=job_file)
+            fingerprint = self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="f" * 64,
+                authority_nonce="snapshot-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            consumption_file = output / "proofrail-consumption.json"
+            consumption_file.write_text(json.dumps(grant, sort_keys=True), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/xzenia-coder-dispatch",
+                    "--job-file",
+                    str(job_file),
+                    "--repo-path",
+                    str(repo),
+                    "--output-dir",
+                    str(output),
+                    "--proofrail-consumption-file",
+                    str(consumption_file),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
+            dispatch = json.loads(completed.stdout)
+            worker_seen_path = output / "worker-seen-job.json"
+            for _ in range(50):
+                if worker_seen_path.exists():
+                    break
+                time.sleep(0.05)
+            self.assertTrue(worker_seen_path.exists())
+            worker_seen = json.loads(worker_seen_path.read_text(encoding="utf-8"))
+            self.assertEqual(worker_seen["objective"], "Change value to 2.")
+            self.assertEqual(dispatch["verified_worker_input_digest"], parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo))["canonical_job_digest"])
+            self.assertEqual(dispatch["verified_input_transport"], "stdin_pipe")
+            self.assertEqual(dispatch["resolved_executor_identity"], "xzenia-coder")
+            self.assertEqual(dispatch["resolved_executor_contract_version"], DEFAULT_EXECUTOR_CONTRACT_VERSION)
+            self.assertEqual(dispatch["resolved_executor_fingerprint"], fingerprint)
+
+
+    def test_verified_snapshot_replacement_race_cannot_change_worker_input(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            job_file = Path(directory) / "job.json"
+            job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
+            worker = _recording_worker(directory, marker="legitimate")
+            fingerprint = self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="8" * 64,
+                authority_nonce="snapshot-race-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            consumption_file = output / "proofrail-consumption.json"
+            consumption_file.write_text(json.dumps(grant, sort_keys=True), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/xzenia-coder-dispatch",
+                    "--job-file",
+                    str(job_file),
+                    "--repo-path",
+                    str(repo),
+                    "--output-dir",
+                    str(output),
+                    "--proofrail-consumption-file",
+                    str(consumption_file),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            (output / "dispatch" / "verified-job.json").write_text(
+                json.dumps({"objective": "attacker replacement"}),
+                encoding="utf-8",
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
+            worker_seen_path = output / "worker-seen-job.json"
+            for _ in range(50):
+                if worker_seen_path.exists():
+                    break
+                time.sleep(0.05)
+            worker_seen = json.loads(worker_seen_path.read_text(encoding="utf-8"))
+            self.assertEqual(worker_seen["objective"], "Change value to 2.")
+
+    def test_attacker_cli_worker_override_is_impossible(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            worker = _recording_worker(directory, marker="legitimate")
+            fingerprint = self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="9" * 64,
+                authority_nonce="cli-worker-override-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            job_file = Path(directory) / "job.json"
+            job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
+            consumption_file = output / "proofrail-consumption.json"
+            consumption_file.write_text(json.dumps(grant, sort_keys=True), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/xzenia-coder-dispatch",
+                    "--job-file",
+                    str(job_file),
+                    "--repo-path",
+                    str(repo),
+                    "--output-dir",
+                    str(output),
+                    "--proofrail-consumption-file",
+                    str(consumption_file),
+                    "--worker-path",
+                    str(_recording_worker(directory, marker="attacker")),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("unrecognized arguments", completed.stderr + completed.stdout)
+            self.assertFalse((output / "worker-marker.txt").exists())
+
+    def test_attacker_env_worker_override_is_ignored(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            worker = _recording_worker(directory, marker="legitimate")
+            attacker = _recording_worker(directory, marker="attacker")
+            fingerprint = self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="a1" * 32,
+                authority_nonce="env-worker-override-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            completed = _direct_dispatch(
+                directory,
+                repo,
+                job,
+                output,
+                grant,
+                env={**os.environ, "XZENIA_CODER_WORKER": str(attacker)},
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
+            marker_path = output / "worker-marker.txt"
+            marker_text = ""
+            for _ in range(50):
+                if marker_path.exists():
+                    marker_text = marker_path.read_text(encoding="utf-8")
+                    if marker_text:
+                        break
+                time.sleep(0.05)
+            self.assertEqual(marker_text, "legitimate")
+
+    def test_substituted_binary_same_filename_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            worker = _recording_worker(directory, marker="legitimate")
+            fingerprint = self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="a2" * 32,
+                authority_nonce="substituted-worker-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            Path(worker).write_text("#!/usr/bin/env python3\nraise SystemExit('attacker')\n", encoding="utf-8")
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("installed_worker_fingerprint_mismatch", completed.stderr + completed.stdout)
+
+    def test_wrong_worker_fingerprint_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            worker = _recording_worker(directory, marker="legitimate")
+            self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="a3" * 32,
+                authority_nonce="wrong-worker-fingerprint-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest="0" * 64,
+            )
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("executor_fingerprint_mismatch", completed.stderr + completed.stdout)
+
+    def test_missing_installed_worker_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            worker = _recording_worker(directory, marker="legitimate")
+            fingerprint = self._write_installation_worker_registry(worker)
+            Path(worker).unlink()
+            grant = mint_consumption_grant(
+                authority_digest="a4" * 32,
+                authority_nonce="missing-worker-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("installed_worker_missing", completed.stderr + completed.stdout)
+
+    def test_legitimate_installed_worker_dispatches_with_fingerprint_receipt(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            worker = _recording_worker(directory, marker="legitimate")
+            fingerprint = self._write_installation_worker_registry(worker)
+            grant = mint_consumption_grant(
+                authority_digest="a5" * 32,
+                authority_nonce="legitimate-installed-worker-nonce",
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_id="xzenia-coder",
+                consumed_at=NOW.isoformat(),
+                expires_at=(NOW + timedelta(minutes=5)).isoformat(),
+                private_key=self.consumption_private_key,
+                key_id="execution-key",
+                executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                executable_identity_digest=fingerprint,
+            )
+            completed = _direct_dispatch(directory, repo, job, output, grant)
+            self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
+            dispatch = json.loads(completed.stdout)
+            self.assertEqual(dispatch["resolved_executor_fingerprint"], fingerprint)
+            self.assertEqual(dispatch["verified_input_transport"], "stdin_pipe")
+            self.assertEqual(len(dispatch["consumption_grant_digest"]), 64)
+
+    def test_repo_base_drift_is_denied_before_worker(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            (repo / "drift.txt").write_text("drift\n", encoding="utf-8")
+            subprocess.run(["git", "add", "drift.txt"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "drift"], cwd=repo, check=True)
+            dispatcher = _dispatcher(directory, "success")
+            adapter = self._adapter(directory, dispatcher)
+            with self.assertRaisesRegex(Exception, "target_changed"):
+                adapter.execute(
+                    _action(job, repo, directory, authority=authority),
+                    idempotency_key="b" * 64,
+                )
+            self.assertFalse((Path(directory) / "called.txt").exists())
+
+    def test_fake_tests_json_pass_but_actual_acceptance_test_fails(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            dispatcher = _dispatcher(directory, "fake_tests")
+            adapter = self._adapter(directory, dispatcher)
+            result = adapter.execute(
+                _action(job, repo, directory, authority=authority),
+                idempotency_key="fake-tests",
+            )
+            self.assertEqual(result["status"], "failed")
+            self.assertIn(
+                "tests_failed",
+                result["receipt_evidence"]["reconciliation"]["errors"],
+            )
+
+    def test_committed_unauthorized_change_is_reconciliation_failure(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            dispatcher = _dispatcher(directory, "unauthorized_commit")
+            adapter = self._adapter(directory, dispatcher)
+            result = adapter.execute(
+                _action(job, repo, directory, authority=authority),
+                idempotency_key="unauthorized-commit",
+            )
+            reconciliation = result["receipt_evidence"]["reconciliation"]
+            self.assertEqual(reconciliation["state"], "RECONCILIATION_FAILED")
+            self.assertIn("unauthorized_changes", reconciliation["errors"])
+            self.assertIn("escape.py", reconciliation["unauthorized_changes"])
+
+    def test_allowed_committed_change_is_visible_and_reconciles(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            dispatcher = _dispatcher(directory, "allowed_commit")
+            adapter = self._adapter(directory, dispatcher)
+            result = adapter.execute(
+                _action(job, repo, directory, authority=authority),
+                idempotency_key="allowed-commit",
+            )
+            reconciliation = result["receipt_evidence"]["reconciliation"]
+            self.assertEqual(reconciliation["state"], "RECONCILED")
+            self.assertIn("allowed.py", reconciliation["changed_files"])
+
+    def test_untracked_unauthorized_file_is_reconciliation_failure(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            dispatcher = _dispatcher(directory, "untracked_unauthorized")
+            adapter = self._adapter(directory, dispatcher)
+            result = adapter.execute(
+                _action(job, repo, directory, authority=authority),
+                idempotency_key="untracked",
+            )
+            reconciliation = result["receipt_evidence"]["reconciliation"]
+            self.assertEqual(reconciliation["state"], "RECONCILIATION_FAILED")
+            self.assertIn("escape.py", reconciliation["unauthorized_changes"])
+
+    def test_expired_authority_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            parameters = parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo))
+            authority = mint_repository_change_authority(
+                roots=ROOTS,
+                approval_digest=APPROVAL,
+                parameters=parameters,
+                executor_identity="xzenia-coder",
+                issuer_principal_id="verifier",
+                issuer_role="verifier",
+                nonce="expired-authority-0001",
+                expires_at=NOW + timedelta(seconds=1),
+                private_key=self.private_key,
+                key_id="verifier-key",
+                now=NOW,
+            )
+            with self.assertRaisesRegex(Exception, "permit_expired"):
+                consume_repository_change_authority(
+                    authority,
+                    registry_path=Path(directory) / "registry.sqlite3",
+                    public_key=self.public_key,
+                    expected_roots=ROOTS,
+                    expected_approval_digest=APPROVAL,
+                    parameters=parameters,
+                    executor_id="xzenia-coder",
+                    private_key=self.consumption_private_key,
+                    key_id="execution-key",
+                    now=NOW + timedelta(seconds=1),
+                )
+
+    def test_two_workers_race_same_authority_only_one_consumes(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            authority = self._authority(job, repo)
+            parameters = parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo),
+                                             worker=self._registered_worker())
+            registry = Path(directory) / "registry.sqlite3"
+            outcomes = []
+
+            def consume():
+                try:
+                    consume_repository_change_authority(
+                        authority,
+                        registry_path=registry,
+                        public_key=self.public_key,
+                        expected_roots=ROOTS,
+                        expected_approval_digest=APPROVAL,
+                        parameters=parameters,
+                        executor_id="xzenia-coder",
+                        private_key=self.consumption_private_key,
+                        key_id="execution-key",
+                    )
+                    outcomes.append("consumed")
+                except Exception as exc:
+                    outcomes.append(str(exc))
+
+            threads = [threading.Thread(target=consume), threading.Thread(target=consume)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+            self.assertEqual(outcomes.count("consumed"), 1)
+            self.assertTrue(any("authority_replayed" in item for item in outcomes))
+            with sqlite3.connect(registry) as db:
+                count = db.execute("SELECT COUNT(*) FROM permit_claims").fetchone()[0]
+            self.assertEqual(count, 1)
+
+    # --- Review of #11: real adapter + real dispatcher + real worker -------
+
+    def _real_run(self, directory, worker_body, *, max_runtime=30):
+        """Install a real worker, mint authority naming it, run the real adapter."""
+        repo = _repo(directory)
+        job = _job(repo)
+        job["max_runtime_seconds"] = max_runtime
+        worker = _scripted_worker(directory, worker_body)
+        self._write_installation_worker_registry(worker)
+        authority = self._authority(job, repo)
+        adapter = self._adapter(directory, _real_dispatcher(directory))
+        action = _action(job, repo, directory, authority=authority)
+        return repo, action, adapter
+
+    def test_b1_real_adapter_drives_real_dispatcher_and_binds_worker(self):
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            receipt = adapter.execute(action, idempotency_key="1" * 64)
+            self.assertEqual(receipt["status"], "success", receipt["receipt_evidence"]["reconciliation"]["errors"])
+            grant = json.loads((Path(directory) / "evidence/proofrail-consumption.json").read_text())
+            self.assertEqual(len(grant["executable_identity_digest"]), 64)
+            self.assertEqual(grant["executor_contract_version"], DEFAULT_EXECUTOR_CONTRACT_VERSION)
+            self.assertEqual(receipt["receipt_evidence"]["dispatch"]["result"]["status"], "COMPLETED")
+
+    def test_b1_authority_not_naming_the_worker_is_denied(self):
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            job = action["execution"]["job"]
+            action["execution"]["authority"] = mint_repository_change_authority(
+                roots=ROOTS, approval_digest=APPROVAL,
+                parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+                executor_identity="xzenia-coder", issuer_principal_id="verifier",
+                issuer_role="verifier", nonce="repository-authority-unbound",
+                expires_at=NOW + timedelta(minutes=5), private_key=self.private_key,
+                key_id="verifier-key", now=NOW)
+            with self.assertRaisesRegex(Exception, "parameters_changed"):
+                adapter.execute(action, idempotency_key="2" * 64)
+            self.assertFalse((repo / "spawned.log").exists())
+
+    def test_b2_consumption_grant_cannot_start_the_worker_twice(self):
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(
+                directory, _SPAWN_LOG + _ALLOWED_CHANGE + _PASS_REPORT)
+            adapter.execute(action, idempotency_key="3" * 64)
+            output = Path(directory) / "evidence"
+            again = subprocess.run(
+                [sys.executable, "scripts/xzenia-coder-dispatch",
+                 "--job-file", action["execution"]["job_file"], "--repo-path", str(repo),
+                 "--output-dir", str(Path(directory) / "replay"),
+                 "--proofrail-consumption-file", str(output / "proofrail-consumption.json")],
+                cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True)
+            self.assertNotEqual(again.returncode, 0)
+            self.assertIn("consumption_grant_replayed", again.stderr)
+            self.assertEqual((Path(directory) / "spawned.log").read_text().count("spawn"), 1)
+
+    def test_b3_files_hidden_via_git_exclude_and_hooks_fail_reconciliation(self):
+        with TemporaryDirectory() as directory:
+            hide = ("(repo/'.git/info/exclude').write_text('backdoor.py\\n')\n"
+                    "(repo/'backdoor.py').write_text('STOLEN = 1\\n')\n"
+                    "(repo/'.git/hooks/pre-commit').write_text('#!/bin/sh\\n')\n")
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + hide + _PASS_REPORT)
+            receipt = adapter.execute(action, idempotency_key="4" * 64)
+            rec = receipt["receipt_evidence"]["reconciliation"]
+            self.assertEqual(rec["state"], "RECONCILIATION_FAILED")
+            self.assertIn("repository_control_tampered", rec["errors"])
+            self.assertIn("backdoor.py", rec["unauthorized_changes"])
+
+    def test_b3_worker_fsmonitor_is_never_executed_by_the_reconciler(self):
+        with TemporaryDirectory() as directory:
+            marker = Path(directory) / "fsmonitor-ran"
+            plant = ("hook = repo.parent/'fsmon.sh'\n"
+                     f"hook.write_text('#!/bin/sh\\necho ran >> {marker}\\n'); hook.chmod(0o755)\n"
+                     "import subprocess\n"
+                     "subprocess.run(['git','config','core.fsmonitor',str(hook)],cwd=repo,check=True)\n")
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + plant + _PASS_REPORT)
+            receipt = adapter.execute(action, idempotency_key="5" * 64)
+            rec = receipt["receipt_evidence"]["reconciliation"]
+            self.assertEqual(rec["state"], "RECONCILIATION_FAILED")
+            self.assertIn("repository_control_tampered", rec["errors"])
+            self.assertFalse(marker.exists(), "reconciler executed worker-planted fsmonitor")
+
+    def test_b3_redirected_git_config_and_object_store_fail_reconciliation(self):
+        # commondir/worktrees can redirect where git reads config (hooks,
+        # fsmonitor); alternates add a foreign object store.
+        for label, plant in (
+            ("alternates", "(repo/'.git/objects/info/alternates').write_text('/tmp/elsewhere\\n')\n"),
+            ("commondir", "(repo/'.git/commondir').write_text('../elsewhere\\n')\n"),
+            ("worktrees", "(repo/'.git/worktrees/x').mkdir(parents=True); (repo/'.git/worktrees/x/commondir').write_text('../..\\n')\n"),
+        ):
+            with self.subTest(surface=label), TemporaryDirectory() as directory:
+                self.installation_dispatch_claims.unlink(missing_ok=True)  # fixtures reuse one nonce
+                repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT + plant)
+                rec = adapter.execute(action, idempotency_key="8" * 64)["receipt_evidence"]["reconciliation"]
+                self.assertEqual(rec["state"], "RECONCILIATION_FAILED")
+                self.assertIn("repository_control_tampered", rec["errors"])
+
+    def test_b4_changes_after_the_pass_report_are_observed(self):
+        with TemporaryDirectory() as directory:
+            late = "import time\ntime.sleep(1.5)\n(repo/'late_unauthorized.py').write_text('x = 1\\n')\n"
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT + late)
+            receipt = adapter.execute(action, idempotency_key="6" * 64)
+            rec = receipt["receipt_evidence"]["reconciliation"]
+            self.assertEqual(rec["state"], "RECONCILIATION_FAILED")
+            self.assertIn("late_unauthorized.py", rec["unauthorized_changes"])
+
+    def test_b4_runtime_limit_kills_the_worker(self):
+        with TemporaryDirectory() as directory:
+            marker = Path(directory) / "still-running"
+            hang = f"import time\ntime.sleep(6)\npathlib.Path({str(marker)!r}).write_text('x')\n"
+            repo, action, adapter = self._real_run(directory, hang, max_runtime=1)
+            started = time.monotonic()
+            with self.assertRaisesRegex(RepositoryAuthorityError, "worker_runtime_exceeded"):
+                adapter.execute(action, idempotency_key="7" * 64)
+            self.assertLess(time.monotonic() - started, 5)
+            time.sleep(6)
+            self.assertFalse(marker.exists(), "worker survived its runtime limit")
+
+    # --- Second review of #11 -------------------------------------------
+
+    def _reconcile(self, adapter, action, key):
+        return adapter.execute(action, idempotency_key=key)
+
+    def test_replace_ref_cannot_hide_a_committed_unauthorized_file(self):
+        # Previously RECONCILED/success for a HEAD whose real tree held escape.py.
+        with TemporaryDirectory() as directory:
+            body = (
+                "import subprocess as sp, os\n"
+                "env = {k: v for k, v in os.environ.items() if not k.startswith('GIT_')}\n"
+                "g = lambda *a: sp.run(['git', *a], cwd=repo, check=True, capture_output=True, env=env).stdout.decode().strip()\n"
+                + _ALLOWED_CHANGE +
+                "g('add', 'allowed.py'); g('commit', '-m', 'clean'); clean = g('rev-parse', 'HEAD')\n"
+                "g('reset', '--hard', 'HEAD~1')\n"
+                + _ALLOWED_CHANGE +
+                "(repo/'escape.py').write_text('BACKDOOR = 1\\n')\n"
+                "g('add', 'allowed.py', 'escape.py'); g('commit', '-m', 'evil'); evil = g('rev-parse', 'HEAD')\n"
+                "g('replace', evil, clean)\n"
+                "g('rm', '-q', '--cached', 'escape.py'); (repo/'escape.py').unlink()\n"
+                + _PASS_REPORT)
+            repo, action, adapter = self._real_run(directory, body)
+            receipt = self._reconcile(adapter, action, "a1" * 32)
+            rec = receipt["receipt_evidence"]["reconciliation"]
+            self.assertEqual(receipt["status"], "failed")
+            self.assertIn("repository_control_tampered", rec["errors"])
+
+    def test_nested_repository_filter_never_runs_in_the_reconciler(self):
+        with TemporaryDirectory() as directory:
+            marker = Path(directory) / "nested-filter-ran"
+            body = (_ALLOWED_CHANGE +
+                "import subprocess as sp, os\n"
+                "env = {k: v for k, v in os.environ.items() if not k.startswith('GIT_')}\n"
+                "sub = repo/'sub'; sub.mkdir()\n"
+                "g = lambda *a, cwd=sub: sp.run(['git', *a], cwd=cwd, check=True, capture_output=True, env=env).stdout.decode().strip()\n"
+                "g('init'); g('config', 'user.email', 'a@b'); g('config', 'user.name', 'a')\n"
+                "(sub/'a.txt').write_text('hello\\n'); g('add', 'a.txt'); g('commit', '-m', 'x')\n"
+                f"g('config', 'filter.evil.clean', 'sh -c \"echo ran >> {marker}; cat\"')\n"
+                "(sub/'.gitattributes').write_text('* filter=evil\\n')\n"
+                "os.utime(sub/'a.txt', (1, 1))\n"
+                "h = g('rev-parse', 'HEAD')\n"
+                "g('update-index', '--add', '--cacheinfo', f'160000,{h},sub', cwd=repo)\n"
+                + _PASS_REPORT)
+            repo, action, adapter = self._real_run(directory, body)
+            marker.unlink(missing_ok=True)  # only count runs after the worker exits
+            rec = self._reconcile(adapter, action, "a2" * 32)["receipt_evidence"]["reconciliation"]
+            self.assertIn("repository_control_tampered", rec["errors"])
+            self.assertFalse(marker.exists(), "reconciler executed a nested repository's filter")
+
+    def test_repository_with_config_include_is_refused_before_consumption(self):
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            subprocess.run(["git", "config", "include.path", "../wt.gitconfig"], cwd=repo, check=True)
+            with self.assertRaisesRegex(RepositoryAuthorityError, "unsafe_repository:config_include"):
+                self._reconcile(adapter, action, "a3" * 32)
+            # The authority was not spent: nothing reached the consumption registry.
+            registry = Path(directory) / "registry.sqlite3"
+            if registry.exists():
+                with sqlite3.connect(registry) as db:
+                    self.assertEqual(db.execute("SELECT COUNT(*) FROM permit_claims").fetchone()[0], 0)
+
+    def test_descendant_escaping_the_process_group_is_killed(self):
+        # setpgid(0, 0) leaves the worker's group; the subreaper still reaps it.
+        with TemporaryDirectory() as directory:
+            child = ("import subprocess\n"
+                     "subprocess.Popen([sys.executable, '-c', \"import time, pathlib, sys; "
+                     "time.sleep(1.0); pathlib.Path(sys.argv[1], 'late_child.py').write_text('x = 1')\", "
+                     "str(repo)], process_group=0)\n")
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT + child)
+            try:
+                receipt = self._reconcile(adapter, action, "a4" * 32)
+            except RepositoryAuthorityError as exc:
+                # Unsupported hosts must explicitly refuse, not skip the test
+                # or run with weaker containment. No other error is accepted.
+                self.assertIn(str(exc), ("descendant_containment_unavailable",
+                                          "dispatcher_failed:descendant_containment_unavailable"))
+                self.assertEqual((repo / "allowed.py").read_text(), "def value():\n    return 1\n")
+                self.assertFalse((repo / "late_child.py").exists())
+                return
+            time.sleep(2.0)
+            self.assertFalse((repo / "late_child.py").exists(), "escaped descendant outlived supervision")
+            dispatch = receipt["receipt_evidence"]["dispatch"]["result"]
+            self.assertEqual(dispatch.get("descendant_containment"), "subreaper")
+            self.assertGreaterEqual(dispatch["escaped_descendants_killed"], 1)
+
+    def test_adapter_preflight_denial_preserves_permit(self):
+        from unittest.mock import patch
+        from integrations.openclaw import repository_change as rc
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            with patch.object(rc, "_preflight_descendant_containment",
+                    side_effect=RepositoryAuthorityError("descendant_containment_unavailable")), \
+                    patch.object(rc, "consume_repository_change_authority") as consume, \
+                    patch.object(rc, "_run_dispatcher") as dispatch:
+                with self.assertRaisesRegex(RepositoryAuthorityError, "^descendant_containment_unavailable$"):
+                    adapter.execute(action, idempotency_key="f1" * 32)
+                consume.assert_not_called()
+                dispatch.assert_not_called()
+            self.assertFalse(adapter.registry_path.exists())
+            self.assertEqual((repo / "allowed.py").read_text(), "def value():\n    return 1\n")
+
+    def test_preflight_probe_errors_fail_closed(self):
+        from unittest.mock import patch
+        from integrations.openclaw.repository_change import _preflight_descendant_containment
+        for failure in (OSError("unavailable"), subprocess.TimeoutExpired("probe", 5)):
+            with self.subTest(failure=type(failure).__name__), \
+                    patch("subprocess.run", side_effect=failure):
+                with self.assertRaisesRegex(RepositoryAuthorityError, "^descendant_containment_unavailable$"):
+                    _preflight_descendant_containment()
+        with patch("subprocess.run", return_value=subprocess.CompletedProcess([], 1)):
+            with self.assertRaisesRegex(RepositoryAuthorityError, "^descendant_containment_unavailable$"):
+                _preflight_descendant_containment()
+
+    def test_subreaper_requires_matching_proc_pid_namespace(self):
+        import runpy
+        from unittest.mock import patch
+        script = Path(__file__).resolve().parents[1] / "scripts" / "xzenia-coder-dispatch"
+        become = runpy.run_path(str(script))["_become_subreaper"]
+        with patch.object(Path, "read_text", return_value=f"{os.getpid() + 1000} (fixture) S 0"), \
+                patch("ctypes.CDLL", side_effect=AssertionError("must fail before prctl")):
+            self.assertFalse(become())
+
+    def test_missing_subreaper_denies_before_claim_and_worker_spawn(self):
+        import runpy
+        from unittest.mock import patch, Mock
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            worker = _scripted_worker(directory, "raise AssertionError('must not start')\n")
+            grant = self._grant_for(repo, job, worker)
+            job_file = Path(directory) / "job.json"
+            grant_file = Path(directory) / "grant.json"
+            job_file.write_text(json.dumps(job))
+            grant_file.write_text(json.dumps(grant))
+            script = Path(__file__).resolve().parents[1] / "scripts" / "xzenia-coder-dispatch"
+            main = runpy.run_path(str(script))["main"]
+            claim = Mock(side_effect=AssertionError("claim before capability check"))
+            argv = [str(script), "--job-file", str(job_file), "--repo-path", str(repo),
+                    "--output-dir", str(Path(directory) / "output"),
+                    "--proofrail-consumption-file", str(grant_file)]
+            with patch.object(sys, "argv", argv), patch.dict(main.__globals__,
+                    {"_become_subreaper": lambda: False, "record_dispatch_claim": claim}):
+                # git_head uses subprocess.run/Popen too; verify it first, then
+                # patch that read so any remaining Popen would be a worker.
+                head = _head(repo)
+                with patch.dict(main.__globals__, {"git_head": lambda _: head}), \
+                        patch("subprocess.Popen", side_effect=AssertionError("worker spawned")) as spawn:
+                    with self.assertRaisesRegex(SystemExit, "^descendant_containment_unavailable$"):
+                        main()
+                    spawn.assert_not_called()
+            claim.assert_not_called()
+
+    def test_tree_snapshot_hashes_large_files_without_reading_them_whole(self):
+        from unittest.mock import patch
+        from integrations.openclaw import repository_change as rc
+        with TemporaryDirectory() as directory:
+            big = Path(directory) / "big.bin"
+            with big.open("wb") as handle:
+                handle.truncate(64 * 1024 * 1024)  # sparse 64 MiB
+            with patch.object(Path, "read_bytes", side_effect=AssertionError("read whole file")):
+                digest = rc._entry_digest(big)
+            self.assertTrue(digest.startswith("file:"))
+
+    def test_job_allowing_a_forbidden_path_is_refused_before_authority(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            for forbidden in (["allowed.py"], ["/allowed.py/"]):
+                with self.subTest(forbidden=forbidden):
+                    job["forbidden_paths"] = forbidden
+                    with self.assertRaisesRegex(RepositoryAuthorityError, "allowed_path_forbidden:allowed.py"):
+                        parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo))
+
+    def test_forbidden_directory_covers_paths_beneath_it(self):
+        from integrations.openclaw.repository_change import is_forbidden_path
+        self.assertTrue(is_forbidden_path("secrets/key.pem", ["secrets"]))
+        self.assertTrue(is_forbidden_path("secrets/a/b", ["secrets/"]))
+        self.assertTrue(is_forbidden_path("secrets", ["secrets"]))
+        self.assertFalse(is_forbidden_path("secrets-public/x", ["secrets"]))
+        self.assertFalse(is_forbidden_path("allowed.py", []))
+
+    def test_worker_change_under_forbidden_directory_is_flagged(self):
+        with TemporaryDirectory() as directory:
+            write = "(repo/'secrets').mkdir(); (repo/'secrets'/'key.pem').write_text('x')\n"
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + write + _PASS_REPORT)
+            action["execution"]["job"]["forbidden_paths"] = ["secrets"]
+            job_file = Path(action["execution"]["job_file"])
+            job = json.loads(job_file.read_text()); job["forbidden_paths"] = ["secrets"]
+            job_file.write_text(json.dumps(job, sort_keys=True))
+            action["execution"]["authority"] = self._authority(job, repo)
+            rec = adapter.execute(action, idempotency_key="b1" * 32)["receipt_evidence"]["reconciliation"]
+            self.assertEqual(rec["state"], "RECONCILIATION_FAILED")
+            self.assertIn("forbidden_path_changed", rec["errors"])
+            self.assertEqual(rec["forbidden_changes"], ["secrets/key.pem"])
+
+    # --- S1: trusted environment ------------------------------------------
+
+    def _grant_for(self, repo, job, worker, *, environment=None):
+        if environment is None:
+            fingerprint = self._write_installation_worker_registry(worker)
+        else:
+            fingerprint = executable_fingerprint(worker)
+            write_worker_registry(self.installation_worker_registry, workers={"xzenia-coder": {
+                "path": str(Path(worker).resolve()), "contract_version": DEFAULT_EXECUTOR_CONTRACT_VERSION,
+                "executable_identity_digest": fingerprint, "environment": environment}})
+        return mint_consumption_grant(
+            authority_digest="c1" * 32, authority_nonce="s1-environment-nonce",
+            parameters=parameters_from_job(job, repo_path=repo, base_commit_sha=_head(repo)),
+            executor_id="xzenia-coder", consumed_at=NOW.isoformat(),
+            expires_at=(datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat(),
+            private_key=self.consumption_private_key, key_id="execution-key",
+            executor_contract_version=DEFAULT_EXECUTOR_CONTRACT_VERSION,
+            executable_identity_digest=fingerprint)
+
+    def test_fake_git_first_on_caller_path_cannot_hide_base_drift(self):
+        # Previously: a fake git reporting the old HEAD let a drifted repo pass.
+        with TemporaryDirectory() as directory:
+            repo, job = _repo(directory), None
+            job = _job(repo)
+            worker = _scripted_worker(directory, "(repo.parent/'spawned').write_text('1')\n")
+            grant = self._grant_for(repo, job, worker)
+            base = _head(repo)
+            (repo / "other.py").write_text("x = 1\n")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-qm", "drift"], cwd=repo, check=True)
+            fake = Path(directory) / "fakebin"
+            fake.mkdir()
+            (fake / "git").write_text(f"#!/bin/sh\necho {base}\n")
+            os.chmod(fake / "git", 0o755)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            env = dict(os.environ, PATH=f"{fake}:{os.environ['PATH']}")
+            completed = _direct_dispatch(directory, repo, job, output, grant, env=env)
+            time.sleep(0.5)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("base_commit_mismatch", completed.stderr)
+            self.assertFalse((Path(directory) / "spawned").exists())
+
+    def test_worker_does_not_inherit_caller_secrets(self):
+        # Previously: worker saw FAKE_PROVIDER_TOKEN from the dispatcher's environment.
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            worker = _scripted_worker(directory,
+                "import os\n(repo.parent/'env.json').write_text(json.dumps(dict(os.environ)))\n")
+            grant = self._grant_for(repo, job, worker)
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            env = dict(os.environ, FAKE_PROVIDER_TOKEN="sk-secret-123", PYTHONPATH="/attacker")
+            completed = _direct_dispatch(directory, repo, job, output, grant, env=env)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            seen = json.loads((Path(directory) / "env.json").read_text())
+            self.assertNotIn("FAKE_PROVIDER_TOKEN", seen)
+            self.assertNotIn("PYTHONPATH", seen)
+            self.assertEqual(seen["PATH"], "/usr/local/bin:/usr/bin:/bin")
+
+    def test_registry_allowlist_is_the_only_way_to_pass_a_variable(self):
+        with TemporaryDirectory() as directory:
+            repo = _repo(directory)
+            job = _job(repo)
+            worker = _scripted_worker(directory,
+                "import os\n(repo.parent/'env.json').write_text(json.dumps(dict(os.environ)))\n")
+            grant = self._grant_for(repo, job, worker, environment=["PROVIDER_API_KEY"])
+            output = Path(directory) / "evidence"
+            output.mkdir()
+            env = dict(os.environ, PROVIDER_API_KEY="admin-provisioned", OTHER_SECRET="x")
+            completed = _direct_dispatch(directory, repo, job, output, grant, env=env)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            seen = json.loads((Path(directory) / "env.json").read_text())
+            self.assertEqual(seen.get("PROVIDER_API_KEY"), "admin-provisioned")
+            self.assertNotIn("OTHER_SECRET", seen)
+
+    def test_reconciler_never_runs_git_from_the_caller_path(self):
+        with TemporaryDirectory() as directory:
+            marker = Path(directory) / "fake-git-ran"
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            fake = Path(directory) / "fakebin"
+            fake.mkdir()
+            (fake / "git").write_text(f"#!/bin/sh\necho ran >> {marker}\nexec /usr/bin/git \"$@\"\n")
+            os.chmod(fake / "git", 0o755)
+            old_path = os.environ["PATH"]
+            os.environ["PATH"] = f"{fake}:{old_path}"
+            try:
+                receipt = adapter.execute(action, idempotency_key="c2" * 32)
+            finally:
+                os.environ["PATH"] = old_path
+            self.assertEqual(receipt["status"], "success")
+            self.assertFalse(marker.exists(), "reconciler or dispatcher used git from the caller's PATH")
+
+    # --- S3: contained acceptance-test execution ----------------------------
+
+    def test_acceptance_tests_that_modify_the_repository_fail_reconciliation(self):
+        # Previously: a file written by worker-authored test code after the
+        # repository was observed went unrecorded in the attested final state.
+        with TemporaryDirectory() as directory:
+            plant = ("(repo/'test_allowed.py').write_text(\"import unittest, pathlib\\n"
+                     "pathlib.Path('planted_by_test.py').write_text('x=1')\\n"
+                     "from allowed import value\\n"
+                     "class T(unittest.TestCase):\\n    def test_value(self):\\n        self.assertEqual(value(), 2)\\n\")\n")
+            report = _PASS_REPORT.replace("'changed_files':['allowed.py']",
+                                          "'changed_files':['allowed.py','test_allowed.py']")
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + plant + report)
+            job = json.loads(Path(action["execution"]["job_file"]).read_text())
+            job["allowed_paths"] = ["allowed.py", "test_allowed.py"]
+            Path(action["execution"]["job_file"]).write_text(json.dumps(job, sort_keys=True))
+            action["execution"]["job"] = job
+            action["execution"]["authority"] = self._authority(job, repo)
+            rec = adapter.execute(action, idempotency_key="e1" * 32)["receipt_evidence"]["reconciliation"]
+            self.assertEqual(rec["state"], "RECONCILIATION_FAILED")
+            self.assertIn("acceptance_tests_modified_repository", rec["errors"])
+
+    def test_hanging_acceptance_test_is_killed_and_recorded_as_failed(self):
+        from integrations.openclaw.repository_change import run_acceptance_tests
+        with TemporaryDirectory() as directory:
+            marker = Path(directory) / "survived"
+            child = f"import time, pathlib; time.sleep(3); pathlib.Path({str(marker)!r}).write_text('x')"
+            parent = f"import subprocess, sys, time\nsubprocess.Popen([sys.executable, '-c', {child!r}])\ntime.sleep(30)"
+            hang = [sys.executable, "-c", parent]
+            started = time.monotonic()
+            results = run_acceptance_tests(directory, [hang], timeout_seconds=1)
+            self.assertLess(time.monotonic() - started, 5)
+            self.assertTrue(results[0]["timed_out"])
+            self.assertIsNone(results[0]["returncode"])
+            time.sleep(4)
+            self.assertFalse(marker.exists(), "a process started by the acceptance test survived")
+
+    def test_acceptance_tests_do_not_see_caller_secrets_or_crash_on_bytes(self):
+        from integrations.openclaw.repository_change import run_acceptance_tests
+        with TemporaryDirectory() as directory:
+            probe = [sys.executable, "-c",
+                     "import os, sys\n"
+                     "sys.stdout.buffer.write(b'\\xff\\xfe')\n"
+                     "sys.exit(0 if 'FAKE_PROVIDER_TOKEN' not in os.environ else 7)"]
+            os.environ["FAKE_PROVIDER_TOKEN"] = "sk-secret-123"
+            try:
+                results = run_acceptance_tests(directory, [probe], timeout_seconds=10)
+            finally:
+                os.environ.pop("FAKE_PROVIDER_TOKEN", None)
+            self.assertEqual(results[0]["returncode"], 0, "acceptance test saw the caller's secret")
+            self.assertEqual(len(results[0]["stdout_sha256"]), 64)
+
+
+    def test_adapter_ignores_fake_python_on_path(self):
+        from unittest.mock import patch
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            fake = Path(directory) / "fakebin"
+            fake.mkdir()
+            marker = Path(directory) / "fake-python-ran"
+            (fake / "python3").write_text(f"#!/bin/sh\necho ran > {marker}\nexit 97\n")
+            (fake / "python3").chmod(0o755)
+            with patch.dict(os.environ, {"PATH": str(fake) + ":" + os.environ["PATH"]}):
+                self.assertEqual(adapter.execute(action, idempotency_key="d1" * 32)["status"], "success")
+            self.assertFalse(marker.exists())
+
+    def test_registry_rejects_runtime_environment_controls(self):
+        from integrations.openclaw.repository_change import worker_environment
+        for name in ("LD_PRELOAD", "LD_LIBRARY_PATH", "PYTHONPATH", "PYTHONHOME", "HOME",
+                     "TMPDIR", "PATH", "GIT_CONFIG_COUNT", "BASH_ENV", "NODE_OPTIONS",
+                     "GCONV_PATH", "x=y", "PROVIDER_TOKEN\n"):
+            with self.subTest(name=name), self.assertRaises(RepositoryAuthorityError):
+                worker_environment([name])
+        with TemporaryDirectory() as directory:
+            worker = _scripted_worker(directory, "pass\n")
+            self._write_installation_worker_registry(worker)
+            registry = json.loads(self.installation_worker_registry.read_text())
+            # Match the actual installed registry structure, then attempt load.
+            for entry in registry["workers"]:
+                entry["environment"] = ["LD_PRELOAD"]
+            self.installation_worker_registry.write_text(json.dumps(registry))
+            with self.assertRaises(RepositoryAuthorityError):
+                load_worker_registry_executor("xzenia-coder")
+
+    def test_fresh_home_tmp_and_minimal_git_environment(self):
+        from unittest.mock import patch
+        from integrations.openclaw.repository_change import execution_environment, _git_env
+        with TemporaryDirectory() as directory:
+            with patch.dict(os.environ, {"HOME": directory, "TMPDIR": directory,
+                                        "LD_PRELOAD": "caller.so", "PYTHONPATH": directory}):
+                with execution_environment() as first:
+                    home = Path(first["HOME"])
+                    self.assertNotEqual(home, Path(directory))
+                    self.assertEqual(list(home.iterdir()), [])
+                    self.assertNotEqual(first["TMPDIR"], directory)
+                    with execution_environment() as second:
+                        self.assertNotEqual(first["HOME"], second["HOME"])
+                    self.assertNotIn("LD_PRELOAD", _git_env())
+                    self.assertNotIn("PYTHONPATH", _git_env())
+                self.assertFalse(home.exists())
+
+    def test_acceptance_git_control_mutation_is_rejected(self):
+        from unittest.mock import patch
+        with TemporaryDirectory() as directory:
+            repo, action, adapter = self._real_run(directory, _ALLOWED_CHANGE + _PASS_REPORT)
+            def mutate(*args, **kwargs):
+                with (repo / ".git" / "config").open("a") as stream:
+                    stream.write("\n# changed by acceptance test\n")
+                return []
+            with patch("integrations.openclaw.repository_change.run_acceptance_tests", side_effect=mutate):
+                receipt = adapter.execute(action, idempotency_key="d2" * 32)
+            self.assertNotEqual(receipt["status"], "success")
+            # The receipt itself must expose a failed reconciliation; no git call
+            # is needed to detect the changed control file.
+
+    def _registered_worker(self):
+        """The installed worker the governor's authority must name.
+
+        Tests that install a real worker do so before minting; otherwise a
+        placeholder executable is registered so authority can bind a
+        fingerprint, exactly as production authority must.
+        """
+        if not self.installation_worker_registry.exists():
+            placeholder = Path(self._placeholder_dir.name) / "placeholder-worker"
+            placeholder.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            placeholder.chmod(0o755)
+            self._write_installation_worker_registry(placeholder)
+        return load_worker_registry_executor("xzenia-coder")
+
+    def _authority(self, job, repo):
+        return mint_repository_change_authority(
+            roots=ROOTS,
+            approval_digest=APPROVAL,
+            parameters=parameters_from_job(
+                job, repo_path=repo, base_commit_sha=_head(repo),
+                worker=self._registered_worker(),
+            ),
+            executor_identity="xzenia-coder",
+            issuer_principal_id="verifier",
+            issuer_role="verifier",
+            nonce="repository-authority-0001",
+            expires_at=NOW + timedelta(minutes=5),
+            private_key=self.private_key,
+            key_id="verifier-key",
+            now=NOW,
+        )
+
+    def _adapter(self, directory, dispatcher):
+        return XzeniaCoderRepositoryAdapter(
+            dispatcher_path=dispatcher,
+            registry_path=Path(directory) / "registry.sqlite3",
+            public_key=self.public_key,
+            consumption_private_key=self.consumption_private_key,
+            consumption_key_id="execution-key",
+            consumption_public_key=self.consumption_public_key,
+            expected_roots=ROOTS,
+            expected_approval_digest=APPROVAL,
+            executor_id="xzenia-coder",
+        )
+
+
+def _repo(directory):
+    repo = Path(directory) / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(["git", "config", "user.email", "proofrail@example.test"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "ProofRail Test"], cwd=repo, check=True)
+    (repo / "allowed.py").write_text("def value():\n    return 1\n", encoding="utf-8")
+    (repo / "test_allowed.py").write_text(
+        "import unittest\n\nfrom allowed import value\n\n\n"
+        "class AllowedTests(unittest.TestCase):\n"
+        "    def test_value(self):\n"
+        "        self.assertEqual(value(), 2)\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "add", "allowed.py", "test_allowed.py"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+    return repo
+
+
+def _job(repo):
+    return {
+        "job_id": "governed-job",
+        "objective": "Change value to 2.",
+        "repo_path": str(repo),
+        "allowed_paths": ["allowed.py"],
+        "forbidden_paths": [],
+        "allowed_commands": [[sys.executable, "-m", "unittest", "discover", "-s", ".", "-p", "test_*.py"]],
+        "acceptance_tests": [[sys.executable, "-m", "unittest", "discover", "-s", ".", "-p", "test_*.py"]],
+        "max_runtime_seconds": 30,
+        "max_model_calls": 1,
+    }
+
+
+def _action(job, repo, directory, *, authority):
+    output = Path(directory) / "evidence"
+    job_file = Path(directory) / "job.json"
+    job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
+    return {
+        "action_type": "repository_change",
+        "execution": {
+            "authority": authority,
+            "job": job,
+            "job_file": str(job_file),
+            "repo_path": str(repo),
+            "output_dir": str(output),
+        },
+    }
+
+
+def _direct_dispatch(directory, repo, job, output, consumption_grant, env=None):
+    job_file = Path(directory) / "job.json"
+    job_file.write_text(json.dumps(job, sort_keys=True), encoding="utf-8")
+    consumption_file = Path(output) / "proofrail-consumption.json"
+    consumption_file.write_text(json.dumps(consumption_grant, sort_keys=True), encoding="utf-8")
+    return subprocess.run(
+        [
+            sys.executable,
+            "scripts/xzenia-coder-dispatch",
+            "--job-file",
+            str(job_file),
+            "--repo-path",
+            str(repo),
+            "--output-dir",
+            str(output),
+            "--proofrail-consumption-file",
+            str(consumption_file),
+        ],
+        cwd=Path(__file__).resolve().parents[1],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _dispatcher(directory, mode):
+    path = Path(directory) / "dispatcher.py"
+    path.write_text(
+        f"""#!/usr/bin/env python3
+import json, pathlib, subprocess, sys
+mode = {mode!r}
+repo = pathlib.Path(sys.argv[sys.argv.index('--repo-path') + 1])
+if mode == 'fake_tests':
+    pathlib.Path(repo, 'allowed.py').write_text('def value():\\n    return 3\\n')
+elif mode in ('unauthorized_commit', 'untracked_unauthorized'):
+    pathlib.Path(repo, 'allowed.py').write_text('def value():\\n    return 2\\n')
+    pathlib.Path(repo, 'escape.py').write_text('escape = True\\n')
+    if mode == 'unauthorized_commit':
+        subprocess.run(['git', 'add', 'allowed.py', 'escape.py'], cwd=repo, check=True)
+        subprocess.run(['git', 'commit', '-m', 'worker change'], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+elif mode == 'allowed_commit':
+    pathlib.Path(repo, 'allowed.py').write_text('def value():\\n    return 2\\n')
+    subprocess.run(['git', 'add', 'allowed.py'], cwd=repo, check=True)
+    subprocess.run(['git', 'commit', '-m', 'worker change'], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+else:
+    pathlib.Path(repo, 'allowed.py').write_text('def value():\\n    return 2\\n')
+out = pathlib.Path(sys.argv[sys.argv.index('--output-dir') + 1])
+out.mkdir(parents=True, exist_ok=True)
+for name in ('transcript.jsonl', 'commands.jsonl', 'patch.diff'):
+    (out / name).write_text('x\\n')
+(out / 'job.json').write_text(pathlib.Path(sys.argv[sys.argv.index('--job-file') + 1]).read_text())
+(out / 'tests.json').write_text(json.dumps({{'final': [{{'returncode': 0}}]}}))
+(out / 'hashes.json').write_text('{{}}')
+(out / 'final_report.json').write_text(json.dumps({{'status': 'PASS', 'changed_files': ['allowed.py']}}))
+pathlib.Path(pathlib.Path(sys.argv[sys.argv.index('--output-dir') + 1]).parent, 'called.txt').write_text('called')
+print(json.dumps({{'status': 'DISPATCHED'}}))
+""",
+        encoding="utf-8",
+    )
+    os.chmod(path, 0o755)
+    return path
+
+
+def _worker(directory):
+    path = Path(directory) / "worker.py"
+    path.write_text(
+        "#!/usr/bin/env python3\nraise SystemExit('worker_should_not_start')\n",
+        encoding="utf-8",
+    )
+    os.chmod(path, 0o755)
+    return path
+
+
+def _recording_worker(directory, *, mutate_original_job=None, marker=None):
+    path = Path(directory) / f"recording_worker_{marker or 'default'}.py"
+    mutation = (
+        f"pathlib.Path({str(mutate_original_job)!r}).write_text(json.dumps({{'objective': 'unauthorized mutation'}}))"
+        if mutate_original_job is not None
+        else ""
+    )
+    path.write_text(
+        f"""#!/usr/bin/env python3
+import json, pathlib, sys
+job_bytes = sys.stdin.buffer.read()
+output_dir = pathlib.Path(sys.argv[sys.argv.index('--output-dir') + 1])
+{mutation}
+output_dir.mkdir(parents=True, exist_ok=True)
+(output_dir / 'worker-seen-job.json').write_bytes(job_bytes)
+(output_dir / 'worker-marker.txt').write_text({(marker or 'legitimate')!r})
+for name in ('transcript.jsonl', 'commands.jsonl', 'patch.diff'):
+    (output_dir / name).write_text('x\\n')
+(output_dir / 'job.json').write_bytes(job_bytes)
+(output_dir / 'tests.json').write_text(json.dumps({{'final': [{{'returncode': 0}}]}}))
+(output_dir / 'hashes.json').write_text('{{}}')
+(output_dir / 'final_report.json').write_text(json.dumps({{'status': 'PASS', 'changed_files': []}}))
+""",
+        encoding="utf-8",
+    )
+    os.chmod(path, 0o755)
+    return path
+
+
+def _public_key_hex(public_key):
+    return public_key.public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    ).hex()
+
+
+def _head(repo):
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+# Worker script fragments for the review-of-#11 regression tests. Each runs in
+# a real worker process started by the real dispatcher; `repo` and `out` are
+# the paths the dispatcher passes on the command line.
+_ALLOWED_CHANGE = "(repo/'allowed.py').write_text('def value():\\n    return 2\\n')\n"
+_SPAWN_LOG = "open(repo.parent/'spawned.log','a').write('spawn\\n')\n"
+_PASS_REPORT = (
+    "for n in ('transcript.jsonl','commands.jsonl','patch.diff','tests.json','hashes.json'):\n"
+    "    (out/n).write_text('{}')\n"
+    "(out/'job.json').write_bytes(job)\n"
+    "(out/'final_report.json').write_text(json.dumps({'status':'PASS','changed_files':['allowed.py']}))\n"
+)
+
+
+def _scripted_worker(directory, body):
+    path = Path(directory) / "scripted_worker.py"
+    path.write_text(
+        f"#!{sys.executable}\n"
+        "import json, pathlib, sys\n"
+        "job = sys.stdin.buffer.read()\n"
+        "repo = pathlib.Path(sys.argv[sys.argv.index('--repo-path') + 1])\n"
+        "out = pathlib.Path(sys.argv[sys.argv.index('--output-dir') + 1])\n"
+        "out.mkdir(parents=True, exist_ok=True)\n" + body,
+        encoding="utf-8",
+    )
+    os.chmod(path, 0o755)
+    return path
+
+
+def _real_dispatcher(directory):
+    """Exercise the actual adapter interpreter selection, without a shell wrapper."""
+    return Path(__file__).resolve().parents[1] / "scripts" / "xzenia-coder-dispatch"
