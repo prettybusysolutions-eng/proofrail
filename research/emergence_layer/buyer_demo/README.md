@@ -73,8 +73,11 @@ on it without any of your files. The verifier checks:
   on the approved parent, changing only the approved path, with exactly the
   approved bytes.
 
-Altered evidence fails even if `SHA256SUMS` is regenerated, because the signatures
-and the git objects no longer agree. `tests/test_buyer_demo.py` covers this.
+If someone alters the signed records, the approved text or a bundle, verification
+fails even if `SHA256SUMS` is regenerated, because the signatures and the git objects
+no longer agree. `tests/test_buyer_demo.py` covers this. `summary.json` is different:
+it is the run's own narrative. The verifier checks its outcome, call and branch-head
+fields against the expected results, but not its timings or environment fields.
 
 ## What it does not show
 

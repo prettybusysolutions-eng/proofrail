@@ -52,9 +52,12 @@ they make themselves using `git archive --format=tar --prefix=proofrail/ <SHA>`.
    commit.
 5. **Read-only recovery.** `recover` issues no writes on any path, including error
    paths.
-6. **Evidence integrity.** Altering any exported file makes `verify_evidence.py`
-   fail, even when `SHA256SUMS` is regenerated. A verifier PASS implies that the
-   bundle holds exactly one dispatcher commit per approval, with the approved bytes.
+6. **Evidence integrity.** Altering the signed handoff, the contract, the
+   consumption record, the journal row, the approved text or a bundle makes
+   `verify_evidence.py` fail, even when `SHA256SUMS` is regenerated. A verifier
+   PASS implies that each bundle holds exactly one dispatcher commit per approval,
+   with the approved bytes. The timing and environment fields in `summary.json`
+   are self-reported and are not verified.
 7. **No secret export.** The evidence directory contains no private key, token or
    service database.
 
