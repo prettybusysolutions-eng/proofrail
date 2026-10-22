@@ -1,0 +1,387 @@
+{
+  "scope": "Local SQLite fixtures; two deliveries per cell; no remote services",
+  "rows": [
+    {
+      "mode": "retry_only",
+      "fault": "none",
+      "worker_exit_codes": [
+        0,
+        0
+      ],
+      "effect_count": 2,
+      "status": "COMPLETED",
+      "duplicate_effects": 1,
+      "false_completion": true,
+      "correct_effect": false,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "durable",
+      "fault": "none",
+      "worker_exit_codes": [
+        0,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": true,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "idempotent",
+      "fault": "none",
+      "worker_exit_codes": [
+        0,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": true,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "verified",
+      "fault": "none",
+      "worker_exit_codes": [
+        0,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": true,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "retry_only",
+      "fault": "before_effect",
+      "worker_exit_codes": [
+        73,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": true,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "durable",
+      "fault": "before_effect",
+      "worker_exit_codes": [
+        73,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": true,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "idempotent",
+      "fault": "before_effect",
+      "worker_exit_codes": [
+        73,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": true,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "verified",
+      "fault": "before_effect",
+      "worker_exit_codes": [
+        73,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": true,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "retry_only",
+      "fault": "after_effect",
+      "worker_exit_codes": [
+        73,
+        0
+      ],
+      "effect_count": 2,
+      "status": "COMPLETED",
+      "duplicate_effects": 1,
+      "false_completion": true,
+      "correct_effect": false,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "durable",
+      "fault": "after_effect",
+      "worker_exit_codes": [
+        73,
+        0
+      ],
+      "effect_count": 2,
+      "status": "COMPLETED",
+      "duplicate_effects": 1,
+      "false_completion": true,
+      "correct_effect": false,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "idempotent",
+      "fault": "after_effect",
+      "worker_exit_codes": [
+        73,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": true,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "verified",
+      "fault": "after_effect",
+      "worker_exit_codes": [
+        73,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": true,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "retry_only",
+      "fault": "after_checkpoint",
+      "worker_exit_codes": [
+        73,
+        0
+      ],
+      "effect_count": 2,
+      "status": "COMPLETED",
+      "duplicate_effects": 1,
+      "false_completion": true,
+      "correct_effect": false,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "durable",
+      "fault": "after_checkpoint",
+      "worker_exit_codes": [
+        73,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": true,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "idempotent",
+      "fault": "after_checkpoint",
+      "worker_exit_codes": [
+        73,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": true,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "verified",
+      "fault": "after_checkpoint",
+      "worker_exit_codes": [
+        73,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": true,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "retry_only",
+      "fault": "false_ack",
+      "worker_exit_codes": [
+        0,
+        0
+      ],
+      "effect_count": 0,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": true,
+      "correct_effect": false,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "durable",
+      "fault": "false_ack",
+      "worker_exit_codes": [
+        0,
+        0
+      ],
+      "effect_count": 0,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": true,
+      "correct_effect": false,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "idempotent",
+      "fault": "false_ack",
+      "worker_exit_codes": [
+        0,
+        0
+      ],
+      "effect_count": 0,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": true,
+      "correct_effect": false,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "verified",
+      "fault": "false_ack",
+      "worker_exit_codes": [
+        0,
+        0
+      ],
+      "effect_count": 0,
+      "status": "UNCONFIRMED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": false,
+      "receipt_chain_valid": true,
+      "protocol_status": "ACCEPTED"
+    },
+    {
+      "mode": "retry_only",
+      "fault": "wrong_effect",
+      "worker_exit_codes": [
+        0,
+        0
+      ],
+      "effect_count": 2,
+      "status": "COMPLETED",
+      "duplicate_effects": 1,
+      "false_completion": true,
+      "correct_effect": false,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "durable",
+      "fault": "wrong_effect",
+      "worker_exit_codes": [
+        0,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": true,
+      "correct_effect": false,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "idempotent",
+      "fault": "wrong_effect",
+      "worker_exit_codes": [
+        0,
+        0
+      ],
+      "effect_count": 1,
+      "status": "COMPLETED",
+      "duplicate_effects": 0,
+      "false_completion": true,
+      "correct_effect": false,
+      "receipt_chain_valid": true,
+      "protocol_status": "COMPLETED"
+    },
+    {
+      "mode": "verified",
+      "fault": "wrong_effect",
+      "worker_exit_codes": [
+        0,
+        0
+      ],
+      "effect_count": 1,
+      "status": "UNCONFIRMED",
+      "duplicate_effects": 0,
+      "false_completion": false,
+      "correct_effect": false,
+      "receipt_chain_valid": true,
+      "protocol_status": "ACCEPTED"
+    }
+  ],
+  "summary": {
+    "retry_only": {
+      "duplicate_effects": 4,
+      "false_completions": 5,
+      "correct_effect_cases": 1
+    },
+    "durable": {
+      "duplicate_effects": 1,
+      "false_completions": 3,
+      "correct_effect_cases": 3
+    },
+    "idempotent": {
+      "duplicate_effects": 0,
+      "false_completions": 2,
+      "correct_effect_cases": 4
+    },
+    "verified": {
+      "duplicate_effects": 0,
+      "false_completions": 0,
+      "correct_effect_cases": 4
+    }
+  }
+}

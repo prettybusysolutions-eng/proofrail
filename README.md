@@ -154,6 +154,10 @@ sources, and deployment hardening.
 
 ## Repository Map
 
+- [`research/emergence_layer/`](research/emergence_layer/): isolated signed-handoff
+  and subprocess-crash experiments comparing recovery controls; includes
+  reproducible negative controls and explicit ProofRail integration boundaries
+
 - `proofrail/`: authority, permit, trust, checkpoint, anchor, and reproduction
   logic
 - `integrations/openclaw/`: governed execution adapters
