@@ -110,7 +110,7 @@ class Service:
                           repository=self.repository, branch=self.branch, path=self.path, trust=trust)
 
 
-def run(workdir, evidence, repository, branch, path, make_client, source_commit, mode):
+def run(workdir, evidence, repository, branch, path, make_client, source, mode):
     import sqlite3
     keys = {n: Ed25519PrivateKey.generate() for n in ('agent', 'approver', 'consumer', 'observer')}
     artifact = ('# Gate-3 trial artifact\n\nApproved exact bytes for one dispatcher '
@@ -211,7 +211,7 @@ def run(workdir, evidence, repository, branch, path, make_client, source_commit,
                                      start_head, scenarios)
     print('[provider end state] %s%s' % (provider['result'],
           ' (' + provider['reason'] + ')' if provider.get('reason') else ''))
-    export(evidence, repository, branch, path, source_commit, mode, scenarios, provider)
+    export(evidence, repository, branch, path, source, mode, scenarios, provider)
     return scenarios, provider
 
 
@@ -260,14 +260,15 @@ def verify_provider_chain(client, repository, branch, path, start_head, scenario
             'read_calls': len(client.calls), 'write_calls': client.write_count()}
 
 
-def export(evidence, repository, branch, path, source_commit, mode, scenarios, provider):
+def export(evidence, repository, branch, path, source, mode, scenarios, provider):
     evidence.mkdir(parents=True, exist_ok=False)
     summary = {
         'kind': 'proofrail.gate3-live-trial-evidence.v1',
         'mode': mode,
         'verdict': 'PASS' if trial_passed(scenarios, provider) else 'FAIL',
         'claim': 'Author-run scenario observations; consult verdict and individual results.',
-        'source_commit': source_commit,
+        'source_commit': source['commit'],
+        'source_tree': source,
         'repository': repository, 'branch': branch, 'path': path,
         'fault_model': 'application-level response loss after a completed GitHub call',
         'not_covered': ['transport-level interruption during a call (reset, timeout, truncated body)',
@@ -293,15 +294,26 @@ def trial_passed(scenarios, provider):
             and provider['result'] == 'PASS' and len(provider['chain']) == 3)
 
 
-def source_commit_of(repo_dir):
+def source_state(repo_dir):
+    """The checkout this run executes: commit, tracked changes and untracked paths.
+
+    Recorded separately rather than as a '-dirty' suffix on the SHA. Untracked
+    files matter: the runner puts its own directories first on sys.path, so an
+    untracked module there could shadow an import. Ignored files (build output,
+    caches) are not listed. Keep virtual environments outside the checkout.
+    """
+    def git(*args):
+        return subprocess.run(['git', '-C', str(repo_dir), *args], capture_output=True,
+                              text=True, check=True).stdout
     try:
-        out = subprocess.run(['git', '-C', str(repo_dir), 'rev-parse', 'HEAD'],
-                             capture_output=True, text=True, check=True).stdout.strip()
-        dirty = subprocess.run(['git', '-C', str(repo_dir), 'status', '--porcelain'],
-                              capture_output=True, text=True).stdout.strip()
-        return out + ('-dirty' if dirty else '')
+        commit = git('rev-parse', 'HEAD').strip()
+        tracked, untracked = [], []
+        for entry in filter(None, git('status', '--porcelain=v1', '-z').split('\0')):
+            (untracked if entry.startswith('??') else tracked).append(entry[3:])
     except Exception:  # noqa: BLE001
-        return None
+        return {'commit': None, 'tracked_changes': None, 'untracked': None, 'clean': False}
+    return {'commit': commit, 'tracked_changes': tracked[:50], 'untracked': untracked[:50],
+            'clean': not tracked and not untracked}
 
 
 def main():
@@ -317,7 +329,7 @@ def main():
     import tempfile
     workdir = args.workdir or Path(tempfile.mkdtemp(prefix='gate3-'))
     workdir.mkdir(parents=True, exist_ok=True)
-    source_commit = source_commit_of(ROOT)
+    source = source_state(ROOT)
 
     if args.local:
         from local_git_provider import LocalGitProvider, create_repository
@@ -326,15 +338,23 @@ def main():
         create_repository(git_dir, branch, {'README.md': 'Gate-3 local self-test.\n'})
         make_client = lambda: LocalGitProvider(git_dir, repository)  # noqa: E731
         scenarios, provider = run(workdir, args.evidence, repository, branch, path, make_client,
-                                  source_commit, 'local-selftest')
+                                  source, 'local-selftest')
     else:
+        if not source['clean']:
+            # Refuse before any GitHub call, so the operator can fix the checkout and
+            # rerun within the token's lifetime instead of producing unpinned evidence.
+            print('refusing live run: checkout is not a clean pinned commit '
+                  '(tracked changes: %s; untracked: %s). Keep the virtual environment '
+                  'outside the checkout.' % (source['tracked_changes'],
+                                             source['untracked']), file=sys.stderr)
+            return 2
         from dispatcher_cli import private_file
         config = json.loads(private_file(args.config))
         repository, branch, path = config['repository'], config['branch'], config['path']
         token_file = config['github_token_file']
         make_client = lambda: GitHubAPI(token_file)  # noqa: E731 - reads the 0600 token each call-set
         scenarios, provider = run(workdir, args.evidence, repository, branch, path, make_client,
-                                  source_commit, 'live')
+                                  source, 'live')
     return 0 if trial_passed(scenarios, provider) else 1
 
 

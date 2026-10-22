@@ -17,6 +17,8 @@ sys.path[:0] = [str(LIVE), str(ROOT / 'buyer_demo'), str(ROOT)]
 
 from app_fault import ResponseLostAfterCall, UNKNOWN  # noqa: E402
 
+SOURCE = {'commit': 'test', 'tracked_changes': [], 'untracked': [], 'clean': True}
+
 
 def test_runner_local_selftest(tmp_path):
     evidence = tmp_path / 'evidence'
@@ -111,7 +113,7 @@ def test_runner_rejects_fault_that_never_fires(tmp_path, monkeypatch):
     monkeypatch.setattr(run_trial, 'ResponseLostAfterCall', lambda client: client)
     scenarios, provider = run_trial.run(tmp_path / 'work', tmp_path / 'evidence', repository,
                                         branch, 'evidence/report.json',
-                                        lambda: LocalGitProvider(repo, repository), 'test', 'local-selftest')
+                                        lambda: LocalGitProvider(repo, repository), SOURCE, 'local-selftest')
     assert scenarios[1]['outcome'] == 'UNEXPECTED'
     summary = json.loads((tmp_path / 'evidence' / 'summary.json').read_text())
     assert summary['verdict'] == 'FAIL'
@@ -146,7 +148,7 @@ def _run_with(tmp_path, monkeypatch, before_scenario_b=None, after_run=None):
             return real_verify(client, *args)
         monkeypatch.setattr(run_trial, 'verify_provider_chain', verify)
     scenarios, provider = run_trial.run(tmp_path / 'work', tmp_path / 'evidence', repository, branch, path,
-                                        lambda: LocalGitProvider(repo, repository), 'test', 'local-selftest')
+                                        lambda: LocalGitProvider(repo, repository), SOURCE, 'local-selftest')
     summary = json.loads((tmp_path / 'evidence' / 'summary.json').read_text())
     return scenarios, provider, summary
 
@@ -186,3 +188,39 @@ def test_extra_commit_after_run_fails(tmp_path, monkeypatch):
         tmp_path, monkeypatch,
         after_run=lambda repo, branch, path: commit_file(repo, branch, path, 'edited\n', 'Late edit'))
     assert provider['result'] == 'FAIL' and summary['verdict'] == 'FAIL'
+
+
+def test_source_state_separates_commit_from_untracked_and_tracked_changes(tmp_path):
+    """A venv inside the checkout used to turn the recorded SHA into '<sha>-dirty'."""
+    import run_trial
+    repo = tmp_path / 'checkout'
+    subprocess.run(['git', 'init', '-q', str(repo)], check=True)
+    (repo / 'a.py').write_text('x = 1\n')
+    subprocess.run(['git', '-C', str(repo), 'add', 'a.py'], check=True)
+    subprocess.run(['git', '-C', str(repo), '-c', 'user.name=t', '-c', 'user.email=t@t',
+                    'commit', '-qm', 'init'], check=True)
+    sha = subprocess.run(['git', '-C', str(repo), 'rev-parse', 'HEAD'], capture_output=True,
+                         text=True, check=True).stdout.strip()
+    clean = run_trial.source_state(repo)
+    assert clean == {'commit': sha, 'tracked_changes': [], 'untracked': [], 'clean': True}
+    (repo / '.venv').mkdir()
+    (repo / '.venv' / 'pyvenv.cfg').write_text('home = /usr\n')
+    state = run_trial.source_state(repo)
+    assert state['commit'] == sha and state['untracked'] == ['.venv/'] and not state['clean']
+    (repo / 'a.py').write_text('x = 2\n')
+    assert run_trial.source_state(repo)['tracked_changes'] == ['a.py']
+
+
+def test_live_mode_refuses_unclean_checkout_before_any_provider_call(tmp_path, monkeypatch):
+    import run_trial
+    monkeypatch.setattr(run_trial, 'source_state', lambda root: {
+        'commit': 'a' * 40, 'tracked_changes': [], 'untracked': ['.venv/'], 'clean': False})
+
+    def no_provider(*args, **kwargs):
+        raise AssertionError('provider client constructed for an unclean checkout')
+    monkeypatch.setattr(run_trial, 'GitHubAPI', no_provider)
+    monkeypatch.setattr(run_trial, 'run', no_provider)
+    monkeypatch.setattr(sys, 'argv', ['run_trial.py', '--config', str(tmp_path / 'absent.json'),
+                                      '--evidence', str(tmp_path / 'e'), '--workdir', str(tmp_path / 'w')])
+    assert run_trial.main() == 2
+    assert not (tmp_path / 'e').exists()
