@@ -130,6 +130,8 @@ def run(workdir, evidence, repository, branch, path, make_client, source_commit,
     except RuntimeError as exc:
         lost_error = str(exc)
     writes_during_loss = client_b.write_count()
+    discarded = sum(event.get('response_discarded') is True
+                    for event in getattr(fault, 'events', []))
     # Operator restart: reopen the journal, swap in a clean counting client (no fault).
     disp_b.journal = Journal(journal_b.path)
     recovery_client = CallLog(make_client())
@@ -142,12 +144,16 @@ def run(workdir, evidence, repository, branch, path, make_client, source_commit,
         reuse_refused = type(exc).__name__ + ': ' + str(exc)
     record('B lost response then read-only recovery',
            dispatch_error=lost_error, lost_response_was_unknown=(lost_error == UNKNOWN),
+           discarded_responses=discarded,
            write_calls_including_lost_write=writes_during_loss,
            recovery_outcome=result_b['outcome'], recovery_commit_sha=result_b['commit_sha'],
            recovery_write_calls=recovery_client.write_count(),
            recovery_calls=recovery_client.paths(), reuse_refused=reuse_refused,
-           outcome='MATCH' if result_b['outcome'] == 'MATCH' and recovery_client.write_count() == 0
-                   and reuse_refused else 'UNEXPECTED')
+           outcome='MATCH' if lost_error == UNKNOWN and discarded == 1
+                   and writes_during_loss == 3 and result_b['outcome'] == 'MATCH'
+                   and recovery_client.write_count() == 0
+                   and reuse_refused == 'ValueError: retained_authority_already_reserved'
+                   else 'UNEXPECTED')
 
     # Scenario C: registry rollback with retained journal blocks admission.
     client_c = CallLog(make_client())
@@ -182,7 +188,9 @@ def run(workdir, evidence, repository, branch, path, make_client, source_commit,
            first_dispatch_outcome=result_c['outcome'], first_commit_sha=result_c['commit_sha'],
            write_calls_before_rollback=writes_before_rollback,
            admission_blocked=blocked, provider_write_calls_after_rollback=rollback_client.write_count(),
-           outcome='BLOCKED' if blocked and rollback_client.write_count() == 0 else 'UNEXPECTED')
+           outcome='BLOCKED' if blocked == 'BindingError: execution_not_found'
+                   and result_c['outcome'] == 'MATCH' and writes_before_rollback == 3
+                   and not rollback_client.calls else 'UNEXPECTED')
 
     export(evidence, repository, branch, path, source_commit, mode, scenarios)
     return scenarios
@@ -193,9 +201,8 @@ def export(evidence, repository, branch, path, source_commit, mode, scenarios):
     summary = {
         'kind': 'proofrail.gate3-live-trial-evidence.v1',
         'mode': mode,
-        'claim': ('Against ' + repository + ', the unchanged dispatcher wrote approved bytes once, '
-                  'reported a lost response as unknown and recovered with reads only, and blocked '
-                  'admission after a registry rollback with the journal retained.'),
+        'verdict': 'PASS' if trial_passed(scenarios) else 'FAIL',
+        'claim': 'Author-run scenario observations; consult verdict and individual results.',
         'source_commit': source_commit,
         'repository': repository, 'branch': branch, 'path': path,
         'fault_model': 'application-level response loss after a completed GitHub call',
@@ -211,6 +218,13 @@ def export(evidence, repository, branch, path, source_commit, mode, scenarios):
             for p in sorted(evidence.rglob('*')) if p.is_file()}
     (evidence / 'SHA256SUMS').write_text(''.join(f'{d}  {n}\n' for n, d in sums.items()))
     print('evidence:', evidence)
+
+
+def trial_passed(scenarios):
+    return (len(scenarios) == 3
+            and [s['outcome'] for s in scenarios] == ['MATCH', 'MATCH', 'BLOCKED']
+            and scenarios[0]['write_calls'] == 3
+            and scenarios[0]['parent_sha'] != scenarios[0]['commit_sha'])
 
 
 def source_commit_of(repo_dir):
@@ -245,15 +259,16 @@ def main():
         git_dir = workdir / 'repo.git'
         create_repository(git_dir, branch, {'README.md': 'Gate-3 local self-test.\n'})
         make_client = lambda: LocalGitProvider(git_dir, repository)  # noqa: E731
-        run(workdir, args.evidence, repository, branch, path, make_client, source_commit, 'local-selftest')
+        scenarios = run(workdir, args.evidence, repository, branch, path, make_client, source_commit, 'local-selftest')
     else:
         from dispatcher_cli import private_file
         config = json.loads(private_file(args.config))
         repository, branch, path = config['repository'], config['branch'], config['path']
         token_file = config['github_token_file']
         make_client = lambda: GitHubAPI(token_file)  # noqa: E731 - reads the 0600 token each call-set
-        run(workdir, args.evidence, repository, branch, path, make_client, source_commit, 'live')
+        scenarios = run(workdir, args.evidence, repository, branch, path, make_client, source_commit, 'live')
+    return 0 if trial_passed(scenarios) else 1
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

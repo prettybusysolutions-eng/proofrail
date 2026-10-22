@@ -90,3 +90,24 @@ def test_app_fault_real_failure_is_not_recorded_as_loss():
         fault.request('PATCH', '/git/refs/heads/b')
     assert fault.events == []        # nothing marked discarded; the call itself failed
     assert fault._armed is True      # still armed: no response was actually dropped
+
+
+def test_runner_rejects_fault_that_never_fires(tmp_path, monkeypatch):
+    import run_trial
+    from local_git_provider import LocalGitProvider, create_repository
+    repository = 'demo-team/gate3-local'
+    branch = 'trial/emergence-gate3'
+    repo = tmp_path / 'repo.git'
+    create_repository(repo, branch, {'README.md': 'fixture\n'})
+    monkeypatch.setattr(run_trial, 'ResponseLostAfterCall', lambda client: client)
+    scenarios = run_trial.run(tmp_path / 'work', tmp_path / 'evidence', repository,
+                              branch, 'evidence/report.json',
+                              lambda: LocalGitProvider(repo, repository), 'test', 'local-selftest')
+    assert scenarios[1]['outcome'] == 'UNEXPECTED'
+    summary = json.loads((tmp_path / 'evidence' / 'summary.json').read_text())
+    assert summary['verdict'] == 'FAIL'
+    monkeypatch.setattr(run_trial, 'run', lambda *args: scenarios)
+    monkeypatch.setattr(sys, 'argv', ['run_trial.py', '--local', '--evidence',
+                                    str(tmp_path / 'cli-evidence'), '--workdir',
+                                    str(tmp_path / 'cli-work')])
+    assert run_trial.main() == 1

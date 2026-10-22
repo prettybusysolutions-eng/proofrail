@@ -49,6 +49,13 @@ never bodies), and the recovery and block reasons. It is covered by `SHA256SUMS`
 It deliberately excludes every secret: no private key, no installation token, no
 request or response body. Keys are generated per run (see "Limits").
 
+The summary includes an explicit `verdict`. The runner exits nonzero if a scenario
+does not satisfy its expected assertions. Scenario B requires exactly one recorded
+discarded response, the exact unknown-outcome error, successful read-only recovery,
+and the expected replay refusal. Scenario C requires the specific missing-execution
+refusal after restoration, not an arbitrary exception. A disabled fault must fail
+the trial even if all writes and subsequent recovery otherwise succeed.
+
 ## Running the self-test (no network)
 
 ```sh
