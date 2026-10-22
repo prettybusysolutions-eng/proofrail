@@ -21,6 +21,8 @@ one repository, branch, path and parent commit. The unmodified pilot dispatcher
 | 6a | Second approval; branch update succeeds but the response is lost | `OUTCOME_UNKNOWN`, never reported as success |
 | 6b | Read-only recovery | `MATCH` using GET requests only |
 | 6c | Retry of that approval | `REFUSED`; the total stays at one branch update |
+| 7a | Third approval, approved write | `MATCH` |
+| 7b | Someone points the branch at a look-alike commit with the same parent and the same file bytes, plus an unapproved `deploy/run.sh`; verification rerun | `REFUSED`: `commit_tree_not_exact_approved_change`; reads only |
 
 Steps 2a and 2b happen before the approved write and do not use up the approval.
 Step 3 therefore succeeds with the same approval.
@@ -80,6 +82,32 @@ update the unsigned summary and checksums, and require verification to fail
 without changing any signed record. Both probes falsely passed at `8da1041`;
 the mode check closes that evidence-verification gap. This finding concerns the
 offline verifier, not a demonstrated bypass of the dispatcher's write controls.
+
+The same cause, confirming a result from one projection of the commit (the bytes
+at the approved path) instead of the whole commit, was also present in the
+dispatcher's own read-back. Before this change, `Dispatcher.recover` returned
+`MATCH` for a commit it never wrote, as long as that commit sat on the approved
+parent and served the approved bytes. That held when the look-alike commit:
+
+- added another file;
+- made the file executable;
+- placed a submodule beside it;
+- deleted or changed a base file;
+- on GitHub, turned the path into a symlink to a file with the exact bytes,
+  because GitHub's contents API documents that it follows such symlinks.
+
+Both `recover` and the verifier now apply one rule. The commit's whole tree must
+equal the approved base tree plus exactly one regular `100644` file holding the
+expected bytes. `recover` checks this from complete recursive tree listings and
+refuses a truncated listing. `tests/test_recover_whole_tree.py` covers every
+variant above against real git objects. All seven of those failure cases returned
+`MATCH` with the previous dispatcher. Demo step 7 shows one of them.
+
+This was a false-confirmation gap, not a write bypass. The dispatcher never wrote
+unapproved content. Exploiting it required someone else to replace the branch. The
+pilot's required branch controls forbid that, but they are not yet configured. One
+cost of the fix: a repository whose recursive tree listing exceeds GitHub's limit
+(100,000 entries or 7 MB) cannot be confirmed.
 
 If someone alters the signed records, the approved text or a bundle, verification
 fails even if `SHA256SUMS` is regenerated, because the signatures and the git objects

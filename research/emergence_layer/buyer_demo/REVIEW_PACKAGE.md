@@ -48,8 +48,10 @@ they make themselves using `git archive --format=tar --prefix=proofrail/ <SHA>`.
    - a lost response;
    - restoring an older registry while the journal is retained.
 4. **No false success.** A lost or failed response is never reported as `MATCH`.
-   `MATCH` is reported only after reading back the exact bytes at the immutable
-   commit.
+   `MATCH` is reported only when the commit at the branch head sits on the
+   approved parent and its whole tree equals the approved base tree plus exactly
+   one regular `100644` file holding the exact bytes. This rules out a commit the
+   dispatcher did not write that merely serves the same bytes.
 5. **Read-only recovery.** `recover` issues no writes on any path, including error
    paths.
 6. **Evidence integrity.** Altering the signed handoff, the contract, the
@@ -79,6 +81,15 @@ they make themselves using `git archive --format=tar --prefix=proofrail/ <SHA>`.
   without corroboration.
 - Craft a repository bundle in which a second commit carries the dispatcher's
   commit message.
+- Point the branch at a look-alike commit on the approved parent that serves the
+  approved bytes, and check that it gets no confirmation. Variants to try:
+  - another file added;
+  - mode changes;
+  - a symlink (GitHub's contents API follows it);
+  - a submodule;
+  - a deleted base file;
+  - a path differing only in Unicode or case;
+  - a tree listing reported as truncated.
 
 ## Out of scope for this package (do not certify)
 

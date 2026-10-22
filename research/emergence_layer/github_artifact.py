@@ -53,3 +53,40 @@ def verify_commit(ledger, execution_id, handoff, contract, trust, *,
             'commit_sha': commit['sha'], 'consumption_digest': full_digest(consumption),
             'file_sha256': hashlib.sha256(file_content.encode()).hexdigest(),
             'scope': 'Authenticated GitHub commit readback; operator-mediated dispatch'}
+
+
+def git_blob_sha(data):
+    """Git's object ID for a blob with these bytes (SHA-1 object format)."""
+    return hashlib.sha1(b'blob %d\0' % len(data) + data).hexdigest()
+
+
+def _tree_entries(listing):
+    require(isinstance(listing, dict) and listing.get('truncated') is False and
+            isinstance(listing.get('tree'), list), 'tree_listing_incomplete')
+    leaves, trees = {}, set()
+    for entry in listing['tree']:
+        require(isinstance(entry, dict) and isinstance(entry.get('path'), str) and
+                all(isinstance(entry.get(k), str) for k in ('mode', 'type', 'sha')), 'tree_entry_invalid')
+        require(entry['path'] not in leaves and entry['path'] not in trees, 'tree_entry_duplicate')
+        if entry['type'] == 'tree':
+            trees.add(entry['path'])
+        else:
+            leaves[entry['path']] = (entry['mode'], entry['type'], entry['sha'])
+    return leaves, trees
+
+
+def verify_tree_change(base_listing, head_listing, path, content):
+    """The commit's whole tree must be the approved base tree plus exactly one
+    regular, non-executable file at `path` holding `content`.
+
+    Checking only the bytes served for `path` is a projection: the GitHub contents
+    API follows a symlink to a normal file, and it says nothing about the mode or
+    about other paths. Both listings must be complete (`truncated` false).
+    """
+    base_leaves, base_trees = _tree_entries(base_listing)
+    head_leaves, head_trees = _tree_entries(head_listing)
+    expected = dict(base_leaves)
+    expected[path] = ('100644', 'blob', git_blob_sha(content.encode('utf-8')))
+    parents = {'/'.join(path.split('/')[:i]) for i in range(1, path.count('/') + 1)}
+    require(head_leaves == expected and head_trees == base_trees | parents,
+            'commit_tree_not_exact_approved_change')

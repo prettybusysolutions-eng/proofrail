@@ -40,9 +40,9 @@ def load(path):
     return json.loads(path.read_text())
 
 
-def git(git_dir, *args):
-    return subprocess.run(['git', '--git-dir', str(git_dir), *args], capture_output=True,
-                          env=GIT_ENV, check=True).stdout
+def git(git_dir, *args, input=None, env=None):
+    return subprocess.run(['git', '--git-dir', str(git_dir), *args], capture_output=True, input=input,
+                          env={**GIT_ENV, **(env or {})}, check=True).stdout
 
 
 def verify_checksums(root):
@@ -126,6 +126,15 @@ def verify_run(root, name, keys, summary, steps, scratch):
                            'task_id': contract['task_id'], 'artifact': approved['text']},
                           sort_keys=True, indent=2) + '\n'
     actual = git(git_dir, 'cat-file', 'blob', commit + ':' + p['path'])
+    # Whole-tree rule: the commit's tree must be exactly the approved base tree with
+    # one regular file holding the expected bytes. Bytes alone are a projection.
+    index = {'GIT_INDEX_FILE': str(scratch / (name + '.expected-index'))}
+    git(git_dir, 'read-tree', p['base_tree'], env=index)
+    blob = git(git_dir, 'hash-object', '-w', '--stdin', input=expected.encode()).decode().strip()
+    git(git_dir, 'update-index', '--add', '--cacheinfo', '100644,' + blob + ',' + p['path'], env=index)
+    expected_tree = git(git_dir, 'write-tree', env=index).decode().strip()
+    check(f'{name}: dispatcher commit tree is exactly the approved base plus the approved file',
+          git(git_dir, 'rev-parse', commit + '^{tree}').decode().strip() == expected_tree)
     check(f'{name}: committed file is exactly the approved text plus its execution record',
           actual == expected.encode())
     confirmed = [s for s in steps if s.get('result', {}).get('execution_id') == consumption['execution_id']]
@@ -186,6 +195,10 @@ def verify_all(root):
     check('step 6b: recovery confirmed using reads only',
           by['6b']['outcome'] == 'MATCH' and by['6b']['provider_write_calls'] == 0
           and all(c.startswith('GET ') for c in by['6b']['provider_calls']))
+    check('step 7b: look-alike commit with the approved bytes and an extra file not confirmed',
+          by['7a']['outcome'] == 'MATCH' and by['7b']['outcome'] == 'REFUSED'
+          and by['7b']['refusal'].endswith('commit_tree_not_exact_approved_change')
+          and by['7b']['provider_write_calls'] == 0)
     with tempfile.TemporaryDirectory() as scratch:
         for name in ('primary', 'recovery'):
             try:

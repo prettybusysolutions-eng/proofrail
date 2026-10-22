@@ -62,6 +62,22 @@ def commit_file(git_dir, branch, path, text, message):
     return commit
 
 
+def replace_with_lookalike(git_dir, branch, base, path, data, extra_path, extra_text):
+    """Someone else points the branch at a commit on `base` that has the same file
+    bytes at `path` plus one more file (for example after an administrative rewind)."""
+    index = Path(git_dir) / 'demo-index'
+    env = {'GIT_INDEX_FILE': str(index)}
+    git(git_dir, 'read-tree', base, env=env)
+    for name, content in ((path, data), (extra_path, extra_text.encode())):
+        blob = git(git_dir, 'hash-object', '-w', '--stdin', input=content).decode().strip()
+        git(git_dir, 'update-index', '--add', '--cacheinfo', '100644,' + blob + ',' + name, env=env)
+    tree = git(git_dir, 'write-tree', env=env).decode().strip()
+    index.unlink()
+    commit = git(git_dir, 'commit-tree', tree, '-p', base, '-m', 'Look-alike commit').decode().strip()
+    git(git_dir, 'update-ref', 'refs/heads/' + branch, commit)
+    return commit
+
+
 class LocalGitProvider:
     """Answers exactly the requests `Dispatcher` issues; anything else is refused.
 
@@ -89,6 +105,16 @@ class LocalGitProvider:
             return {'ref': ref, 'object': {'sha': self._rev(ref)}}
         if method == 'GET' and route.startswith('/git/commits/'):
             return self._commit(route.rsplit('/', 1)[1])
+        if method == 'GET' and route.startswith('/git/trees/'):
+            sha = route.rsplit('/', 1)[1]
+            recursive = ['-r', '-t'] if 'recursive=1' in query.split('&') else []
+            raw = git(self.git_dir, 'ls-tree', '-z', *recursive, sha).decode()
+            tree = []
+            for item in filter(None, raw.split('\0')):
+                meta, path = item.split('\t', 1)
+                mode, kind, obj = meta.split()
+                tree.append({'path': path, 'mode': mode, 'type': kind, 'sha': obj})
+            return {'sha': sha, 'tree': tree, 'truncated': False}
         if method == 'GET' and route.startswith('/contents/'):
             ref = dict(p.split('=', 1) for p in query.split('&') if '=' in p).get('ref')
             data = git(self.git_dir, 'cat-file', 'blob', ref + ':' + route[len('/contents/'):])

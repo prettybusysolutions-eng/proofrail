@@ -1,6 +1,12 @@
 # Independent dispatcher review request
 
 Status: OPEN. Author-run tests and CI are not independent semantic review.
+
+Target note (2026-10-22): `recover` changed after 73d7d48 (the SHA named in
+issue #30) to confirm the whole commit tree, not only the file bytes; see
+buyer_demo/README.md. Review the current head of the branch under review, not
+73d7d48. Add to the counterexamples: a look-alike commit on the approved parent
+serving the approved bytes.
 This target extends PR #29; it does not close existing ProofRail review gates.
 
 Review the exact PR head SHA, record reviewer identity, independence from authors,

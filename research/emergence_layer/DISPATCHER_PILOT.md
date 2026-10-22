@@ -107,7 +107,10 @@ Legacy trust-checkpoint-bearing authority remains rejected; this PR does not adv
 ProofRail's checkpoint epoch/counter protocol or migrate deployed checkpoint stores.
 
 Recovery performs GET requests only. It validates parent, exact file bytes, run ID
-and consumption digest at the observed immutable commit. A moved branch, unavailable
+and consumption digest at the observed immutable commit, and that the commit's whole
+tree equals the approved base tree plus exactly one regular 100644 file with those
+bytes (complete recursive listings; a truncated listing blocks confirmation). Byte
+equality alone would confirm a look-alike commit someone else wrote. A moved branch, unavailable
 provider, incomplete preparation or mismatching content blocks confirmation; there
 is no write retry or broad commit search. This is conservative reconciliation,
 not a general exactly-once external transaction protocol.

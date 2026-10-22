@@ -52,8 +52,10 @@ def test_demo_outcomes(evidence):
     assert steps['6a']['outcome'] == 'OUTCOME_UNKNOWN'
     assert steps['6b']['outcome'] == 'MATCH' and steps['6b']['provider_write_calls'] == 0
     assert steps['6c']['refusal'].endswith('retained_authority_already_reserved')
+    assert steps['7a']['outcome'] == 'MATCH'
+    assert steps['7b']['refusal'].endswith('commit_tree_not_exact_approved_change')
     total_updates = sum(s['branch_updates'] for s in steps.values())
-    assert total_updates == 2  # one per approval, including the lost-response run
+    assert total_updates == 3  # one per approval: primary, lost-response and look-alike runs
 
 
 def test_export_holds_no_private_material(evidence):
