@@ -1,7 +1,7 @@
 # Human handoff: prepare the witnessed GitHub trial
 
 Status: setup instructions only. No live run or independent approval is recorded.
-Code baseline: 55a8d8bfd203a5400418ae3cfe2deb9e454f559d (PR #40, draft).
+Code baseline: d95438033e01502c0bf4a989ab0ec63129fa026e (PR #40, draft).
 This trial does not execute untrusted worker code and does not close #11's sandbox gate.
 
 ## Marcus: three decisions, no credentials in chat
@@ -70,17 +70,24 @@ and evidence directories.
 
 ```sh
 git clone https://github.com/prettybusysolutions-eng/proofrail.git proofrail-gate3-source
+python3 -m venv proofrail-gate3-venv          # OUTSIDE the checkout
+. proofrail-gate3-venv/bin/activate
 cd proofrail-gate3-source
 git fetch origin pilot/buyer-demo
-git checkout --detach 55a8d8bfd203a5400418ae3cfe2deb9e454f559d
-python3 -m venv .venv
-. .venv/bin/activate
+git checkout --detach d95438033e01502c0bf4a989ab0ec63129fa026e
 python -m pip install . -r research/emergence_layer/requirements-dev.txt
 cd research/emergence_layer
 python -m pytest -q tests/test_gate3_trial.py
+git status --porcelain                         # must print nothing
 ```
 
-Record Python/dependency versions. Confirm the tracked source is unchanged.
+Keep the virtual environment, config, token, work and evidence directories outside
+the checkout. The live runner refuses to start (exit 2, before any GitHub call)
+if the checkout has tracked changes or untracked files, because an untracked
+module beside the runner could shadow an import. The evidence records the bare
+commit SHA plus `source_tree` (tracked changes, untracked paths, `clean`).
+
+Record Python/dependency versions (`python -m pip freeze`).
 If using another code revision, explicitly record and review that SHA instead.
 
 Write a service-owned 0600 config at an operator-chosen absolute path:
