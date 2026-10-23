@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from collections.abc import Mapping
 from datetime import datetime, timezone
@@ -17,6 +18,7 @@ from .crypto import hash_record, sign_record, verify_signature
 from .permit import PERMIT_ISSUER_ROLES, PermitError
 
 ROOT_NAMES = ("identity", "evidence", "policy", "state")
+_RFC3339_TIMESTAMP = re.compile(r"\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})\\Z")
 
 
 def effect_digest(
@@ -195,6 +197,10 @@ def _parse_time(value: datetime | str) -> datetime:
         raise PermitError("invalid_timestamp") from exc
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise PermitError("timezone_required")
+    # The jsonschema date-time FormatChecker may be unavailable when optional
+    # format-validation dependencies are absent. Enforce the wire format here.
+    if not _RFC3339_TIMESTAMP.fullmatch(value):
+        raise PermitError("invalid_timestamp")
     return parsed.astimezone(timezone.utc)
 
 
