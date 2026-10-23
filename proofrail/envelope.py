@@ -4,7 +4,7 @@ import json
 import uuid
 from collections.abc import Mapping
 from datetime import datetime, timezone
-from importlib.resources import files
+from pathlib import Path
 from typing import Any
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
@@ -144,7 +144,10 @@ def verify_action_authority_envelope(
 
 
 def _validator() -> Draft202012Validator:
-    schema_path = files("schemas").joinpath("action_authority_envelope.schema.json")
+    # Use the schema shipped alongside this implementation. Looking up the
+    # importable top-level "schemas" package is unsafe: an unrelated earlier
+    # sys.path entry could replace the authority-validation contract.
+    schema_path = Path(__file__).resolve().parents[1] / "schemas" / "action_authority_envelope.schema.json"
     return Draft202012Validator(json.loads(schema_path.read_text(encoding="utf-8")))
 
 
