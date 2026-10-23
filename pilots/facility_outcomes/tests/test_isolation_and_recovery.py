@@ -3,11 +3,10 @@ import json
 import shutil
 import subprocess
 import sys
-import time
 
 import pytest
 
-from conftest import PILOT, approved, provider_count, through_work
+from conftest import PILOT, approved, provider_count, through_work, wait_for_orders
 from fixtures import ALL_MET, load_world, save_world
 from records import PilotError
 from store import verify_chain
@@ -71,10 +70,7 @@ def test_gateway_process_dies_while_the_provider_call_is_in_flight(env):
                                '--provider', env.url, '--tenant', 'tenant-a',
                                '--envelope', str(env.tmp / 'envelope.json'), '--out', str(env.tmp / 'out.json'),
                                '--timeout', '30'])
-    for _ in range(200):
-        if provider_count(env.url) == 1:
-            break
-        time.sleep(0.02)
+    wait_for_orders(env.url, 1)                               # the call reached the provider
     worker.kill()                                             # the gateway process dies mid-call
     worker.wait()
     assert not (env.tmp / 'out.json').exists()

@@ -58,3 +58,14 @@ def through_work(env, t='a'):
     env.p.claim_completion(env.w[f'contractor-{t}'], f'tenant-{t}', problem['problem_id'], evidence_refs=[])
     env.w.clock.advance(hours=1)
     return problem, plan, approval, envelope, result
+
+
+def wait_for_orders(url, n, *, seconds=30.0):
+    """Poll the provider's ground-truth count; fail loudly instead of proceeding on a false premise."""
+    import time
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if provider_count(url) >= n:
+            return
+        time.sleep(0.02)
+    raise AssertionError(f'provider never reached {n} order(s) within {seconds}s')

@@ -119,8 +119,8 @@ def test_E2_connection_dropped_before_any_effect_stays_unknown_and_is_not_retrie
 
 def test_E3_provider_dies_after_accepting_then_confirms_after_restart(env):
     """Unknown while the provider is unreadable; read-only recovery confirms once it is back."""
-    import threading, time
-    from conftest import provider_count
+    import threading
+    from conftest import provider_count, wait_for_orders
     from fixtures import start_provider
     problem, plan, approval, envelope = approved(env)
     gateway = env.p.gateways['tenant-a']
@@ -129,10 +129,7 @@ def test_E3_provider_dies_after_accepting_then_confirms_after_restart(env):
     box = {}
     worker = threading.Thread(target=lambda: box.update(r=env.p.admit('tenant-a', envelope)))
     worker.start()
-    for _ in range(100):
-        if provider_count(env.url) == 1:
-            break
-        time.sleep(0.02)
+    wait_for_orders(env.url, 1)                                        # the provider has stored it
     env.proc.kill()                                                    # this provider process dies mid-request
     env.proc.wait()
     worker.join(30)

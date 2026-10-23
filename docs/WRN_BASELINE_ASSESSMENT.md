@@ -40,18 +40,18 @@ No failures were masked. None needed masking.
    (`pilots/facility_outcomes/proofrail_gateway.py`) as a new capability.
 2. **`verify_action_authority_envelope` checks less than `verify_permit`.**
    It checks the schema, signature, expiry, the four roots, the approval digest
-   and the exact effect. It does **not** check:
+   and the exact effect. `state` and `failure_semantics` are enforced as schema
+   constants. It does **not** check:
    - the issuer role against `PERMIT_ISSUER_ROLES` (that is enforced only when
      minting);
    - the subject (which executor the authority is for);
-   - the `state`, beyond what the schema enforces;
-   - `failure_semantics`.
+   - not-before (`issued_at` is never compared with the current time).
 
-   A caller relying on it alone would accept authority minted outside
-   `mint_action_authority_envelope` with a non-verifier issuer role, as long as
-   the key verifies. The pilot gateway enforces all four. A core fix is proposed
-   in `docs/WRN_THREAT_MODEL.md` (finding F-1); `proofrail/` is not changed in
-   this phase.
+   Its schema validator is also built without a format checker, so
+   `"format": "date-time"` is not enforced, and a timestamp without a timezone is
+   parsed as local time. The pilot gateway enforces the issuer, subject and
+   not-before checks. A core fix is proposed in `docs/WRN_THREAT_MODEL.md`
+   (finding F-1); `proofrail/` is not changed in this branch.
 3. **`RELEASING.md` is stale.** It says the package declares `0.6.0` and that no
    release is published; the package is `0.6.1` and two prereleases exist. It
    also contains escaped backticks (`\`vMAJOR.MINOR.PATCH\``). Corrected in this
