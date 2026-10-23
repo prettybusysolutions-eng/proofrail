@@ -88,10 +88,21 @@ def verify(root: Path, trusted: dict | None = None) -> dict:
     snapshot = identity_now
     key_trust = 'self_asserted'
     if trusted is not None:
+        # A signed envelope is verified under its admission-time issuer key.
+        # Trusting ONLY the export-time identity snapshot does not authenticate
+        # that historical key. Pin all identities on which either snapshot relies.
+        # A future key-rotation scheme must prove transitions independently.
         key_trust = 'trusted'
-        for p in snapshot['principals']:
-            r.check('authenticity', f"key of {p['principal_id']} matches the independently trusted key",
-                    trusted.get(p['principal_id']) == p['public_key'], 'untrusted or different key')
+        for phase, identity_snapshot in (('admission', identity_then), ('export', identity_now)):
+            ids = [p['principal_id'] for p in identity_snapshot['principals']]
+            r.check('authenticity', f'{phase} identity snapshot has unique principal IDs',
+                    len(ids) == len(set(ids)), 'duplicate principals')
+            for p in identity_snapshot['principals']:
+                pin = trusted.get(p['principal_id'])
+                r.check('authenticity',
+                        f"{phase} key of {p['principal_id']} matches independently trusted key",
+                        isinstance(pin, str) and pin == p['public_key'],
+                        'missing or mismatched independently trusted historical key')
     registry = Registry.from_snapshot(snapshot)
     required = [('problem', problem, 'problem_reviewer'), ('approval', approval, 'approver')]
     required += [(f"observation {o['observation_id']}", o, {'provider_work_order_state': 'provider_observer',
@@ -139,7 +150,7 @@ def verify(root: Path, trusted: dict | None = None) -> dict:
     r.check('authority', 'success predicate binds the exact parameters',
             envelope['observation_contract']['success_predicate_digest'] == success_predicate(params))
     claim = consumption['claim']
-    r.check('authority', 'consumed once in the ProofRail replay registry, by the named executor',
+    r.check('authority', 'unsigned registry-export snapshot reports one consumption by the named executor',
             claim['permit_hash'] == envelope['record_hash'] and claim['nonce'] == envelope['nonce']
             and claim['executor_id'] == envelope['subject']['principal_id']
             and [e['state'] for e in consumption['events']] == ['EXECUTING', 'CONSUMED'])
@@ -199,8 +210,12 @@ def verify(root: Path, trusted: dict | None = None) -> dict:
         outcome['settlement'] = {'status': settlements[-1]['authorization_status'],
                                  'money_moved': settlements[-1]['money_moved']}
         r.check('outcome', 'settlement is simulated (no money moved)', all(s['money_moved'] is False for s in settlements))
+    # Hashes of exported database rows are internally consistent evidence,
+    # not proof that a trusted append-only registry recorded consumption.
+    consumption_provenance = 'unsigned_registry_export_not_independently_attested'
     required_dims = ('integrity', 'authenticity', 'authority', 'execution')
     return {'bundle': str(root), 'key_trust': key_trust,
+            'consumption_provenance': consumption_provenance,
             'verified': all(r.passed(d) for d in required_dims) and (not r.dimensions.get('outcome') or r.passed('outcome')),
             'dimensions': {d: {'result': 'PASS' if r.passed(d) else 'FAIL', 'checks': c} for d, c in r.dimensions.items()},
             'physical_outcome': {**outcome, 'nature': 'attested by a buyer-designated inspector under recorded rules; '

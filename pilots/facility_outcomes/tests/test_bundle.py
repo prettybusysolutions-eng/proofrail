@@ -67,10 +67,15 @@ def test_command_line_exit_codes(bundle):
                           capture_output=True).returncode == 1
 
 
+def pinned_fixture_keys(env):
+    """Keys held by the synthetic test world, not copied from the evidence export."""
+    return {ident.principal.principal_id: ident.principal.public_key
+            for ident in env.w.ids.values() if ident.principal.tenant_id == 'tenant-a'}
+
+
 def test_trusted_keys_upgrade_and_mismatch(bundle):
     root, env = bundle
-    snapshot = json.loads((root / 'context' / 'identity-at-export.json').read_text())
-    keys = {p['principal_id']: p['public_key'] for p in snapshot['principals']}
+    keys = pinned_fixture_keys(env)
     assert verify(root, keys)['key_trust'] == 'trusted' and verify(root, keys)['verified']
     keys['approver-a'] = keys['buyer-a']                      # an independently held key disagrees
     report = verify(root, keys)
@@ -80,12 +85,49 @@ def test_trusted_keys_upgrade_and_mismatch(bundle):
 def test_swapped_public_key_in_the_bundle_fails_against_trusted_keys(bundle):
     """A key substituted inside the bundle is caught by independently held keys."""
     root, env = bundle
-    snapshot = json.loads((root / 'context' / 'identity-at-export.json').read_text())
-    trusted = {p['principal_id']: p['public_key'] for p in snapshot['principals']}
+    trusted = pinned_fixture_keys(env)
     edit(root, 'context/identity-at-export.json',
          lambda d: d['principals'][0].update(public_key=d['principals'][1]['public_key']))
     resum(root)
     assert not verify(root, trusted)['verified']
+
+
+def test_historical_issuer_key_is_pinned_even_if_absent_from_export_snapshot(bundle):
+    """An earlier issuer still needs independent trust after its account is removed."""
+    root, env = bundle
+    trusted = pinned_fixture_keys(env)
+    def remove_retired_issuer(snapshot):
+        snapshot['principals'] = [p for p in snapshot['principals']
+                                  if p['principal_id'] != 'issuer-a']
+    edit(root, 'context/identity-at-export.json', remove_retired_issuer)
+    resum(root)
+    report = verify(root, trusted)
+    assert report['verified'] and report['key_trust'] == 'trusted', report
+
+    untrusted_history = {k: v for k, v in trusted.items() if k != 'issuer-a'}
+    report = verify(root, untrusted_history)
+    assert not report['verified']
+    assert report['dimensions']['authenticity']['result'] == 'FAIL'
+    assert any(x['check'] == 'admission key of issuer-a matches independently trusted key'
+               and x['result'] == 'FAIL'
+               for x in report['dimensions']['authenticity']['checks'])
+
+
+def test_historical_issuer_key_substitution_fails_trusted_origin_check(bundle):
+    """Fail on independently pinned admission-time key mismatch, not only on hashes."""
+    root, env = bundle
+    trusted = pinned_fixture_keys(env)
+    def change_issuer_key(snapshot):
+        issuer = next(p for p in snapshot['principals'] if p['principal_id'] == 'issuer-a')
+        issuer['public_key'] = trusted['buyer-a']
+    edit(root, 'context/identity-at-admission.json', change_issuer_key)
+    resum(root)
+    report = verify(root, trusted)
+    assert not report['verified']
+    assert report['dimensions']['authenticity']['result'] == 'FAIL'
+    assert any(x['check'] == 'admission key of issuer-a matches independently trusted key'
+               and x['result'] == 'FAIL'
+               for x in report['dimensions']['authenticity']['checks'])
 
 
 @pytest.mark.parametrize('rel,change,dimension', [
