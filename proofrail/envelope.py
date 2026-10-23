@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from collections.abc import Mapping
 from datetime import datetime, timezone
@@ -11,12 +12,13 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PrivateKey,
     Ed25519PublicKey,
 )
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, FormatChecker
 
 from .crypto import hash_record, sign_record, verify_signature
 from .permit import PERMIT_ISSUER_ROLES, PermitError
 
 ROOT_NAMES = ("identity", "evidence", "policy", "state")
+_RFC3339_TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\Z")
 
 
 def effect_digest(
@@ -114,14 +116,41 @@ def verify_action_authority_envelope(
     target: str,
     parameters: Mapping[str, Any],
     now: datetime | None = None,
+    expected_issuer: Mapping[str, str] | None = None,
+    expected_subject: Mapping[str, str] | None = None,
+    expected_key_id: str | None = None,
 ) -> bool:
+    """Validate a signed exact-effect envelope.
+
+    Callers enforcing identity must pass trusted expected_issuer, expected_subject
+    and expected_key_id values from their authorization context; an envelope
+    cannot establish the trustworthiness of its own declared identities.
+    Omitting them retains the v1 generic signature/effect-verification behavior.
+    """
     try:
         _validator().validate(envelope)
         verify_signature(envelope, public_key)
     except Exception as exc:
         raise PermitError("invalid_envelope", str(exc)) from exc
-    if _utc(now) >= _parse_time(str(envelope["expires_at"])):
+
+    current_time = _utc(now)
+    issued_at = _parse_time(str(envelope["issued_at"]))
+    expires_at = _parse_time(str(envelope["expires_at"]))
+    if issued_at > current_time:
+        raise PermitError("authority_not_yet_valid")
+    if expires_at <= issued_at:
+        raise PermitError("invalid_validity_window")
+    if current_time >= expires_at:
         raise PermitError("permit_expired")
+
+    if envelope["issuer"]["role"] not in PERMIT_ISSUER_ROLES:
+        raise PermitError("issuer_role_forbidden")
+    if expected_issuer is not None and envelope["issuer"] != dict(expected_issuer):
+        raise PermitError("issuer_changed")
+    if expected_subject is not None and envelope["subject"] != dict(expected_subject):
+        raise PermitError("subject_changed")
+    if expected_key_id is not None and envelope["signature"]["key_id"] != expected_key_id:
+        raise PermitError("issuer_key_changed")
 
     roots = envelope["roots"]
     for name in ROOT_NAMES:
@@ -145,7 +174,11 @@ def verify_action_authority_envelope(
 
 def _validator() -> Draft202012Validator:
     schema_path = files("schemas").joinpath("action_authority_envelope.schema.json")
-    return Draft202012Validator(json.loads(schema_path.read_text(encoding="utf-8")))
+    # Date-time format is security-relevant: reject timezone-less and malformed values.
+    return Draft202012Validator(
+        json.loads(schema_path.read_text(encoding="utf-8")),
+        format_checker=FormatChecker(),
+    )
 
 
 def _utc(value: datetime | None) -> datetime:
@@ -159,11 +192,16 @@ def _parse_time(value: datetime | str) -> datetime:
     if isinstance(value, datetime):
         return _utc(value)
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(
-            timezone.utc
-        )
-    except (AttributeError, ValueError) as exc:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (AttributeError, TypeError, ValueError) as exc:
         raise PermitError("invalid_timestamp") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise PermitError("timezone_required")
+    # The jsonschema date-time FormatChecker may be unavailable when optional
+    # format-validation dependencies are absent. Enforce the wire format here.
+    if not _RFC3339_TIMESTAMP.fullmatch(value):
+        raise PermitError("invalid_timestamp")
+    return parsed.astimezone(timezone.utc)
 
 
 def _format_time(value: datetime) -> str:
