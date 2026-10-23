@@ -2,6 +2,10 @@
 
 Status: OPEN. Author-run tests and CI are not independent semantic review.
 
+Author self-review (2026-10-22): SELF_REVIEW.md records mutation sweeps and fault
+matrices run by the authors, with the tools to rerun them. It narrows what a
+reviewer should expect to find; it does not replace this review.
+
 Target note (2026-10-22): `recover` changed after 73d7d48 (the SHA named in
 issue #30) to confirm the whole commit tree, not only the file bytes; see
 buyer_demo/README.md. Review the current head of the branch under review, not

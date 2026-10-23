@@ -141,8 +141,11 @@ class Dispatcher:
         self.ledger, self.journal, self.api, self.trust = ledger, journal, api, trust
         self.repository, self.branch, self.path = repository, branch, path
         self.prefix = '/repos/' + repository
+        self.write_calls = 0  # counted from calls actually issued, never asserted
 
     def call(self, method, suffix, body=None):
+        if method != 'GET':
+            self.write_calls += 1
         return self.api.request(method, self.prefix + suffix, body)
 
     def scope(self, contract):
@@ -189,6 +192,7 @@ class Dispatcher:
     def recover(self, handoff, contract):
         """Only GET requests. Unknown/mismatched effects never trigger another write."""
         handoff, contract = copy.deepcopy(handoff), copy.deepcopy(contract)
+        writes_before = self.write_calls
         self.scope(contract)
         authority = handoff['payload']['authority']
         row = self.journal.get(authority['nonce'])
@@ -216,6 +220,7 @@ class Dispatcher:
                            self.call('GET', '/git/trees/' + tree_sha + '?recursive=1'),
                            self.path, content)
         result['scope'] = 'Dispatcher-owned authenticated GitHub readback'
-        result['recovery_writes'] = 0
+        result['recovery_writes'] = self.write_calls - writes_before
+        require(result['recovery_writes'] == 0, 'recovery_issued_write')
         self.journal.observed(authority['nonce'], result)
         return result

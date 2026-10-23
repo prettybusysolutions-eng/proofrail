@@ -349,8 +349,11 @@ def test_verify_commit_requires_started_dispatch(tmp_path):
 
 def test_verify_commit_rejects_another_approval_for_this_execution(tmp_path):
     w = World(tmp_path)
-    first = w.dispatched()
+    # Approvals are evaluated as of the consumption time, so the second one must
+    # exist before the first is consumed; created afterwards it would be refused
+    # as 'handoff_expired_or_future' whenever a clock second ticks in between.
     h2, c2, t2 = w.approve()
+    first = w.dispatched()
     with pytest.raises(Exception) as exc:
         verify_commit(w.dispatcher.ledger, first['execution_id'], h2, c2, t2,
                       commit={'sha': first['commit_sha'], 'parents': [{'sha': w.base}]},

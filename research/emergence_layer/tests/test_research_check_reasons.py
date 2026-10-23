@@ -12,7 +12,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from test_acceptance_bridge import make_fixture, NOW
-from acceptance_bridge import full_digest, verify_observation
+from acceptance_bridge import verify_observation
 from execution_binding import ExecutionLedger, LocalArtifactDestination, verify_execution
 from proofrail.crypto import canonical_json, sign_record
 
