@@ -10,6 +10,7 @@ from acceptance_bridge import Trust, full_digest
 from execution_binding import ExecutionLedger
 from enforcing_dispatcher import Dispatcher, Journal, GitHubAPI, NoRedirect
 from live_github_trial import prepare
+from github_artifact import git_blob_sha
 
 class Provider:
     def __init__(self):
@@ -26,14 +27,26 @@ class Provider:
             if '/git/ref/' in path:
                 return {'object': {'sha': self.head}}
             if '/git/commits/' in path:
-                return {'sha': path.rsplit('/', 1)[1], 'tree': {'sha': self.parent_tree},
+                sha = path.rsplit('/', 1)[1]
+                # The dispatcher's commit ('c') carries the tree it created ('d').
+                return {'sha': sha, 'tree': {'sha': 'd' * 40 if sha == 'c' * 40 else self.parent_tree},
                         'parents': [{'sha': 'a' * 40}] if self.head != 'a' * 40 else []}
+            if '/git/trees/' in path:
+                base = [{'path': 'README.md', 'mode': '100644', 'type': 'blob', 'sha': '1' * 40}]
+                if path.split('/git/trees/')[1].startswith('d' * 40):
+                    parts = self.tree_path.split('/')
+                    base = base + [{'path': '/'.join(parts[:i]), 'mode': '040000', 'type': 'tree',
+                                    'sha': '2' * 40} for i in range(1, len(parts))] + [
+                        {'path': self.tree_path, 'mode': '100644', 'type': 'blob',
+                         'sha': git_blob_sha(self.content.encode())}]
+                return {'sha': path.split('/git/trees/')[1][:40], 'tree': base, 'truncated': False}
             if '/contents/' in path:
                 if self.content is None:
                     raise RuntimeError('absent')
                 return {'encoding': 'base64', 'content': base64.b64encode(self.content.encode()).decode()}
         if method == 'POST' and path.endswith('/trees'):
             self.content = body['tree'][0]['content']
+            self.tree_path = body['tree'][0]['path']
             return {'sha': 'd' * 40}
         if method == 'POST' and path.endswith('/commits'):
             return {'sha': 'c' * 40}
@@ -182,14 +195,14 @@ class DurableProvider(Provider):
         self.state, self.kill = state, kill
         if state.exists():
             saved = json.loads(state.read_text())
-            self.head, self.content = saved['head'], saved['content']
+            self.head, self.content, self.tree_path = saved['head'], saved['content'], saved['tree_path']
 
     def request(self, method, path, body=None):
         result = super().request(method, path, body)
         if method == 'PATCH':
             import os
             with self.state.open('w') as stream:
-                json.dump({'head': self.head, 'content': self.content}, stream)
+                json.dump({'head': self.head, 'content': self.content, 'tree_path': self.tree_path}, stream)
                 stream.flush()
                 os.fsync(stream.fileno())
             if self.kill:

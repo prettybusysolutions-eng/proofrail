@@ -107,7 +107,10 @@ Legacy trust-checkpoint-bearing authority remains rejected; this PR does not adv
 ProofRail's checkpoint epoch/counter protocol or migrate deployed checkpoint stores.
 
 Recovery performs GET requests only. It validates parent, exact file bytes, run ID
-and consumption digest at the observed immutable commit. A moved branch, unavailable
+and consumption digest at the observed immutable commit, and that the commit's whole
+tree equals the approved base tree plus exactly one regular 100644 file with those
+bytes (complete recursive listings; a truncated listing blocks confirmation). Byte
+equality alone would confirm a look-alike commit someone else wrote. A moved branch, unavailable
 provider, incomplete preparation or mismatching content blocks confirmation; there
 is no write retry or broad commit search. This is conservative reconciliation,
 not a general exactly-once external transaction protocol.
@@ -135,6 +138,22 @@ these are acceptance targets to measure, not current results.
 
 Go-live gates: independently reproduce/review exact commit; deploy constrained
 credentials under the service user; confirm branch controls; perform one real
-write/readback through this dispatcher; inject a real response-loss fault at a
-controlled proxy; restore registry while retaining journal; record evidence and
-buyer acceptance. All remain open until witnessed and recorded.
+write/readback through this dispatcher; exercise response loss and recovery;
+restore registry while retaining journal; record evidence and buyer acceptance.
+All remain open until witnessed and recorded.
+
+Response-loss testing has two distinct parts, and they are not interchangeable:
+
+- Application-level response loss after a completed GitHub call: the branch update
+  succeeds on the server and its response is discarded before the dispatcher sees
+  it. This is prepared in `live_trial/` (runner, in-process fault, self-test) and
+  exercises the dispatcher's unknown-outcome reconciliation (read-only recovery
+  confirms the exact tree with zero writes; the permit cannot be reused).
+- Transport-level interruption during the call itself (connection reset, timeout,
+  half-open connection, truncated or malformed body). This is NOT covered by the
+  application-level substitution and remains an OUTSTANDING validation item; it
+  must be designed and witnessed separately (for example with a controlled network
+  intermediary that severs a connection mid-response).
+
+Providing the application-level exercise does not establish transport-level
+coverage and does not by itself close gate 3. See `live_trial/LIVE_TRIAL.md`.

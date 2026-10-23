@@ -46,11 +46,16 @@ jobs:
         run: |
           python counterfactual_lab.py --output reproduced-results.json
           diff -u counterfactual_results.json reproduced-results.json
+      - name: Run the buyer demonstration and verify its exported evidence
+        run: |
+          python buyer_demo/run_demo.py --workdir "$RUNNER_TEMP/demo-work" --evidence buyer-demo-evidence
+          python buyer_demo/verify_evidence.py buyer-demo-evidence
       - uses: actions/upload-artifact@v7
         with:
           name: emergence-evidence-python-${{ matrix.python-version }}
           path: |
             research/emergence_layer/reproduced-results.json
             research/emergence_layer/execution-test-results.xml
+            research/emergence_layer/buyer-demo-evidence/
           if-no-files-found: error
           retention-days: 30

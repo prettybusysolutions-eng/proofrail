@@ -15,7 +15,7 @@ from urllib.parse import quote
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 from acceptance_bridge import require, verify_handoff, full_digest
-from github_artifact import prepare_commit, verify_commit
+from github_artifact import prepare_commit, verify_commit, verify_tree_change
 from proofrail.trust import replay_registry_root
 
 
@@ -141,8 +141,11 @@ class Dispatcher:
         self.ledger, self.journal, self.api, self.trust = ledger, journal, api, trust
         self.repository, self.branch, self.path = repository, branch, path
         self.prefix = '/repos/' + repository
+        self.write_calls = 0  # counted from calls actually issued, never asserted
 
     def call(self, method, suffix, body=None):
+        if method != 'GET':
+            self.write_calls += 1
         return self.api.request(method, self.prefix + suffix, body)
 
     def scope(self, contract):
@@ -189,6 +192,7 @@ class Dispatcher:
     def recover(self, handoff, contract):
         """Only GET requests. Unknown/mismatched effects never trigger another write."""
         handoff, contract = copy.deepcopy(handoff), copy.deepcopy(contract)
+        writes_before = self.write_calls
         self.scope(contract)
         authority = handoff['payload']['authority']
         row = self.journal.get(authority['nonce'])
@@ -207,7 +211,16 @@ class Dispatcher:
         content = base64.b64decode(''.join(file['content'].split()), validate=True).decode('utf-8')
         result = verify_commit(self.ledger, row['execution_id'], handoff, contract, self.trust,
             commit=commit, file_content=content, repository=self.repository, path=self.path, observed_ref=head)
+        # The file's bytes are one projection of the commit. Confirm the whole tree:
+        # approved base plus exactly this regular file, nothing else.
+        tree_sha = commit['tree']['sha']
+        require(re.fullmatch('[0-9a-f]{40}', tree_sha) is not None, 'invalid_provider_sha')
+        params = contract['parameters']
+        verify_tree_change(self.call('GET', '/git/trees/' + params['base_tree'] + '?recursive=1'),
+                           self.call('GET', '/git/trees/' + tree_sha + '?recursive=1'),
+                           self.path, content)
         result['scope'] = 'Dispatcher-owned authenticated GitHub readback'
-        result['recovery_writes'] = 0
+        result['recovery_writes'] = self.write_calls - writes_before
+        require(result['recovery_writes'] == 0, 'recovery_issued_write')
         self.journal.observed(authority['nonce'], result)
         return result
