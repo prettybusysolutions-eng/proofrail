@@ -24,6 +24,11 @@ def _write(path: Path, value) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + '\n')
 
 
+def _claim(registry_path: Path, permit_hash: str) -> dict:
+    """Compatibility helper used by existing negative tests."""
+    return read_registry_claim(registry_path, permit_hash)
+
+
 def source_commit(directory: Path) -> str | None:
     try:
         return subprocess.run(['git', '-C', str(directory), 'rev-parse', 'HEAD'], capture_output=True, text=True,
