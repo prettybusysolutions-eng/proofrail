@@ -41,7 +41,9 @@ assert schema["properties"]["kind"]["const"] == "proofrail.action-authority-enve
             )
             result = subprocess.run(
                 [sys.executable, "-c", code, str(shadow)],
-                cwd=REPO_ROOT,
+                # For -c, Python prepends cwd before PYTHONPATH. Use the shadow
+                # directory here so the fixture truly wins import resolution.
+                cwd=shadow,
                 env=env,
                 text=True,
                 capture_output=True,
