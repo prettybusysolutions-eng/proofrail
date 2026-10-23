@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/pilots/facility_outcomes/execution_authority_reference.schema.json",
+  "title": "WRN ExecutionAuthorityReference",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "tenant_id",
+    "envelope_id",
+    "envelope_digest",
+    "effect_digest",
+    "approval_digest",
+    "target",
+    "authority_state",
+    "consumption_reference",
+    "provider_operation_reference",
+    "reconciliation_reference"
+  ],
+  "properties": {
+    "kind": {
+      "const": "wrn.execution-authority-reference.v1"
+    },
+    "tenant_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "envelope_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "envelope_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "effect_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "approval_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_state": {
+      "enum": [
+        "PERMITTED",
+        "CONSUMED",
+        "EXECUTION_UNKNOWN",
+        "RECONCILED",
+        "RECONCILIATION_FAILED"
+      ]
+    },
+    "consumption_reference": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_operation_reference": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reconciliation_reference": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}
