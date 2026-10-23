@@ -173,7 +173,12 @@ def verify_action_authority_envelope(
 
 
 def _validator() -> Draft202012Validator:
-    schema_path = files("schemas").joinpath("action_authority_envelope.schema.json")
+    # The authority schema ships under ProofRail's own package namespace.
+    # An unrelated top-level "schemas" distribution must never define policy
+    # for this verifier, even when installed into the same site-packages.
+    schema_path = files("proofrail").joinpath(
+        "authority_schemas", "action_authority_envelope.schema.json"
+    )
     # Date-time format is security-relevant: reject timezone-less and malformed values.
     return Draft202012Validator(
         json.loads(schema_path.read_text(encoding="utf-8")),
