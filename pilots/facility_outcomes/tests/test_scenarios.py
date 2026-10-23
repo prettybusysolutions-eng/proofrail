@@ -30,7 +30,7 @@ def test_A_authorized_success_keeps_every_claim_separate(env):
     learning = p.learning_record('tenant-a', pid, area_type='staging_zone', debris_volume_class='medium',
                                  shareable=True)
     assert learning['causal_claim'] == 'none' and 'tenant-a' not in str(learning)
-    assert verify_chain(p.store.audit_entries())
+    assert verify_chain(p.store.audit_entries('tenant-a'))
     assert env.count() == 1
 
 

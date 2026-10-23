@@ -37,14 +37,13 @@ from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
-from proofrail.envelope import (effect_digest, mint_action_authority_envelope,
-                                verify_action_authority_envelope)
+from proofrail.envelope import mint_action_authority_envelope, verify_action_authority_envelope
 from proofrail.permit import PERMIT_ISSUER_ROLES
 from proofrail.trust import replay_claim_exists
 
 import lifecycle
 from policy import evidence_root
-from records import Clock, Identity, PilotError, Registry, decode_public, digest, require, stamp, utc, validate
+from records import Clock, Identity, PilotError, Registry, decode_public, digest, require, utc, validate
 from store import Store
 
 ACTION_TYPE = 'facility.create_work_order'
@@ -68,16 +67,21 @@ def current_roots(store: Store, registry: Registry, policy_root: str, tenant_id:
                   plan_id: str, approval_id: str) -> dict:
     """The four ProofRail roots, recomputed from the records as they are now."""
     problem = store.get(tenant_id, 'problem', problem_id)
+    state = state_inputs(store, tenant_id, problem_id, plan_id, approval_id)
+    # Recompute the evidence root from the evidence references: the stored field alone is a claim.
+    return {'identity': registry.root(tenant_id), 'evidence': evidence_root(problem['evidence_refs']), 'policy': policy_root,
+            'state': digest(state)}
+
+
+def state_inputs(store: Store, tenant_id: str, problem_id: str, plan_id: str, approval_id: str) -> dict:
+    problem = store.get(tenant_id, 'problem', problem_id)
     plan = store.get(tenant_id, 'plan', plan_id)
     approval = store.get(tenant_id, 'approval', approval_id)
-    revoked = any(r['approval_id'] == approval_id for r in store.all(tenant_id, 'revocation'))
-    state = {'problem_id': problem_id, 'problem_revision': problem['revision'], 'problem_status': problem['status'],
-             'problem_digest': digest(problem), 'plan_digest': plan['plan_digest'],
-             'approval_digest': approval['approval_digest'], 'approval_revoked': revoked,
-             'work_state': store.state(tenant_id, problem_id)}
-    # Recompute the evidence root from the evidence references: the stored field alone is a claim.
-    return {'identity': registry.root(), 'evidence': evidence_root(problem['evidence_refs']), 'policy': policy_root,
-            'state': digest(state)}
+    return {'problem_id': problem_id, 'problem_revision': problem['revision'], 'problem_status': problem['status'],
+            'problem_digest': digest(problem), 'plan_digest': plan['plan_digest'],
+            'approval_digest': approval['approval_digest'],
+            'approval_revoked': any(r['approval_id'] == approval_id for r in store.all(tenant_id, 'revocation')),
+            'work_state': store.state(tenant_id, problem_id)}
 
 
 def success_predicate(parameters: dict) -> str:
@@ -266,8 +270,10 @@ class Gateway:
                'consumption_reference': consumption, 'provider_operation_reference': operation,
                'reconciliation_reference': reconciliation}
         validate('execution_authority_reference', ref)
-        self.store.put(tenant_id, 'authority', envelope['envelope_id'], {'reference': ref, 'envelope': envelope},
-                       replace=replace)
+        body = {'reference': ref, 'envelope': envelope}
+        if replace:   # update the reference; keep snapshots and markers recorded earlier
+            body = {**self.store.get(tenant_id, 'authority', envelope['envelope_id']), **body}
+        self.store.put(tenant_id, 'authority', envelope['envelope_id'], body, replace=replace)
         return ref
 
     def admit(self, tenant_id: str, envelope: dict) -> dict:
@@ -291,6 +297,14 @@ class Gateway:
             if exc.reason == 'record_exists':     # lost a race against a concurrent admission
                 raise PilotError('authority_already_admitted') from None
             raise
+        # Keep the exact inputs the roots were computed from, so an exported case can be
+        # re-verified offline (identity and policy roots recomputed from these snapshots).
+        stored = self.store.get(tenant_id, 'authority', envelope['envelope_id'])
+        self.store.put(tenant_id, 'authority', envelope['envelope_id'],
+                       {**stored, 'identity_snapshot': self.registry.snapshot(tenant_id),
+                        'policy_snapshot': self.policy.doc(tenant_id),
+                        'state_inputs': state_inputs(self.store, tenant_id, problem_id, checked['plan']['plan_id'],
+                                                     checked['approval']['approval_id'])}, replace=True)
         self.store.audit(tenant_id, 'authority_consumed', envelope['envelope_id'], {'consumption': consumption})
         # Re-check after consumption: a revocation, a role change or a concurrent transition that
         # landed between verification and the claim must stop the provider call.
@@ -318,6 +332,20 @@ class Gateway:
         except PilotError:
             claimed, outcome = None, UNKNOWN
         return self._reconcile(tenant_id, envelope, checked['parameters'], claimed, outcome)
+
+    def still_matches(self, tenant_id: str, envelope_id: str) -> bool:
+        """Fresh read: does exactly one order still match every authorized parameter? Reads only."""
+        stored = self.store.get(tenant_id, 'authority', envelope_id)
+        parameters = stored['envelope']['effect']['parameters']
+        observation = self.observer.observe(tenant_id, envelope_id)
+        self.store.put(tenant_id, 'observation', observation['observation_id'], observation)
+        seen = observation['findings']['work_order']
+        if not seen['readable'] or len(seen['orders']) != 1:
+            return False
+        order = seen['orders'][0]
+        return (order.get('tenant_id') == tenant_id and
+                order.get('work_order_id') == stored['reference']['provider_operation_reference'] and
+                all(order.get(k) == v for k, v in parameters.items() if k != 'tenant_id'))
 
     def _reconcile(self, tenant_id, envelope, parameters, claimed, outcome) -> dict:
         observation = self.observer.observe(tenant_id, envelope['envelope_id'])

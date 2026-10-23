@@ -256,8 +256,18 @@ def test_concurrent_admission_from_two_processes(env):
                                '--out', str(env.tmp / f'out{i}.json'), '--timeout', '2']) for i in (1, 2)]
     for proc in procs:
         assert proc.wait(60) == 0
-    outcomes = sorted(json.loads((env.tmp / f'out{i}.json').read_text())['outcome'] for i in (1, 2))
-    reasons = [json.loads((env.tmp / f'out{i}.json').read_text()).get('reason') for i in (1, 2)]
-    assert outcomes == ['admitted', 'refused'], reasons
-    assert [r for r in reasons if r][0] in ('permit_replayed', 'authority_already_admitted')
+    results = [json.loads((env.tmp / f'out{i}.json').read_text()) for i in (1, 2)]
+    assert sorted(r['outcome'] for r in results) == ['admitted', 'refused'], results
+    admitted = next(r for r in results if r['outcome'] == 'admitted')
+    refusal = next(r for r in results if r['outcome'] == 'refused')
+    assert admitted['authority_state'] == 'RECONCILED'
+    # Whichever layer the loser reaches first: the registry claim, the business-store record,
+    # or (if the winner already moved the work state) the state root.
+    assert refusal['reason'] in ('permit_replayed', 'authority_already_admitted', 'state_root_changed')
     assert env.count() == 1
+
+
+def test_another_tenants_identity_change_does_not_touch_this_tenants_authority(env):
+    problem, plan, approval, envelope = approved(env)
+    env.p.registry.add('new-approver-b', tenant_id='tenant-b', organization='harbor-distribution', roles={'approver'})
+    assert env.p.admit('tenant-a', envelope)['authority_state'] == 'RECONCILED'

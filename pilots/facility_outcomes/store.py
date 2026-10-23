@@ -15,8 +15,6 @@ import json
 import sqlite3
 from contextlib import closing
 from pathlib import Path
-from typing import Any
-
 from proofrail.crypto import canonical_json
 from records import PilotError, require
 
@@ -108,7 +106,9 @@ class Store:
     def audit(self, tenant_id: str, event: str, subject: str, detail: dict) -> str:
         with closing(self._db()) as db:
             db.execute('BEGIN IMMEDIATE')
-            row = db.execute('SELECT hash FROM audit ORDER BY sequence DESC LIMIT 1').fetchone()
+            # One chain per tenant, so a tenant's audit can be exported and verified on its own.
+            row = db.execute('SELECT hash FROM audit WHERE tenant_id=? ORDER BY sequence DESC LIMIT 1',
+                             (tenant_id,)).fetchone()
             previous = row[0] if row else GENESIS
             entry = {'tenant_id': tenant_id, 'event': event, 'subject': subject, 'detail': detail,
                      'previous': previous}
@@ -118,17 +118,19 @@ class Store:
             db.execute('COMMIT')
         return value
 
-    def audit_entries(self, tenant_id: str | None = None) -> list[dict]:
+    def audit_entries(self, tenant_id: str) -> list[dict]:
         with closing(self._db()) as db:
-            rows = db.execute('SELECT tenant_id,event,subject,detail,previous,hash FROM audit ORDER BY sequence').fetchall()
-        entries = [{'tenant_id': t, 'event': e, 'subject': s, 'detail': json.loads(d), 'previous': p, 'hash': h}
-                   for t, e, s, d, p, h in rows]
-        return entries if tenant_id is None else [e for e in entries if e['tenant_id'] == tenant_id]
+            rows = db.execute('SELECT tenant_id,event,subject,detail,previous,hash FROM audit WHERE tenant_id=? '
+                              'ORDER BY sequence', (tenant_id,)).fetchall()
+        return [{'tenant_id': t, 'event': e, 'subject': s, 'detail': json.loads(d), 'previous': p, 'hash': h}
+                for t, e, s, d, p, h in rows]
 
 
 def verify_chain(entries: list[dict]) -> bool:
-    """Checks a full chain from genesis. A truncated tail is not detectable this way (see limitations)."""
+    """Checks one tenant's full chain from genesis. A truncated tail is not detectable this way."""
     previous = GENESIS
+    if len({e['tenant_id'] for e in entries}) > 1:
+        return False
     for entry in entries:
         body = {k: entry[k] for k in ('tenant_id', 'event', 'subject', 'detail', 'previous')}
         if entry['previous'] != previous or hashlib.sha256(canonical_json(body)).hexdigest() != entry['hash']:

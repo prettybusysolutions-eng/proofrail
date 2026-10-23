@@ -43,6 +43,10 @@ class FacilityPilot:
             provider=ProviderClient(self.provider_url, 'gateway-' + tenant_id, timeout=self.provider_timeout),
             observer=Observer(observer, observer_client, self.clock))
 
+    @staticmethod
+    def _member(actor: Identity, tenant_id: str) -> None:
+        require(actor.principal.tenant_id == tenant_id, 'actor_tenant_mismatch')
+
     def _move(self, actor: Identity, tenant_id: str, problem_id: str, event: str) -> str:
         require(actor.principal.tenant_id == tenant_id, 'actor_tenant_mismatch')
         current = self.store.state(tenant_id, problem_id)
@@ -59,6 +63,7 @@ class FacilityPilot:
     # ------------------------------------------------------------------ layer A: problem intelligence
     def submit_problem(self, reporter: Identity, tenant_id: str, *, facility_id: str, area_id: str,
                        description: str, evidence_refs: list, ai_assisted: bool = False) -> dict:
+        self._member(reporter, tenant_id)          # before any tenant data is read
         record = {'kind': 'wrn.problem-record.v1', 'problem_id': 'prb-' + uuid.uuid4().hex[:12],
                   'tenant_id': tenant_id, 'facility_id': facility_id, 'asset_or_area_id': area_id,
                   'reported_at': self.clock.text(), 'reported_by': reporter.principal.principal_id,
@@ -75,6 +80,7 @@ class FacilityPilot:
 
     def confirm_problem(self, reviewer: Identity, tenant_id: str, problem_id: str) -> dict:
         """Human review of a consequential conclusion. AI assistance never confirms a problem."""
+        self._member(reviewer, tenant_id)          # before any tenant data is read
         self._move(reviewer, tenant_id, problem_id, 'begin_review')
         problem = self.store.get(tenant_id, 'problem', problem_id)
         revised = reviewer.sign({**{k: v for k, v in problem.items() if k not in ('record_hash', 'signature')},
@@ -87,6 +93,7 @@ class FacilityPilot:
     # ------------------------------------------------------------------ layer B: coordination
     def propose_plan(self, planner: Identity, tenant_id: str, problem_id: str, *, provider_id: str, quote: int,
                      criteria: list, window_hours: int = 48, scope_revision: int = 1) -> dict:
+        self._member(planner, tenant_id)          # before any tenant data is read
         problem = self.store.get(tenant_id, 'problem', problem_id)
         start = self.clock.now()
         plan = {'kind': 'wrn.intervention-plan.v1', 'plan_id': 'pln-' + uuid.uuid4().hex[:12],
@@ -105,6 +112,7 @@ class FacilityPilot:
         return plan
 
     def amend_plan(self, planner: Identity, tenant_id: str, plan_id: str, **changes) -> dict:
+        self._member(planner, tenant_id)          # before any tenant data is read
         plan = self.store.get(tenant_id, 'plan', plan_id)
         amended = {**plan, **changes}
         if 'target' in changes or 'provider_id' in changes or 'estimated_cost' in changes:
@@ -117,6 +125,7 @@ class FacilityPilot:
 
     def approve(self, approver: Identity, tenant_id: str, plan_id: str, *, maximum_cost: int,
                 validity_hours: int = 24) -> dict:
+        self._member(approver, tenant_id)          # before any tenant data is read
         plan = self.store.get(tenant_id, 'plan', plan_id)
         record = {'kind': 'wrn.approval-record.v1', 'approval_id': 'apr-' + uuid.uuid4().hex[:12],
                   'tenant_id': tenant_id, 'approver_principal': approver.principal.principal_id,
@@ -180,6 +189,7 @@ class FacilityPilot:
 
     def claim_completion(self, contractor: Identity, tenant_id: str, problem_id: str, *,
                          evidence_refs: list) -> dict:
+        self._member(contractor, tenant_id)          # before any tenant data is read
         authority = self._authority_for(tenant_id, problem_id)
         self._move(contractor, tenant_id, problem_id, 'claim_completion')
         obs = self._observation(contractor, tenant_id, authority['reference']['provider_operation_reference'],
@@ -191,6 +201,7 @@ class FacilityPilot:
 
     def submit_inspection(self, inspector: Identity, tenant_id: str, problem_id: str, *, criteria: dict,
                           evidence_refs: list, subject: str | None = None) -> dict:
+        self._member(inspector, tenant_id)          # before any tenant data is read
         authority = self._authority_for(tenant_id, problem_id)
         self._move(inspector, tenant_id, problem_id, 'submit_inspection')
         obs = self._observation(inspector, tenant_id,
@@ -223,7 +234,12 @@ class FacilityPilot:
         self.store.put(tenant_id, 'verdict', verdict['outcome_id'], verdict)
         self.store.audit(tenant_id, 'outcome_assessed', verdict['outcome_id'],
                          {'state': verdict['assessment_state'], 'reviewer': reviewer.principal.principal_id})
-        disagreement = any(v['assessment_state'] != verdict['assessment_state'] for v in previous)
+        # INSUFFICIENT_EVIDENCE is "not yet", so moving on from it is progression. Two definite
+        # verdicts that differ (e.g. REJECTED then VERIFIED) are a dispute for a human to resolve.
+        definite = {'VERIFIED', 'REJECTED', 'DISPUTED'}
+        disagreement = verdict['assessment_state'] in definite and any(
+            v['assessment_state'] in definite and v['assessment_state'] != verdict['assessment_state']
+            for v in previous)
         if self.store.state(tenant_id, problem_id) == 'OUTCOME_REVIEW':
             if verdict['assessment_state'] == 'DISPUTED' or disagreement:
                 self._move(reviewer, tenant_id, problem_id, 'flag_dispute')
@@ -232,6 +248,7 @@ class FacilityPilot:
         return verdict
 
     def buyer_decide(self, buyer: Identity, tenant_id: str, problem_id: str, *, decision: str, reason: str) -> dict:
+        self._member(buyer, tenant_id)          # before any tenant data is read
         authority = self._authority_for(tenant_id, problem_id)
         work_order_id = authority['reference']['provider_operation_reference']
         verdicts = [v for v in self.store.all(tenant_id, 'verdict') if v['work_order_id'] == work_order_id]
@@ -252,6 +269,7 @@ class FacilityPilot:
     # ------------------------------------------------------------------ layer E: settlement (simulated)
     def submit_invoice(self, provider: Identity, tenant_id: str, *, work_order_id: str, amount: int,
                        currency: str | None = None) -> dict:
+        self._member(provider, tenant_id)          # before any tenant data is read
         record = provider.sign({'kind': 'wrn.invoice-record.v1', 'invoice_id': 'inv-' + uuid.uuid4().hex[:12],
                                 'tenant_id': tenant_id, 'provider_id': self._provider_id_for(provider, tenant_id),
                                 'work_order_id': work_order_id, 'amount': amount,
@@ -268,6 +286,7 @@ class FacilityPilot:
         return 'unapproved-' + provider.principal.organization
 
     def settle(self, authorizer: Identity, tenant_id: str, problem_id: str, *, invoice_id: str | None) -> dict:
+        self._member(authorizer, tenant_id)          # before any tenant data is read
         authority = self._authority_for(tenant_id, problem_id)
         work_order_id = authority['reference']['provider_operation_reference']
         approval = next(a for a in self.store.all(tenant_id, 'approval')
@@ -282,7 +301,8 @@ class FacilityPilot:
             authorizer, registry=self.registry, store=self.store, tenant_id=tenant_id, work_order_id=work_order_id,
             verdicts=verdicts, acceptance=acceptances[-1] if acceptances else None, invoice=invoice,
             approval=approval, authority=authority, provider_organization=provider_org,
-            contractors=self._contractors(provider_org), now=self.clock.now())
+            contractors=self._contractors(provider_org), now=self.clock.now(),
+            current_order_matches=self.gateways[tenant_id].still_matches(tenant_id, authority['envelope']['envelope_id']))
         self.store.put(tenant_id, 'settlement', decision['settlement_id'], decision)
         self.store.audit(tenant_id, 'settlement_decided', decision['settlement_id'],
                          {'status': decision['authorization_status'], 'reasons': decision['denial_reasons']})

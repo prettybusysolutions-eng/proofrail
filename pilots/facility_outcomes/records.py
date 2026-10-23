@@ -146,6 +146,18 @@ class Registry:
         self._by_key[principal.key_id] = principal
         return Identity(principal, key)
 
+    @classmethod
+    def from_snapshot(cls, snapshot: dict) -> 'Registry':
+        """Public-key-only registry for offline verification (no private keys)."""
+        registry = cls()
+        for p in snapshot['principals']:
+            principal = Principal(p['principal_id'], p['tenant_id'], p['organization'], frozenset(p['roles']),
+                                  p['key_id'], p['public_key'])
+            registry._by_id[principal.principal_id] = principal
+            registry._by_key[principal.key_id] = principal
+        registry._designations = {tuple(d) for d in snapshot['designations']}
+        return registry
+
     def adopt(self, principal: Principal, private_key: Ed25519PrivateKey) -> Identity:
         """Re-register a persisted test identity (multi-process tests reload the same world)."""
         require(principal.principal_id not in self._by_id, 'duplicate_principal')
@@ -193,9 +205,16 @@ class Registry:
     def principals(self) -> list[Principal]:
         return list(self._by_id.values())
 
-    def root(self) -> str:
-        return digest({'principals': [p.describe() for p in sorted(self._by_id.values(), key=lambda p: p.principal_id)],
-                       'designations': sorted(map(list, self._designations))})
+    def snapshot(self, tenant_id: str) -> dict:
+        """The tenant's principals and designations only; other tenants are never included."""
+        return {'tenant_id': tenant_id,
+                'principals': [p.describe() for p in sorted(self._by_id.values(), key=lambda p: p.principal_id)
+                               if p.tenant_id == tenant_id],
+                'designations': sorted(list(d) for d in self._designations if d[0] == tenant_id)}
+
+    def root(self, tenant_id: str) -> str:
+        """Identity root for one tenant: another tenant's changes never invalidate this tenant's authority."""
+        return digest(self.snapshot(tenant_id))
 
     def public_keys(self) -> dict[str, Any]:
         return {p.principal_id: p.describe() for p in self._by_id.values()}

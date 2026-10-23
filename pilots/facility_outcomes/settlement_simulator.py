@@ -11,7 +11,7 @@ import uuid
 from records import Identity, PilotError, Registry, digest, require, validate
 
 POLICY = {'name': 'wrn.settlement.v1',
-          'rules': ['verified_outcome', 'latest_and_only_verdict_state_verified', 'buyer_acceptance_bound_to_verdict',
+          'rules': ['work_order_still_matches_authorized_effect', 'verified_outcome', 'latest_verdict_verified_and_none_rejected_or_disputed', 'buyer_acceptance_bound_to_verdict',
                     'provider_signed_invoice_for_this_work_order', 'currency_matches', 'amount_within_approved_cap',
                     'authorizer_independent_of_performer_and_reviewer', 'one_settlement_per_work_order']}
 POLICY_DIGEST = digest(POLICY)
@@ -19,13 +19,15 @@ POLICY_DIGEST = digest(POLICY)
 
 def decide(authorizer: Identity, *, registry: Registry, store, tenant_id: str, work_order_id: str,
            verdicts: list, acceptance: dict | None, invoice: dict | None, approval: dict, authority: dict,
-           provider_organization: str, contractors: set, now) -> dict:
+           provider_organization: str, contractors: set, now, current_order_matches: bool) -> dict:
     a = authorizer.principal
     require('settlement_authorizer' in a.roles and a.tenant_id == tenant_id, 'authorizer_not_permitted')
     reasons = []
     ref = authority['reference']
     if ref['authority_state'] != 'RECONCILED' or ref['provider_operation_reference'] != work_order_id:
         reasons.append('work_order_not_reconciled_for_this_authority')
+    if not current_order_matches:
+        reasons.append('work_order_changed_since_reconciliation')
     mine = [v for v in verdicts if v['work_order_id'] == work_order_id]
     valid = []
     for v in mine:
@@ -37,7 +39,7 @@ def decide(authorizer: Identity, *, registry: Registry, store, tenant_id: str, w
     latest = valid[-1] if valid else None
     if latest is None or latest['assessment_state'] != 'VERIFIED':
         reasons.append('outcome_not_verified')
-    if any(v['assessment_state'] != 'VERIFIED' for v in valid):
+    if any(v['assessment_state'] in ('REJECTED', 'DISPUTED') for v in valid):
         reasons.append('outcome_previously_rejected_or_disputed')
     if latest is not None and (latest['reviewer_principal'] == a.principal_id or a.principal_id in contractors
                                or a.organization == provider_organization):
