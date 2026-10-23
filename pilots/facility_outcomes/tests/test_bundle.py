@@ -58,6 +58,45 @@ def test_genuine_bundle_verifies_on_every_dimension(bundle):
     assert 'not physical proof' in report['physical_outcome']['nature']
 
 
+def test_signed_consumption_attestation_binds_registry_export(bundle):
+    root, env = bundle
+    report = verify(root, pinned_fixture_keys(env))
+    assert report['verified'], report
+    assert report['consumption_provenance'] == (
+        'signed_gateway_attestation_unanchored_not_independent_registry_proof')
+    assert any(x['check'] == 'gateway signature authenticates consumption-row attestation'
+               and x['result'] == 'PASS'
+               for x in report['dimensions']['authenticity']['checks'])
+    assert any(x['check'] == 'gateway attestation binds these exact exported registry rows'
+               and x['result'] == 'PASS'
+               for x in report['dimensions']['authority']['checks'])
+
+
+def test_consumption_attestation_change_rejected_with_new_checksums(bundle):
+    root, env = bundle
+    edit(root, 'records/consumption-attestation.json',
+         lambda d: d.update(registry_claim_digest='0' * 64))
+    resum(root)
+    report = verify(root, pinned_fixture_keys(env))
+    assert not report['verified']
+    assert report['dimensions']['integrity']['result'] == 'PASS'
+    assert report['dimensions']['authenticity']['result'] == 'FAIL'
+    assert report['dimensions']['authority']['result'] == 'FAIL'
+
+
+def test_registry_row_change_breaks_signed_attestation_binding(bundle):
+    root, env = bundle
+    edit(root, 'records/consumption.json',
+         lambda d: d['claim'].update(executing_at='2026-10-23T13:01:00Z'))
+    resum(root)
+    report = verify(root, pinned_fixture_keys(env))
+    assert not report['verified']
+    assert report['dimensions']['integrity']['result'] == 'PASS'
+    assert any(x['check'] == 'gateway attestation binds these exact exported registry rows'
+               and x['result'] == 'FAIL'
+               for x in report['dimensions']['authority']['checks'])
+
+
 def test_command_line_exit_codes(bundle):
     root, env = bundle
     assert subprocess.run([sys.executable, str(PILOT / 'verify_bundle.py'), str(root)],

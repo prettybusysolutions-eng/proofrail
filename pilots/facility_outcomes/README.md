@@ -45,12 +45,15 @@ export-time roster still needs a separately trusted historical key. Missing pins
 fail trusted verification; a bundle's own key list is not an independent trust
 source. Without trusted pins, key trust is `self_asserted`.
 
-**Remaining proof boundary:** `records/consumption.json` is an unsigned
-export of the local replay-registry rows. A valid digest/inventory and a
-trusted signing key do *not* prove those rows were durably retained or that the
-registry was not rolled back. The verifier reports this limitation explicitly.
-An authoritative signed consumption receipt and an independently retained
-checkpoint/anchor are separate follow-up controls, not claims of this change.
+**Consumption claim boundary:** `records/consumption.json` is a snapshot
+of the local replay-registry rows. The gateway now signs
+`records/consumption-attestation.json` after the registry claim commits and
+before the provider write. The verifier checks the signature with the
+historical gateway key and binds the attestation to the exact exported rows.
+This authenticates a **gateway attestation**, not an independently witnessed
+or durably retained registry history. It does not solve joint rollback or
+ledger-tail truncation. An independently held checkpoint/anchor remains a
+separate unsatisfied security gate.
 
 ## Layout
 

@@ -22,11 +22,12 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 from proofrail.envelope import verify_action_authority_envelope  # noqa: E402
+from proofrail.crypto import verify_signature  # noqa: E402
 
 import outcome_verifier  # noqa: E402
 from policy import approval_digest, evidence_root, plan_digest  # noqa: E402
 from proofrail_gateway import ACTION_TYPE, expected_parameters, success_predicate, work_order_target  # noqa: E402
-from records import PilotError, Registry, decode_public, digest, utc  # noqa: E402
+from records import PilotError, Registry, decode_public, digest, utc, validate  # noqa: E402
 from store import verify_chain  # noqa: E402
 
 
@@ -77,6 +78,7 @@ def verify(root: Path, trusted: dict | None = None) -> dict:
         load(root, 'records/approval.json')
     envelope, reference = load(root, 'records/envelope.json'), load(root, 'records/authority_reference.json')
     consumption = load(root, 'records/consumption.json')
+    consumption_attestation = load(root, 'records/consumption-attestation.json')
     identity_then = load(root, 'context/identity-at-admission.json')
     identity_now = load(root, 'context/identity-at-export.json')
     policy = load(root, 'context/policy-at-admission.json')
@@ -122,6 +124,26 @@ def verify(root: Path, trusted: dict | None = None) -> dict:
     r.check('authenticity', 'audit chain intact from genesis (tail truncation is not detectable)',
             verify_chain(load(root, 'audit/chain.json')))
 
+    # The gateway signed the database rows *after* consumption committed.
+    # Its admission-time key must come from separately pinned historical keys
+    # in trusted mode. This is not an independent registry checkpoint.
+    executor_id = envelope['subject']['principal_id']
+    historical_gateway = next((p for p in identity_then['principals']
+                               if p['principal_id'] == executor_id), None)
+    r.check('authenticity', 'admission-time gateway identity is registered',
+            historical_gateway is not None and 'gateway' in historical_gateway['roles'])
+    try:
+        validate('consumption_attestation', consumption_attestation)
+        if historical_gateway is None:
+            raise PilotError('consumption_gateway_unknown')
+        if consumption_attestation['signature']['key_id'] != historical_gateway['key_id']:
+            raise PilotError('consumption_gateway_key_mismatch')
+        verify_signature(consumption_attestation, decode_public(historical_gateway['public_key']))
+        r.check('authenticity', 'gateway signature authenticates consumption-row attestation', True)
+    except Exception as exc:
+        r.check('authenticity', 'gateway signature authenticates consumption-row attestation',
+                False, getattr(exc, 'reason', type(exc).__name__))
+
     # ---- 3. authority validity
     issuer = next((p for p in identity_then['principals'] if 'authority_issuer' in p['roles']), None)
     r.check('authority', 'issuer present in the admission-time identity snapshot', issuer is not None)
@@ -156,6 +178,14 @@ def verify(root: Path, trusted: dict | None = None) -> dict:
             and [e['state'] for e in consumption['events']] == ['EXECUTING', 'CONSUMED'])
     r.check('authority', 'consumed within the envelope validity window',
             utc(envelope['issued_at']) <= utc(claim['consumed_at']) < utc(envelope['expires_at']))
+    r.check('authority', 'gateway attestation binds these exact exported registry rows',
+            consumption_attestation.get('kind') == 'wrn.consumption-attestation.v1'
+            and consumption_attestation.get('tenant_id') == tenant
+            and consumption_attestation.get('envelope_digest') == envelope['record_hash']
+            and consumption_attestation.get('nonce') == envelope['nonce']
+            and consumption_attestation.get('executor_principal') == executor_id
+            and consumption_attestation.get('consumed_at') == claim['consumed_at']
+            and consumption_attestation.get('registry_claim_digest') == digest(consumption))
 
     # ---- 4. provider-observed execution
     recon = next((o for o in observations if o['record_hash'] == reference['reconciliation_reference']), None)
@@ -210,9 +240,9 @@ def verify(root: Path, trusted: dict | None = None) -> dict:
         outcome['settlement'] = {'status': settlements[-1]['authorization_status'],
                                  'money_moved': settlements[-1]['money_moved']}
         r.check('outcome', 'settlement is simulated (no money moved)', all(s['money_moved'] is False for s in settlements))
-    # Hashes of exported database rows are internally consistent evidence,
-    # not proof that a trusted append-only registry recorded consumption.
-    consumption_provenance = 'unsigned_registry_export_not_independently_attested'
+    # A signed gateway receipt attests to exported database rows but does not
+    # prove an independently retained registry history or prevent joint rollback.
+    consumption_provenance = 'signed_gateway_attestation_unanchored_not_independent_registry_proof'
     required_dims = ('integrity', 'authenticity', 'authority', 'execution')
     return {'bundle': str(root), 'key_trust': key_trust,
             'consumption_provenance': consumption_provenance,
