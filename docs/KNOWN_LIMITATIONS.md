@@ -1,4 +1,7 @@
-# ProofRail v0.5 Known Limitations
+# ProofRail Known Limitations
+
+Applies to package version 0.6.1. (Earlier editions were headed v0.5; the
+items below are unchanged by that correction.)
 
 1. Deleting or rolling back both the replay registry and its independently
    retained signed trust checkpoint can erase replay evidence.
