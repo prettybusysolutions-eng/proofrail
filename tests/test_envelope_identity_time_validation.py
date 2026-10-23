@@ -87,14 +87,14 @@ class EnvelopeIdentityTimeTests(unittest.TestCase):
         with self.assertRaisesRegex(PermitError, "authority_not_yet_valid"):
             self.verify(future)
 
-    def test_timezone_less_signed_date_is_rejected_by_schema(self):
+    def test_timezone_less_signed_date_is_rejected(self):
         modified = self.resign_with_time("issued_at", "2026-10-23T12:00:00")
-        with self.assertRaisesRegex(PermitError, "invalid_envelope"):
+        with self.assertRaisesRegex(PermitError, "timezone_required"):
             self.verify(modified)
 
-    def test_malformed_signed_date_is_rejected_by_schema(self):
+    def test_malformed_signed_date_is_rejected(self):
         modified = self.resign_with_time("expires_at", "not-a-timestamp")
-        with self.assertRaisesRegex(PermitError, "invalid_envelope"):
+        with self.assertRaisesRegex(PermitError, "invalid_timestamp"):
             self.verify(modified)
 
     def test_timezone_less_mint_expiry_is_rejected(self):
