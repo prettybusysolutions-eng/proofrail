@@ -97,6 +97,11 @@ class EnvelopeIdentityTimeTests(unittest.TestCase):
         with self.assertRaisesRegex(PermitError, "invalid_timestamp"):
             self.verify(modified)
 
+    def test_non_rfc3339_separator_is_rejected(self):
+        modified = self.resign_with_time("issued_at", "2026-10-23 12:00:00+00:00")
+        with self.assertRaisesRegex(PermitError, "invalid_timestamp"):
+            self.verify(modified)
+
     def test_timezone_less_mint_expiry_is_rejected(self):
         with self.assertRaisesRegex(PermitError, "timezone_required"):
             mint_action_authority_envelope(
