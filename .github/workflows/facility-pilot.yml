@@ -1,0 +1,55 @@
+name: Facility outcome pilot
+
+on:
+  pull_request:
+    paths:
+      - 'pilots/facility_outcomes/**'
+      - 'proofrail/**'
+      - 'schemas/**'
+      - 'pyproject.toml'
+      - '.github/workflows/facility-pilot.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'pilots/facility_outcomes/**'
+      - 'proofrail/**'
+      - 'schemas/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install ProofRail and pilot test dependencies
+        run: python -m pip install -e . -r pilots/facility_outcomes/requirements-dev.txt
+      - name: Existing ProofRail suite (unchanged)
+        run: python -m unittest discover -s tests -q
+      - name: Pilot suite (scenarios, attack matrix, bundles)
+        working-directory: pilots/facility_outcomes
+        run: python -m pytest -q tests/ --junitxml=pilot-results.xml
+      - name: End-to-end demonstration and offline bundle verification
+        run: |
+          python pilots/facility_outcomes/run_pilot.py --out "$RUNNER_TEMP/wrn-pilot"
+          python pilots/facility_outcomes/verify_bundle.py "$RUNNER_TEMP/wrn-pilot/bundle-A"
+          cp "$RUNNER_TEMP/wrn-pilot/summary.json" pilots/facility_outcomes/demonstration-summary.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: facility-pilot-evidence-python-${{ matrix.python-version }}
+          path: |
+            pilots/facility_outcomes/pilot-results.xml
+            pilots/facility_outcomes/demonstration-summary.json
+          if-no-files-found: error
+          retention-days: 30
