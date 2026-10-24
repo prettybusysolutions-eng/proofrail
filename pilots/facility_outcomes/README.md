@@ -55,6 +55,26 @@ or durably retained registry history. It does not solve joint rollback or
 ledger-tail truncation. An independently held checkpoint/anchor remains a
 separate unsatisfied security gate.
 
+## Spent-authority crash recovery boundary
+
+Two deterministic worker-process crash tests cover the interval after the
+ProofRail replay-registry claim has been committed, but before a provider
+work-order request could be sent:
+
+- **Before an authority business record is written:** the replay registry has
+  spent the permit, but no authority record exists to export. The original
+  permit cannot be replayed; this remains an unresolved incident-recovery
+  gap (L-9).
+- **After CONSUMED is written but before the signed receipt is persisted:**
+  reconciliation records `consumption_receipt_missing`, makes a single signed
+  read-only diagnostic observation, and refuses further reconciliation.
+  Export refuses explicitly, before creating a partial bundle. No automatic
+  retry or re-attestation is authorized (L-10).
+
+The diagnostic checks what the local provider reported at that instant; an
+empty response is **not** independent proof that no side effect occurred.
+Provider authorization and external replay checkpoints remain separate gates.
+
 ## Layout
 
 | File | Role |
