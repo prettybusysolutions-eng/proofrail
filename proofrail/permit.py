@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 
 from .core import ProofRailError
 from .crypto import sign_record, verify_signature
-from .trust import replay_claim_exists, replay_registry_root, verify_trust_checkpoint
+from .trust import ensure_replay_registry, replay_claim_exists, replay_registry_root, verify_trust_checkpoint
 
 ROOT_NAMES = ("identity", "evidence", "policy", "state")
 MERGE_METHODS = {"merge", "squash", "rebase"}
@@ -270,33 +270,14 @@ def consume_permit(
     permit_hash = _required_text(permit, "record_hash")
     nonce = _required_text(permit, "nonce")
     path = Path(registry_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_replay_registry(path)
 
     database = sqlite3.connect(path, isolation_level=None)
     try:
         database.execute("PRAGMA journal_mode=WAL")
-        database.execute(
-            """
-            CREATE TABLE IF NOT EXISTS permit_claims (
-                permit_hash TEXT PRIMARY KEY,
-                nonce TEXT NOT NULL UNIQUE,
-                executor_id TEXT NOT NULL,
-                executing_at TEXT NOT NULL,
-                consumed_at TEXT NOT NULL
-            )
-            """
-        )
-        database.execute(
-            """
-            CREATE TABLE IF NOT EXISTS permit_events (
-                sequence INTEGER PRIMARY KEY AUTOINCREMENT,
-                permit_hash TEXT NOT NULL,
-                state TEXT NOT NULL,
-                observed_at TEXT NOT NULL,
-                executor_id TEXT NOT NULL
-            )
-            """
-        )
+        database.execute("PRAGMA synchronous=FULL")
+        # Missing tables in an existing registry are corruption, not a reason
+        # to recreate replay history. Schema publication happens atomically.
         database.execute("BEGIN IMMEDIATE")
         try:
             # Recheck while holding the write lock: an earlier read cannot
