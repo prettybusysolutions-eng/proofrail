@@ -18,7 +18,7 @@ from .crypto import hash_record, sign_record, verify_signature
 from .permit import PERMIT_ISSUER_ROLES, PermitError
 
 ROOT_NAMES = ("identity", "evidence", "policy", "state")
-_RFC3339_TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\Z")
+_RFC3339_TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\Z", re.ASCII)
 
 
 def effect_digest(
