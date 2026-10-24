@@ -178,10 +178,12 @@ def test_provider_order_reference_binding_has_its_own_failure(bundle):
 # 14-15: an outcome's own consistency and nonpayment requirements must be
 # exercised, not hidden by earlier authenticity failures.
 def test_outcome_reproduction_has_its_own_failure(bundle):
-    for path in (bundle / "records/observations").glob("*.json"):
-        if json.loads(path.read_text())["observation_type"] == "inspection":
-            path.unlink()
-    resum(bundle)
+    # Keep authentic underlying inspection inputs intact so assess() succeeds.
+    # Change only the stated verdict; this exercises the direct comparison
+    # rather than a separate PilotError exception-handler check with the same name.
+    path = sorted((bundle / "records/verdicts").glob("*.json"))[-1]
+    update_json(bundle, str(path.relative_to(bundle)),
+                lambda v: v.update(assessment_state="REJECTED"))
     require_named_failure(bundle, "outcome", "verdict reproduces from the included observations")
 
 
