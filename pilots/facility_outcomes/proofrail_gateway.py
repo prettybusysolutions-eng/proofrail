@@ -44,6 +44,7 @@ from proofrail.permit import PERMIT_ISSUER_ROLES
 from proofrail.trust import replay_claim_exists
 
 import lifecycle
+from consumption_provenance import read_registry_claim
 from policy import evidence_root
 from records import Clock, Identity, PilotError, Registry, decode_public, digest, require, utc, validate
 from store import Store
@@ -292,6 +293,29 @@ class Gateway:
         return digest({'permit_hash': envelope['record_hash'], 'nonce': envelope['nonce'],
                        'executor': self.identity.principal.principal_id})
 
+    def _attest_consumption(self, tenant_id: str, envelope: dict) -> dict:
+        """Sign a digest of the committed registry rows before any provider write.
+
+        This is a gateway attestation, not an independent checkpoint/anchor.
+        Any failure aborts admission after permit spending and before the effect.
+        """
+        rowset = read_registry_claim(self.replay_registry, envelope['record_hash'])
+        claim = rowset['claim']
+        require(claim['nonce'] == envelope['nonce'] and
+                claim['executor_id'] == self.identity.principal.principal_id and
+                [event['state'] for event in rowset['events']] == ['EXECUTING', 'CONSUMED'],
+                'registry_consumption_inconsistent')
+        record = {'kind': 'wrn.consumption-attestation.v1',
+                  'tenant_id': tenant_id,
+                  'envelope_digest': envelope['record_hash'],
+                  'nonce': claim['nonce'],
+                  'executor_principal': claim['executor_id'],
+                  'consumed_at': claim['consumed_at'],
+                  'registry_claim_digest': digest(rowset)}
+        signed = self.identity.sign(record)
+        validate('consumption_attestation', signed)
+        return signed
+
     def _reference(self, tenant_id: str, envelope: dict, state: str, *, consumption=None, operation=None,
                    reconciliation=None, replace=True) -> dict:
         ref = {'kind': 'wrn.execution-authority-reference.v1', 'tenant_id': tenant_id,
@@ -328,6 +352,10 @@ class Gateway:
         consumption = self._consume(envelope)             # single use; from here the authority is spent
         try:
             self._reference(tenant_id, envelope, 'CONSUMED', consumption=consumption, replace=False)
+            attestation = self._attest_consumption(tenant_id, envelope)
+            recorded = self.store.get(tenant_id, 'authority', envelope['envelope_id'])
+            self.store.put(tenant_id, 'authority', envelope['envelope_id'],
+                           {**recorded, 'consumption_attestation': attestation}, replace=True)
         except PilotError as exc:
             if exc.reason == 'record_exists':     # lost a race against a concurrent admission
                 raise PilotError('authority_already_admitted') from None
@@ -432,13 +460,32 @@ class Gateway:
     def reconcile(self, tenant_id: str, envelope_id: str) -> dict:
         """Read-only follow-up for an unknown outcome. Never repeats the create call.
 
-        CONSUMED without a recorded outcome means the process stopped after consuming
-        (for example a crash while the provider call was in flight): it is resolved the
-        same way as EXECUTION_UNKNOWN, by reads only. An admission aborted before any
-        provider call is not reconcilable; it needs new authority.
+        CONSUMED with a recorded receipt can be reconciled by provider reads if
+        a provider call was in flight. Without that receipt it is a fail-closed
+        admission-abort case: record a diagnostic read, then refuse reconciliation
+        and export. The diagnostic is not conclusive absence-of-effect proof.
+        An admission aborted before any provider call is not reconcilable.
         """
         stored = self.store.get(tenant_id, 'authority', envelope_id)
         state = stored['reference']['authority_state']
+        # A crash between the durable replay-registry claim and the durable
+        # signed receipt cannot be treated like a provider-call timeout.
+        # The provider call is ordered AFTER receipt persistence in admit().
+        # Nevertheless a single provider read is only a diagnostic observation,
+        # not an external guarantee that no side effect ever occurred.
+        if 'consumption_attestation' not in stored:
+            reason = 'consumption_receipt_missing'
+            if stored.get('aborted') != reason:
+                diagnostic = self.observer.observe(tenant_id, envelope_id)  # read-only
+                self.store.put(tenant_id, 'observation', diagnostic['observation_id'], diagnostic)
+                self.store.put(tenant_id, 'authority', envelope_id,
+                               {**stored, 'aborted': reason,
+                                'recovery_observation': diagnostic['record_hash']}, replace=True)
+                self.store.audit(tenant_id, 'admission_aborted_after_consumption', envelope_id,
+                                 {'reason': reason, 'observation': diagnostic['record_hash'],
+                                  'provider_calls_during_recovery': 0,
+                                  'absence_of_effect_independently_proven': False})
+            raise PilotError(reason)
         require(not stored.get('aborted'), 'admission_aborted_before_provider_call', stored.get('aborted', ''))
         require(state in ('EXECUTION_UNKNOWN', 'CONSUMED'), 'reconciliation_not_pending', state)
         calls_before = self.provider_calls

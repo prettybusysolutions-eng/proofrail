@@ -9,11 +9,10 @@ from __future__ import annotations
 
 import hashlib
 import json
-import sqlite3
 import subprocess
-from contextlib import closing
 from pathlib import Path
 
+from consumption_provenance import read_registry_claim
 from records import Identity, require
 
 EXPORT_ROLES = {'buyer', 'tenant_admin', 'outcome_reviewer', 'settlement_authorizer'}
@@ -26,15 +25,8 @@ def _write(path: Path, value) -> None:
 
 
 def _claim(registry_path: Path, permit_hash: str) -> dict:
-    with closing(sqlite3.connect(f'file:{registry_path}?mode=ro', uri=True)) as db:
-        claim = db.execute('SELECT permit_hash, nonce, executor_id, executing_at, consumed_at FROM permit_claims '
-                           'WHERE permit_hash=?', (permit_hash,)).fetchone()
-        events = db.execute('SELECT state, observed_at, executor_id FROM permit_events WHERE permit_hash=? '
-                            'ORDER BY sequence', (permit_hash,)).fetchall()
-    require(claim is not None, 'consumption_record_missing')
-    keys = ('permit_hash', 'nonce', 'executor_id', 'executing_at', 'consumed_at')
-    return {'registry_format': 'proofrail.permit_claims (as consume_permit)', 'claim': dict(zip(keys, claim)),
-            'events': [dict(zip(('state', 'observed_at', 'executor_id'), e)) for e in events]}
+    """Compatibility helper used by existing negative tests."""
+    return read_registry_claim(registry_path, permit_hash)
 
 
 def source_commit(directory: Path) -> str | None:
@@ -56,6 +48,11 @@ def export_case(actor: Identity, pilot, tenant_id: str, problem_id: str, out: Pa
                    if a['envelope']['effect']['parameters']['problem_id'] == problem_id]
     require(len(authorities) == 1, 'case_has_no_single_admitted_authority')
     authority = authorities[0]
+    # Refuse before creating a partially populated destination. A spent permit
+    # without a persisted gateway attestation is not a portable proof, even if
+    # its replay-registry rows can still be read.
+    require('consumption_attestation' in authority, 'consumption_receipt_missing')
+    require(not authority.get('aborted'), 'authority_admission_aborted')
     params = authority['envelope']['effect']['parameters']
     plan = store.get(tenant_id, 'plan', params['plan_id'])
     approval = next(a for a in store.all(tenant_id, 'approval')
@@ -76,7 +73,10 @@ def export_case(actor: Identity, pilot, tenant_id: str, problem_id: str, out: Pa
     _write(out / 'records' / 'approval.json', approval)
     _write(out / 'records' / 'envelope.json', authority['envelope'])
     _write(out / 'records' / 'authority_reference.json', authority['reference'])
-    _write(out / 'records' / 'consumption.json', _claim(pilot.replay_registry, authority['envelope']['record_hash']))
+    _write(out / 'records' / 'consumption.json',
+           read_registry_claim(pilot.replay_registry, authority['envelope']['record_hash']))
+    _write(out / 'records' / 'consumption-attestation.json',
+           authority['consumption_attestation'])
     for kind, items in (('observations', observations), ('verdicts', verdicts), ('acceptances', acceptances),
                         ('invoices', invoices), ('settlements', settlements)):
         for i, item in enumerate(items):
@@ -115,7 +115,10 @@ The verifier reports five dimensions separately:
    bundle itself (self-asserted): that shows internal consistency only, not who signed. Obtain the
    tenant's keys independently and pass them with --trusted-keys to check origin.
 3. Authority validity: the ProofRail envelope was issued by the authority issuer, bound to exactly
-   these records (all four roots recomputed from the included snapshots), and consumed once.
+   these records (all four roots recomputed from the included snapshots). A separately signed
+   gateway attestation binds a digest of the registry rows observed after the local consumption
+   commit. It authenticates the gateway's claim, NOT independently retained registry history.
+   An external checkpoint or anchor remains necessary for stronger rollback-resistance claims.
 4. Provider-observed execution: an independent, signed provider read found exactly one work order
    matching every authorized parameter.
 5. Attested physical outcome: the verdict is reproduced from the included observations under the
