@@ -41,9 +41,10 @@ def ensure_replay_registry(registry_path: str | Path) -> None:
     staged = Path(staged_name)
     try:
         with closing(sqlite3.connect(staged, isolation_level=None)) as database:
-            # DELETE avoids WAL sidecars for the unpublished staging database.
-            # Normal consumers can switch to WAL after publication.
-            database.execute("PRAGMA journal_mode=DELETE")
+            # Match the existing registry's WAL-first schema initialization.
+            # Explicit connection close checkpoints and removes staging sidecars
+            # before the complete database is linked into public view.
+            database.execute("PRAGMA journal_mode=WAL")
             database.execute("PRAGMA synchronous=FULL")
             database.executescript("""
                 CREATE TABLE permit_claims (
