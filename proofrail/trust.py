@@ -5,6 +5,7 @@ import os
 import sqlite3
 import tempfile
 from collections.abc import Mapping
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -39,7 +40,7 @@ def ensure_replay_registry(registry_path: str | Path) -> None:
     os.close(descriptor)
     staged = Path(staged_name)
     try:
-        with sqlite3.connect(staged, isolation_level=None) as database:
+        with closing(sqlite3.connect(staged, isolation_level=None)) as database:
             # DELETE avoids WAL sidecars for the unpublished staging database.
             # Normal consumers can switch to WAL after publication.
             database.execute("PRAGMA journal_mode=DELETE")
