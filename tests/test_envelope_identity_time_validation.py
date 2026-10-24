@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from proofrail.crypto import sign_record
-from proofrail.envelope import mint_action_authority_envelope, verify_action_authority_envelope
+from proofrail.envelope import _RFC3339_TIMESTAMP, mint_action_authority_envelope, verify_action_authority_envelope
 from proofrail.permit import PermitError
 
 
@@ -101,6 +101,10 @@ class EnvelopeIdentityTimeTests(unittest.TestCase):
         modified = self.resign_with_time("issued_at", "2026-10-23 12:00:00+00:00")
         with self.assertRaisesRegex(PermitError, "invalid_timestamp"):
             self.verify(modified)
+
+    def test_rfc3339_parser_pattern_rejects_non_ascii_digits(self):
+        self.assertIsNone(_RFC3339_TIMESTAMP.fullmatch("٢٠٢٦-10-23T12:00:00Z"))
+        self.assertIsNotNone(_RFC3339_TIMESTAMP.fullmatch("2026-10-23T12:00:00Z"))
 
     def test_timezone_less_mint_expiry_is_rejected(self):
         with self.assertRaisesRegex(PermitError, "timezone_required"):
