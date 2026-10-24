@@ -46,22 +46,30 @@ def ensure_replay_registry(registry_path: str | Path) -> None:
             # before the complete database is linked into public view.
             database.execute("PRAGMA journal_mode=WAL")
             database.execute("PRAGMA synchronous=FULL")
-            database.executescript("""
-                CREATE TABLE permit_claims (
-                    permit_hash TEXT PRIMARY KEY,
-                    nonce TEXT NOT NULL UNIQUE,
-                    executor_id TEXT NOT NULL,
-                    executing_at TEXT NOT NULL,
-                    consumed_at TEXT NOT NULL
-                );
-                CREATE TABLE permit_events (
-                    sequence INTEGER PRIMARY KEY AUTOINCREMENT,
-                    permit_hash TEXT NOT NULL,
-                    state TEXT NOT NULL,
-                    observed_at TEXT NOT NULL,
-                    executor_id TEXT NOT NULL
-                );
-            """)
+            # Match the original per-table DDL text as well as its semantics:
+            # the reproducible SQLite fixture preserves sqlite_master.sql bytes.
+            database.execute(
+                """
+            CREATE TABLE IF NOT EXISTS permit_claims (
+                permit_hash TEXT PRIMARY KEY,
+                nonce TEXT NOT NULL UNIQUE,
+                executor_id TEXT NOT NULL,
+                executing_at TEXT NOT NULL,
+                consumed_at TEXT NOT NULL
+            )
+            """
+            )
+            database.execute(
+                """
+            CREATE TABLE IF NOT EXISTS permit_events (
+                sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                permit_hash TEXT NOT NULL,
+                state TEXT NOT NULL,
+                observed_at TEXT NOT NULL,
+                executor_id TEXT NOT NULL
+            )
+            """
+            )
         try:
             os.link(staged, path)
         except FileExistsError:
