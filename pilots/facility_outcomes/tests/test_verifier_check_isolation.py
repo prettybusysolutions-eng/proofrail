@@ -178,12 +178,13 @@ def test_provider_order_reference_binding_has_its_own_failure(bundle):
 # 14-15: an outcome's own consistency and nonpayment requirements must be
 # exercised, not hidden by earlier authenticity failures.
 def test_outcome_reproduction_has_its_own_failure(bundle):
-    # Keep authentic underlying inspection inputs intact so assess() succeeds.
-    # Change only the stated verdict; this exercises the direct comparison
-    # rather than a separate PilotError exception-handler check with the same name.
-    path = sorted((bundle / "records/verdicts").glob("*.json"))[-1]
-    update_json(bundle, str(path.relative_to(bundle)),
-                lambda v: v.update(assessment_state="REJECTED"))
+    # The *surviving* historical mutant is the exception-handler check at
+    # verify_bundle.py:195 (constant False), not the successful comparison at
+    # line 190. Force a PilotError in outcome reassessment by changing the
+    # referenced authority state to EXECUTION_UNKNOWN. The verifier must
+    # record that failure even though its execution dimension also fails.
+    update_json(bundle, "records/authority_reference.json",
+                lambda r: r.update(authority_state="EXECUTION_UNKNOWN"))
     require_named_failure(bundle, "outcome", "verdict reproduces from the included observations")
 
 
