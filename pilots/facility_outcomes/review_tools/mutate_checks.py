@@ -8,7 +8,10 @@ Five check shapes are mutated in a disposable copy of the pilot directory:
   if COND: reasons.append(...)   -> COND replaced by False   (settlement rules)
   r.check(dim, name, COND, ...)  -> COND replaced by True    (offline bundle verifier)
   raise PilotError(...)          -> pass                     (offline bundle verifier)
-A check whose removal leaves the suite green is reported as a survivor.
+Each mutant is classified as survived, killed_valid (with the exact failing test and
+its reason, re-confirmed on the mutant and passing on the unmutated copy), or invalid
+(syntax error, collection/usage/internal error, setup error, timeout, unreproduced or
+environment failure). Invalid outcomes are reported, never counted as kills.
 
 The copy keeps the repository layout (pilots/facility_outcomes next to docs/),
 because some tests read docs/. An unmutated copy must pass before any mutant is
@@ -17,6 +20,7 @@ counted: without that baseline, a test that fails for an environmental reason
 """
 import ast
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -71,36 +75,104 @@ def mutants():
             yield VERIFIER, node.lineno, 'raise ' + ast.unparse(node.exc), text[:at(node)] + 'pass' + text[at(node, True):]
 
 
-def run(m):
+PYTEST = [sys.executable, '-m', 'pytest', '-q', '-p', 'no:cacheprovider', '-rfE']
+ENV = {**os.environ, 'PYTHONDONTWRITEBYTECODE': '1', 'COLUMNS': '1000'}
+TIMEOUT = 600
+
+
+def make_copy(d, name=None, mutated=None):
+    copy = Path(d) / 'pilots' / 'facility_outcomes'
+    shutil.copytree(PILOT, copy, ignore=shutil.ignore_patterns('__pycache__', '.pytest_cache', 'review_tools'))
+    shutil.copytree(DOCS, Path(d) / 'docs')
+    if name is not None:
+        (copy / name).write_text(mutated)
+    return copy
+
+
+def pytest(copy, *args):
+    """Return (exit code or 'timeout', FAILED nodeids with messages, ERROR nodeids, output tail)."""
+    try:
+        r = subprocess.run(PYTEST + list(args), cwd=copy, capture_output=True, text=True,
+                           timeout=TIMEOUT, env=ENV)
+    except subprocess.TimeoutExpired:
+        return 'timeout', [], [], ''
+    failed, errors = [], []
+    for line in r.stdout.splitlines():
+        if line.startswith('FAILED '):
+            nodeid, _, message = line[len('FAILED '):].partition(' - ')
+            failed.append({'test': nodeid, 'reason': message[:300]})
+        elif line.startswith('ERROR '):
+            errors.append(line[len('ERROR '):][:300])
+    return r.returncode, failed, errors, '\n'.join((r.stdout + r.stderr).splitlines()[-8:])
+
+
+def run(m, baseline_copy):
+    """Classify one mutant as survived, killed_valid, or invalid (never counted as a kill).
+
+    killed_valid requires all of: the mutated file compiles; pytest exits 1 (test failures,
+    not collection/usage/internal errors); at least one FAILED test and no ERROR (setup)
+    entries; that exact test fails again when re-run alone on the mutant; and the same
+    test passes alone on the unmutated copy. Anything else is invalid with its cause.
+    """
     name, line, label, mutated = m
+    result = {'file': name, 'line': line, 'check': label}
+    try:
+        compile(mutated, name, 'exec')
+    except SyntaxError as exc:
+        return {**result, 'outcome': 'invalid', 'cause': f'syntax_error: {exc}'}
     with tempfile.TemporaryDirectory() as d:
-        copy = Path(d) / 'pilots' / 'facility_outcomes'
-        shutil.copytree(PILOT, copy, ignore=shutil.ignore_patterns('__pycache__', '.pytest_cache', 'review_tools'))
-        shutil.copytree(DOCS, Path(d) / 'docs')
-        if name is not None:
-            (copy / name).write_text(mutated)
-        try:
-            r = subprocess.run([sys.executable, '-m', 'pytest', '-q', '-x', '-p', 'no:cacheprovider', 'tests/'],
-                               cwd=copy, capture_output=True, text=True, timeout=600)
-            survived = r.returncode == 0
-            killer = next((l for l in r.stdout.splitlines() if l.startswith('FAILED')), '')[:160]
-        except subprocess.TimeoutExpired:
-            survived, killer = False, 'timeout'
-    return {'file': name, 'line': line, 'check': label, 'survived': survived, 'killed_by': killer}
+        copy = make_copy(d, name, mutated)
+        code, failed, errors, tail = pytest(copy, '-x', 'tests/')
+        if code == 0:
+            return {**result, 'outcome': 'survived'}
+        if code == 'timeout':
+            return {**result, 'outcome': 'invalid', 'cause': 'timeout'}
+        if code != 1:
+            return {**result, 'outcome': 'invalid', 'cause': f'pytest_exit_{code} (collection, usage or internal error)',
+                    'output': tail}
+        if errors or not failed:
+            return {**result, 'outcome': 'invalid', 'cause': 'test_setup_error' if errors else 'no_failed_test_reported',
+                    'errors': errors, 'output': tail}
+        killer = failed[0]
+        again, _, _, _ = pytest(copy, killer['test'])
+    clean, _, _, _ = pytest(baseline_copy, killer['test'])
+    if again != 1:
+        return {**result, 'outcome': 'invalid', 'cause': f'failure_not_reproduced_on_mutant (exit {again})', **killer}
+    if clean != 0:
+        return {**result, 'outcome': 'invalid', 'cause': f'test_also_fails_unmutated (exit {clean})', **killer}
+    return {**result, 'outcome': 'killed_valid', **killer}
+
+
+def commit():
+    try:
+        sha = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=PILOT, capture_output=True, text=True).stdout.strip()
+        dirty = subprocess.run(['git', 'status', '--porcelain', '--', '.', str(DOCS)], cwd=PILOT,
+                               capture_output=True, text=True).stdout.strip()
+        return sha, bool(dirty)
+    except OSError:
+        return 'unknown', True
 
 
 if __name__ == '__main__':
     out = Path(sys.argv[1])
-    baseline = run((None, 0, 'baseline', None))
-    if not baseline['survived']:
-        sys.exit('unmutated copy fails, so no mutant can be counted: ' + baseline['killed_by'])
-    print('baseline: unmutated copy passes', flush=True)
-    ms = list(mutants())
-    print('checks:', len(ms), flush=True)
-    with ThreadPoolExecutor(max_workers=int(sys.argv[2]) if len(sys.argv) > 2 else 4) as pool:
-        results = list(pool.map(run, ms))
-    out.write_text(json.dumps(results, indent=1))
-    survivors = [r for r in results if r['survived']]
-    print('survived:', len(survivors), 'of', len(results))
-    for r in survivors:
-        print(f"  {r['file']}:{r['line']}  {r['check']}")
+    workers = int(sys.argv[2]) if len(sys.argv) > 2 else 4
+    sha, dirty = commit()
+    with tempfile.TemporaryDirectory() as base:
+        baseline_copy = make_copy(base)
+        code, failed, errors, tail = pytest(baseline_copy, 'tests/')
+        if code != 0:
+            sys.exit(f'unmutated copy fails (exit {code}), so no mutant can be counted: {failed or errors or tail}')
+        print('baseline: unmutated copy passes', flush=True)
+        ms = list(mutants())
+        print('checks:', len(ms), flush=True)
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            results = list(pool.map(lambda m: run(m, baseline_copy), ms))
+    counts = {k: sum(r['outcome'] == k for r in results) for k in ('survived', 'killed_valid', 'invalid')}
+    out.write_text(json.dumps({'commit': sha, 'tree_dirty': dirty, 'python': sys.version.split()[0],
+                               'baseline': 'unmutated copy passes', 'counts': counts, 'results': results}, indent=1))
+    print('commit:', sha, '(dirty)' if dirty else '')
+    print('counts:', counts)
+    for kind in ('survived', 'invalid'):
+        for r in results:
+            if r['outcome'] == kind:
+                print(f"  {kind.upper()} {r['file']}:{r['line']}  {r['check']}  {r.get('cause', '')}")
