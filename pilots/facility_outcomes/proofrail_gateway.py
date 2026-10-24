@@ -26,6 +26,7 @@ authorized parameters reconciles.
 from __future__ import annotations
 
 import json
+import os
 import secrets
 import sqlite3
 import uuid
@@ -37,6 +38,7 @@ from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
+from proofrail.core import ProofRailError
 from proofrail.envelope import mint_action_authority_envelope, verify_action_authority_envelope
 from proofrail.permit import PERMIT_ISSUER_ROLES
 from proofrail.trust import replay_claim_exists
@@ -181,6 +183,14 @@ class Observer:
         return signed
 
 
+REGISTRY_SCHEMA = '''
+    CREATE TABLE IF NOT EXISTS permit_claims (permit_hash TEXT PRIMARY KEY, nonce TEXT NOT NULL UNIQUE,
+        executor_id TEXT NOT NULL, executing_at TEXT NOT NULL, consumed_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS permit_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+        permit_hash TEXT NOT NULL, state TEXT NOT NULL, observed_at TEXT NOT NULL,
+        executor_id TEXT NOT NULL);'''
+
+
 class Gateway:
     """The authority boundary. Holds no authority key; it can only spend authority issued to it."""
 
@@ -192,6 +202,31 @@ class Gateway:
         self.replay_registry = Path(replay_registry)
         self.issuer_id, self.provider, self.observer = issuer_id, provider, observer
         self.provider_calls = 0          # counted from calls actually issued
+        self._ensure_registry()
+
+    def _ensure_registry(self) -> None:
+        """Create the replay registry so that no reader ever sees the file without its tables.
+
+        consume_permit-style creation (connect, then CREATE TABLE) leaves a window in which the
+        file exists but permit_claims does not; a concurrent replay check then fails as
+        'unreadable or corrupt'. The schema is built in a private file and linked into place
+        only if no registry exists yet (os.link fails if the target exists, atomically).
+        """
+        if self.replay_registry.exists():
+            return
+        self.replay_registry.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self.replay_registry.with_name(f'.{self.replay_registry.name}.{os.getpid()}.{uuid.uuid4().hex}')
+        try:
+            with closing(sqlite3.connect(tmp, isolation_level=None)) as db:
+                db.execute('PRAGMA journal_mode=WAL')
+                db.executescript(REGISTRY_SCHEMA)
+            try:
+                os.link(tmp, self.replay_registry)
+            except FileExistsError:
+                pass                     # another process created it first; its schema is complete too
+        finally:
+            for suffix in ('', '-wal', '-shm'):
+                Path(str(tmp) + suffix).unlink(missing_ok=True)
 
     # -------------------------------------------------------------- admission
     def _verify(self, tenant_id: str, envelope: dict) -> dict:
@@ -234,15 +269,11 @@ class Gateway:
 
     def _consume(self, envelope: dict) -> str:
         """Same registry schema and transaction as proofrail.permit.consume_permit."""
+        self._ensure_registry()          # the registry may have been removed since construction
         with closing(sqlite3.connect(self.replay_registry, isolation_level=None, timeout=10)) as db:
             db.execute('PRAGMA journal_mode=WAL')
             db.execute('PRAGMA synchronous=FULL')
-            db.executescript('''
-                CREATE TABLE IF NOT EXISTS permit_claims (permit_hash TEXT PRIMARY KEY, nonce TEXT NOT NULL UNIQUE,
-                    executor_id TEXT NOT NULL, executing_at TEXT NOT NULL, consumed_at TEXT NOT NULL);
-                CREATE TABLE IF NOT EXISTS permit_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT,
-                    permit_hash TEXT NOT NULL, state TEXT NOT NULL, observed_at TEXT NOT NULL,
-                    executor_id TEXT NOT NULL);''')
+            db.executescript(REGISTRY_SCHEMA)
             db.execute('BEGIN IMMEDIATE')
             try:
                 now, executor = self.clock.text(), self.identity.principal.principal_id
@@ -285,7 +316,11 @@ class Gateway:
         #  2. the business store's own record of admitted envelopes (survives a rollback of the
         #     replay registry alone);
         #  3. the state root inside verification (work state has moved on after admission).
-        if self.replay_registry.exists() and replay_claim_exists(self.replay_registry, envelope['record_hash']):
+        try:
+            replayed = replay_claim_exists(self.replay_registry, envelope['record_hash'])
+        except ProofRailError:
+            raise PilotError('replay_registry_unreadable') from None    # fail closed, with a reason
+        if replayed:
             raise PilotError('permit_replayed')
         require(not self._admitted(tenant_id, envelope['envelope_id']), 'authority_already_admitted')
         checked = self._verify(tenant_id, envelope)        # refusals here leave no trace in the registry

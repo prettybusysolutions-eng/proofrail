@@ -96,6 +96,35 @@ def test_replay_registry_missing_entirely(env):
     assert exc.value.reason == 'authority_already_admitted' and env.count() == 1
 
 
+def test_registry_exists_with_its_tables_before_any_admission(env):
+    """A concurrent replay check must never find the registry file without permit_claims."""
+    import sqlite3
+    from contextlib import closing
+    registry = env.p.replay_registry
+    assert registry.exists()
+    with closing(sqlite3.connect(f'file:{registry}?mode=ro', uri=True)) as db:
+        tables = {row[0]: [c[1:4] for c in db.execute(f'PRAGMA table_info({row[0]})')]
+                  for row in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'permit_%'")}
+    # Same columns, types and NOT NULL flags as proofrail.permit.consume_permit creates.
+    assert tables == {
+        'permit_claims': [('permit_hash', 'TEXT', 0), ('nonce', 'TEXT', 1), ('executor_id', 'TEXT', 1),
+                          ('executing_at', 'TEXT', 1), ('consumed_at', 'TEXT', 1)],
+        'permit_events': [('sequence', 'INTEGER', 0), ('permit_hash', 'TEXT', 1), ('state', 'TEXT', 1),
+                          ('observed_at', 'TEXT', 1), ('executor_id', 'TEXT', 1)]}
+    assert not list(registry.parent.glob(f'.{registry.name}.*'))       # no temporary files left behind
+
+
+def test_unreadable_registry_refuses_admission_with_a_reason(env):
+    problem, plan, approval, envelope = approved(env)
+    registry = env.p.replay_registry
+    for suffix in ('-wal', '-shm'):
+        (registry.parent / (registry.name + suffix)).unlink(missing_ok=True)
+    registry.write_bytes(b'')                    # the file exists but holds no tables
+    with pytest.raises(PilotError) as exc:
+        env.p.admit('tenant-a', envelope)
+    assert exc.value.reason == 'replay_registry_unreadable' and env.count() == 0
+
+
 def test_joint_rollback_of_registry_and_business_store_is_a_known_limit(env):
     """LIMITATION (docs/WRN_THREAT_MODEL.md): restoring BOTH stores from before admission lets the
     gateway call the provider a second time. What still holds: the provider's idempotency key is the

@@ -96,6 +96,7 @@ def check(env, problem, plan, approval, now=None):
 
 @pytest.mark.parametrize('changes,expected', [
     ({'approver_principal': 'approver-b'}, 'approver_identity_mismatch'),
+    ({'tenant_id': 'tenant-b'}, 'approval_tenant_mismatch'),   # signed by tenant-a's approver
     ({'approved_plan_digest': 'b' * 64}, 'approval_scope_changed'),
     ({'approved_provider': 'P-099'}, 'provider_changed'),
     ({'currency': 'EUR'}, 'currency_mismatch'),
@@ -144,6 +145,9 @@ def test_schema_validation_and_timestamps(env):
     assert reason(lambda: validate('problem_record', {})) == 'invalid_problem_record'
     assert reason(lambda: utc('2026-10-23T13:00:00+00:00')) == 'invalid_timestamp'   # offset form is ambiguous here
     assert reason(lambda: utc('not a timeZ')) == 'invalid_timestamp'
+    # Without the trailing-Z requirement, dropping the last character would accept any suffix as UTC.
+    assert reason(lambda: utc('2026-10-23T13:00:00Q')) == 'invalid_timestamp'
+    assert reason(lambda: utc(None)) == 'invalid_timestamp'
 
 
 def test_registry_guards(env):
