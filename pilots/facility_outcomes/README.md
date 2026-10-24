@@ -66,12 +66,46 @@ signatures came from. Without it, key trust is `self_asserted`.
 - **Attack matrix:** [docs/WRN_ACCEPTANCE_GATES.md](../../docs/WRN_ACCEPTANCE_GATES.md),
   generated from a pytest run.
 - **Check-removal sweep:** `python review_tools/mutate_checks.py OUT.json`
-  disables each enforcement check in turn. The first run left 66 of 107 checks
-  unenforced: boundary tests are refused by whichever layer fires first.
-  `tests/test_check_reasons.py` pins each check to its own reason. **After
-  adding those tests: 0 of 107 survive.** Every enforcement check in the pilot
-  now has a test that fails when the check is removed. This does not find checks
-  nobody wrote; the attack matrix and fault scenarios are for that.
+  disables each enforcement check in turn, including the offline bundle
+  verifier's checks. An unchanged copy must pass first. A mutant counts as
+  **caught** only if a named test fails, fails again alone on the mutant, and
+  passes alone on the unchanged copy; syntax, collection, setup, timeout and
+  unreproduced failures are reported as invalid and never counted.
+
+  **Withdrawn:** an earlier "0 of 107 survive" claim was invalid. The tool then
+  copied only this folder, a test that reads `docs/` failed in every copy, and
+  each failure was counted as a kill.
+
+  **Measured at `af6018e`** (clean tree, Python 3.13.16; raw results in
+  [`review_tools/results/sweep-af6018e.json`](review_tools/results/sweep-af6018e.json)):
+  130 checks, **115 caught, 15 survive, 0 invalid.** Every check outside the
+  verifier is caught. **All 15 survivors are in `verify_bundle.py`**: removing
+  any one of these leaves the suite green.
+
+  | Line | Verifier check with no test that fails when it is removed |
+  |---|---|
+  | 64 | every file matches SHA256SUMS |
+  | 66 | manifest lists the same digests |
+  | 68 | bundle format recognised |
+  | 116 | issuer present in the admission-time identity snapshot |
+  | 120 | state inputs describe these records at admission |
+  | 124 | plan and approval digests recompute |
+  | 136 | issuer is the tenant authority issuer acting as verifier |
+  | 139 | success predicate binds the exact parameters |
+  | 146 | consumed within the envelope validity window |
+  | 153 | reconciling observation is included |
+  | 159 | observation digest matches its findings |
+  | 160 | exactly one provider order matching every authorized parameter |
+  | 162 | the matching order is the one the reference names |
+  | 195 | verdict reproduces from the included observations |
+  | 201 | settlement is simulated (no money moved) |
+
+  Some may be redundant with checks that fire first; each still needs a test
+  that isolates it, or a documented reason it is redundant. Until then the
+  portable verifier's coverage is **incomplete**. Line numbers refer to
+  `af6018e`; #45 and #46 add verifier checks that are not measured here.
+  A caught check shows only that some test depends on it; this does not find
+  checks nobody wrote, and it is author-run, not independent review.
 
 ## Limits
 
