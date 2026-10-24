@@ -14,7 +14,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from mutate_checks import make_copy, mutants, pytest
+from mutate_checks import PILOT, make_copy, mutants, pytest
 
 TESTS = {
     "every file matches SHA256SUMS": "test_checksum_content_mismatch_is_reported_by_its_own_check",
@@ -36,15 +36,27 @@ TESTS = {
 
 
 def main():
+    # Select the exact original 15 survivors by file, AST line and check label.
+    # One outcome check label occurs in both success and exception branches.
+    historical = json.loads(
+        (PILOT / "review_tools/results/sweep-af6018e.json").read_text()
+    )
+    historical_survivors = {
+        (r["file"], r["line"], r["check"])
+        for r in historical["results"] if r["outcome"] == "survived"
+    }
+    if len(historical_survivors) != 15 or historical["commit"] != "af6018e199cd75519500526d60199bf702709511":
+        raise RuntimeError("historical sweep baseline does not match 15 expected survivors")
+
     selected = {}
     for name, line, label, source in mutants():
-        if name != "verify_bundle.py" or not label.startswith("check "):
+        if (name, line, label) not in historical_survivors:
             continue
-        human_name = label[6:].strip("'\"")
+        human_name = label[6:].strip("'\\\"")
         if human_name not in TESTS:
-            continue
+            raise RuntimeError(f"unmapped historical survivor: {name}:{line} {label}")
         if human_name in selected:
-            raise RuntimeError(f"duplicate mutant for {human_name}")
+            raise RuntimeError(f"duplicate historical survivor: {human_name}")
         selected[human_name] = (name, line, label, source)
     if set(selected) != set(TESTS):
         raise RuntimeError(f"expected 15 unique mutants; missing={set(TESTS) - set(selected)}; extra={set(selected) - set(TESTS)}")
