@@ -1,12 +1,14 @@
 """Core replay-registry publication must not expose a partly initialized SQLite file."""
 from __future__ import annotations
 
+import errno
 import os
 import sqlite3
 import subprocess
 import sys
 import time
 import unittest
+from unittest import mock
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -96,6 +98,21 @@ trust.ensure_replay_registry(registry)
             with self.assertRaisesRegex(ProofRailError, "unreadable or corrupt"):
                 replay_claim_exists(registry, "e" * 64)
             self.assertEqual(registry.stat().st_size, 0)
+
+    def test_filesystem_without_hard_links_blocks_publication_without_leaving_registry(self):
+        """Hard-link unavailability must fail closed, never expose an empty DB."""
+        with TemporaryDirectory() as d:
+            registry = Path(d) / "registry.sqlite3"
+            with mock.patch(
+                "proofrail.trust.os.link",
+                side_effect=OSError(errno.EOPNOTSUPP, "hard links unsupported"),
+            ):
+                with self.assertRaises(OSError) as error:
+                    ensure_replay_registry(registry)
+            self.assertEqual(error.exception.errno, errno.EOPNOTSUPP)
+            self.assertFalse(registry.exists())
+            self.assertFalse(list(Path(d).glob(".registry.sqlite3.*")))
+            self.assertFalse(replay_claim_exists(registry, "e" * 64))
 
     def test_idempotent_initialization_preserves_existing_claims(self):
         with TemporaryDirectory() as d:
