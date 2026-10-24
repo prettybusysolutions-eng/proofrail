@@ -48,6 +48,11 @@ def export_case(actor: Identity, pilot, tenant_id: str, problem_id: str, out: Pa
                    if a['envelope']['effect']['parameters']['problem_id'] == problem_id]
     require(len(authorities) == 1, 'case_has_no_single_admitted_authority')
     authority = authorities[0]
+    # Refuse before creating a partially populated destination. A spent permit
+    # without a persisted gateway attestation is not a portable proof, even if
+    # its replay-registry rows can still be read.
+    require('consumption_attestation' in authority, 'consumption_receipt_missing')
+    require(not authority.get('aborted'), 'authority_admission_aborted')
     params = authority['envelope']['effect']['parameters']
     plan = store.get(tenant_id, 'plan', params['plan_id'])
     approval = next(a for a in store.all(tenant_id, 'approval')
@@ -68,7 +73,6 @@ def export_case(actor: Identity, pilot, tenant_id: str, problem_id: str, out: Pa
     _write(out / 'records' / 'approval.json', approval)
     _write(out / 'records' / 'envelope.json', authority['envelope'])
     _write(out / 'records' / 'authority_reference.json', authority['reference'])
-    require('consumption_attestation' in authority, 'signed_consumption_attestation_missing')
     _write(out / 'records' / 'consumption.json',
            read_registry_claim(pilot.replay_registry, authority['envelope']['record_hash']))
     _write(out / 'records' / 'consumption-attestation.json',
