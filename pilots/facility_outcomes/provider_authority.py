@@ -6,12 +6,13 @@ Neither header identity nor a gateway's receipt authenticates itself.
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 from datetime import datetime, timezone
 
 from proofrail.crypto import verify_signature
 from proofrail.envelope import verify_action_authority_envelope
-from records import decode_public, digest
+from records import decode_public
 
 ACTION_TYPE = "facility.create_work_order"
 
@@ -33,7 +34,7 @@ def _unpack_header(header):
         if not isinstance(value, dict):
             raise ValueError("not an object")
         return value
-    except (ValueError, TypeError, UnicodeError):
+    except (ValueError, TypeError, UnicodeError, binascii.Error):
         raise ProviderAuthorityError("authority_header_invalid") from None
 
 
@@ -110,7 +111,9 @@ def authorize_create(tenant: str, key: str, body: dict, headers, trusted: dict, 
         or receipt.get("envelope_digest") != key
         or receipt.get("nonce") != envelope.get("nonce")
         or receipt.get("executor_principal") != gateway_id
-        or not isinstance(receipt.get("registry_claim_digest"), str)):
+        or not isinstance(receipt.get("registry_claim_digest"), str)
+        or len(receipt["registry_claim_digest"]) != 64
+        or not isinstance(receipt.get("consumed_at"), str)):
         raise ProviderAuthorityError("consumption_receipt_scope_mismatch")
     try:
         verify_signature(receipt, decode_public(trusted_gateway["public_key"]))
