@@ -87,6 +87,14 @@ See [docs/QUICKSTART.md](docs/QUICKSTART.md) for the complete ten-minute
 verification and break-test sequence.
 
 Release status and gates are documented in [RELEASING.md](RELEASING.md).
+Published v0.6.0/v0.6.1 assets have checksums but **no verified signed
+release provenance**; the proposed future-release signing and verification
+procedure is in [docs/VERIFY_RELEASE_ATTESTATIONS.md](docs/VERIFY_RELEASE_ATTESTATIONS.md).
+
+Project governance: [CONTRIBUTING.md](CONTRIBUTING.md),
+[MAINTAINERS.md](MAINTAINERS.md), [CHANGELOG.md](CHANGELOG.md) and
+[SECURITY.md](SECURITY.md). Security-response targets and signing controls
+must be witnessed before claiming full OpenSSF OSPS Baseline compliance.
 
 ## Evidence Included
 
