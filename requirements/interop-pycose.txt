@@ -1,0 +1,5 @@
+# Isolated legacy (-8) cross-library compatibility test only.
+# pycose 1.1.0 does not yet recognize RFC 9864 Ed25519 (-19),
+# and fails to decode COSE arrays when paired with cbor2 6.x.
+pycose==1.1.0
+cbor2==5.6.5
