@@ -87,10 +87,17 @@ def authorize_create(tenant: str, key: str, body: dict, headers, trusted: dict, 
             target=expected_target,
             parameters=params,
             now=now or datetime.now(timezone.utc),
-            expected_issuer={"principal_id": issuer_id, "role": "verifier"},
-            expected_subject={"principal_id": gateway_id, "role": "executor"},
-            expected_key_id=trusted_issuer["key_id"],
         )
+        if (issuer != {"principal_id": issuer_id, "role": "verifier"}
+            or subject != {"principal_id": gateway_id, "role": "executor"}
+            or envelope.get("signature", {}).get("key_id") != trusted_issuer["key_id"]):
+            raise ValueError("issuer, gateway or key binding mismatched")
+        issued = datetime.fromisoformat(envelope["issued_at"].replace("Z", "+00:00"))
+        expiry = datetime.fromisoformat(envelope["expires_at"].replace("Z", "+00:00"))
+        current = now or datetime.now(timezone.utc)
+        if (issued.tzinfo is None or expiry.tzinfo is None
+            or issued > current or expiry <= issued):
+            raise ValueError("authority outside valid time window")
     except Exception:
         raise ProviderAuthorityError("authority_envelope_invalid") from None
 
