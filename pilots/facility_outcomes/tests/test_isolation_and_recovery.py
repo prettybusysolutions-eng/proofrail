@@ -113,7 +113,9 @@ def test_crash_after_authority_record_before_signed_consumption_receipt_fails_cl
     stored = restarted.pilot.store.get('tenant-a', 'authority', envelope['envelope_id'])
     assert stored['reference']['authority_state'] == 'CONSUMED'
     assert 'consumption_attestation' not in stored
-    assert restarted.pilot.store.state('tenant-a', problem['problem_id']) == 'APPROVED'
+    # The final admission guard and state transition now occur before the
+    # provider-usable receipt is signed. A crash here is still fail-closed.
+    assert restarted.pilot.store.state('tenant-a', problem['problem_id']) != 'APPROVED'
 
     with pytest.raises(PilotError) as error:
         restarted.pilot.reconcile('tenant-a', envelope['envelope_id'])
