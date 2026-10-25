@@ -119,6 +119,8 @@ def make_handler(state: ProviderState):
         def do_GET(self):
             parts = urlsplit(self.path)
             segs = parts.path.strip('/').split('/')
+            if parts.path.startswith('/admin/') and state.trusted_authority is not None:
+                return self.reply(403, {'error': 'admin_disabled_in_enforced_mode'})
             if parts.path == '/admin/count':
                 return self.reply(200, {'count': state.count()})
             if len(segs) >= 4 and segs[:2] == ['v1', 'tenants'] and segs[3] == 'work-orders':
@@ -133,6 +135,8 @@ def make_handler(state: ProviderState):
         def do_POST(self):
             parts = urlsplit(self.path)
             segs = parts.path.strip('/').split('/')
+            if parts.path.startswith('/admin/') and state.trusted_authority is not None:
+                return self.reply(403, {'error': 'admin_disabled_in_enforced_mode'})
             if parts.path == '/admin/fault':
                 b = self.body()
                 if b['mode'] in ('no_idempotency', 'status_flap'):
