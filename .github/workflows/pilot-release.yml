@@ -74,7 +74,8 @@ jobs:
           for asset in dist/*; do
             test -f "$asset"
             gh attestation verify "$asset" --repo "$GITHUB_REPOSITORY" \
-              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/pilot-release.yml"
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/pilot-release.yml" \
+              --source-ref "refs/heads/main" --source-digest "$GITHUB_SHA"
           done
       - name: Publish idempotent exact-commit pilot release
         env:
