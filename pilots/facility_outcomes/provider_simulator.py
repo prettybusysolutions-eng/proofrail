@@ -1,6 +1,8 @@
 """Work-order provider simulator: a real HTTP server with its own persistent store.
 
-    python provider_simulator.py --db /tmp/provider.db --port-file /tmp/port [--port 0]
+    python provider_simulator.py --db /tmp/provider.db --port-file /tmp/port
+        --trusted-gateways /path/to/provider-owned-keys.json [--port 0]
+    # Explicit insecure testing ONLY: --insecure-fault-mode
 
 Endpoints (JSON):
   POST /v1/tenants/{tenant}/work-orders               create (Idempotency-Key required)
@@ -241,7 +243,10 @@ def make_handler(state: ProviderState):
     return Handler
 
 
-def serve(db_path: Path, port: int = 0, *, trusted_gateways: dict | None = None):
+def serve(db_path: Path, port: int = 0, *, trusted_gateways: dict | None = None,
+          insecure_fault_mode: bool = False):
+    if insecure_fault_mode == (trusted_gateways is not None):
+        raise ValueError('choose exactly one provider mode: trusted gateways or explicit insecure fault tests')
     state = ProviderState(db_path, trusted_gateways=trusted_gateways)
     server = ThreadingHTTPServer(('127.0.0.1', port), make_handler(state))
     server.daemon_threads = True
@@ -253,11 +258,15 @@ def main():
     parser.add_argument('--db', type=Path, required=True)
     parser.add_argument('--port', type=int, default=0)
     parser.add_argument('--port-file', type=Path, required=True)
-    parser.add_argument('--trusted-gateways', type=Path,
-                        help='JSON tenant-to-externally-pinned gateway identity map; enables enforced mode')
+    modes = parser.add_mutually_exclusive_group(required=True)
+    modes.add_argument('--trusted-gateways', type=Path,
+                       help='JSON tenant-to-externally-pinned gateway identity map; enables enforced mode')
+    modes.add_argument('--insecure-fault-mode', action='store_true',
+                       help='explicitly disable provider auth for local failure-injection tests only')
     args = parser.parse_args()
     trusted = json.loads(args.trusted_gateways.read_text()) if args.trusted_gateways else None
-    server, _ = serve(args.db, args.port, trusted_gateways=trusted)
+    server, _ = serve(args.db, args.port, trusted_gateways=trusted,
+                      insecure_fault_mode=args.insecure_fault_mode)
     args.port_file.write_text(str(server.server_address[1]))
     server.serve_forever()
 
