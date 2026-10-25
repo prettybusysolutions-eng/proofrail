@@ -33,13 +33,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+from provider_authority import ProviderAuthorityError, authorize_create
+
 FIELDS = ('facility_id', 'area_id', 'provider_id', 'problem_id', 'plan_id', 'plan_digest', 'scope_revision',
           'max_cost', 'currency', 'client_reference')
 
 
 class ProviderState:
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path, trusted_authority: dict | None = None):
         self.db_path = Path(db_path)
+        self.trusted_authority = trusted_authority
         self.lock = threading.Lock()
         self.fault = {'mode': None, 'seconds': 0}
         self.persistent = set()
@@ -150,6 +153,12 @@ def make_handler(state: ProviderState):
                 body = self.body()
                 if any(k not in body for k in FIELDS):
                     return self.reply(400, {'error': 'missing_fields'})
+                if state.trusted_authority is not None:
+                    try:
+                        authorize_create(tenant, key, body, self.headers,
+                                         state.trusted_authority)
+                    except ProviderAuthorityError as exc:
+                        return self.reply(403, {'error': exc.reason})
                 mode, seconds = state.take_fault()
                 if mode == 'drop_without_effect':
                     self.close_connection = True
@@ -173,8 +182,8 @@ def make_handler(state: ProviderState):
     return Handler
 
 
-def serve(db_path: Path, port: int = 0):
-    state = ProviderState(db_path)
+def serve(db_path: Path, port: int = 0, trusted_authority: dict | None = None):
+    state = ProviderState(db_path, trusted_authority)
     server = ThreadingHTTPServer(('127.0.0.1', port), make_handler(state))
     server.daemon_threads = True
     return server, state
@@ -185,8 +194,12 @@ def main():
     parser.add_argument('--db', type=Path, required=True)
     parser.add_argument('--port', type=int, default=0)
     parser.add_argument('--port-file', type=Path, required=True)
+    parser.add_argument('--enforce-authority', type=Path,
+                        help='independently provisioned JSON roster of issuer/gateway public keys; '
+                             'when absent the simulator runs explicit insecure fault-test mode')
     args = parser.parse_args()
-    server, _ = serve(args.db, args.port)
+    trusted = json.loads(args.enforce_authority.read_text()) if args.enforce_authority else None
+    server, _ = serve(args.db, args.port, trusted)
     args.port_file.write_text(str(server.server_address[1]))
     server.serve_forever()
 
