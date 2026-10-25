@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+import sys
 import threading
 import time
 from contextlib import closing
@@ -33,13 +34,20 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+# This server is deliberately launched with python -I by the fault harness.
+# Use only its own source directory, not caller-provided PYTHONPATH, for the
+# sibling provider authority validator.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from provider_authority import ProviderAuthorityError, authorize_create
+
 FIELDS = ('facility_id', 'area_id', 'provider_id', 'problem_id', 'plan_id', 'plan_digest', 'scope_revision',
           'max_cost', 'currency', 'client_reference')
 
 
 class ProviderState:
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path, trusted_authority: dict | None = None):
         self.db_path = Path(db_path)
+        self.trusted_authority = trusted_authority
         self.lock = threading.Lock()
         self.fault = {'mode': None, 'seconds': 0}
         self.persistent = set()
@@ -116,6 +124,8 @@ def make_handler(state: ProviderState):
         def do_GET(self):
             parts = urlsplit(self.path)
             segs = parts.path.strip('/').split('/')
+            if parts.path.startswith('/admin/') and state.trusted_authority is not None:
+                return self.reply(403, {'error': 'admin_disabled_in_enforced_mode'})
             if parts.path == '/admin/count':
                 return self.reply(200, {'count': state.count()})
             if len(segs) >= 4 and segs[:2] == ['v1', 'tenants'] and segs[3] == 'work-orders':
@@ -130,6 +140,8 @@ def make_handler(state: ProviderState):
         def do_POST(self):
             parts = urlsplit(self.path)
             segs = parts.path.strip('/').split('/')
+            if parts.path.startswith('/admin/') and state.trusted_authority is not None:
+                return self.reply(403, {'error': 'admin_disabled_in_enforced_mode'})
             if parts.path == '/admin/fault':
                 b = self.body()
                 if b['mode'] in ('no_idempotency', 'status_flap'):
@@ -150,6 +162,12 @@ def make_handler(state: ProviderState):
                 body = self.body()
                 if any(k not in body for k in FIELDS):
                     return self.reply(400, {'error': 'missing_fields'})
+                if state.trusted_authority is not None:
+                    try:
+                        authorize_create(tenant, key, body, self.headers,
+                                         state.trusted_authority)
+                    except ProviderAuthorityError as exc:
+                        return self.reply(403, {'error': exc.reason})
                 mode, seconds = state.take_fault()
                 if mode == 'drop_without_effect':
                     self.close_connection = True
@@ -173,8 +191,8 @@ def make_handler(state: ProviderState):
     return Handler
 
 
-def serve(db_path: Path, port: int = 0):
-    state = ProviderState(db_path)
+def serve(db_path: Path, port: int = 0, trusted_authority: dict | None = None):
+    state = ProviderState(db_path, trusted_authority)
     server = ThreadingHTTPServer(('127.0.0.1', port), make_handler(state))
     server.daemon_threads = True
     return server, state
@@ -185,8 +203,12 @@ def main():
     parser.add_argument('--db', type=Path, required=True)
     parser.add_argument('--port', type=int, default=0)
     parser.add_argument('--port-file', type=Path, required=True)
+    parser.add_argument('--enforce-authority', type=Path,
+                        help='independently provisioned JSON roster of issuer/gateway public keys; '
+                             'when absent the simulator runs explicit insecure fault-test mode')
     args = parser.parse_args()
-    server, _ = serve(args.db, args.port)
+    trusted = json.loads(args.enforce_authority.read_text()) if args.enforce_authority else None
+    server, _ = serve(args.db, args.port, trusted)
     args.port_file.write_text(str(server.server_address[1]))
     server.serve_forever()
 
