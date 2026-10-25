@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/pilots/facility_outcomes/learning_record.schema.json",
+  "title": "WRN facility pilot LearningRecord (shareable aggregate input)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "intervention_category",
+    "context_features",
+    "observed_duration_hours",
+    "accepted_cost_band",
+    "outcome_verdict",
+    "rework_indicator",
+    "follow_up_window_days",
+    "data_rights",
+    "aggregation_version",
+    "source_evidence_refs",
+    "causal_claim"
+  ],
+  "properties": {
+    "kind": {
+      "const": "wrn.learning-record.v1"
+    },
+    "intervention_category": {
+      "enum": [
+        "non_hazardous_debris_removal"
+      ]
+    },
+    "context_features": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "area_type": {
+          "enum": [
+            "staging_zone",
+            "loading_dock",
+            "storage_aisle"
+          ]
+        },
+        "debris_volume_class": {
+          "enum": [
+            "small",
+            "medium",
+            "large"
+          ]
+        }
+      }
+    },
+    "observed_duration_hours": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "accepted_cost_band": {
+      "enum": [
+        "under_250",
+        "250_to_500",
+        "over_500",
+        "not_accepted"
+      ]
+    },
+    "outcome_verdict": {
+      "enum": [
+        "VERIFIED",
+        "REJECTED",
+        "INSUFFICIENT_EVIDENCE",
+        "DISPUTED"
+      ]
+    },
+    "rework_indicator": {
+      "type": "boolean"
+    },
+    "follow_up_window_days": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "data_rights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shareable",
+        "scope"
+      ],
+      "properties": {
+        "shareable": {
+          "type": "boolean"
+        },
+        "scope": {
+          "enum": [
+            "tenant_only",
+            "aggregate_only"
+          ]
+        }
+      }
+    },
+    "aggregation_version": {
+      "const": "wrn.learning.v1"
+    },
+    "source_evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "causal_claim": {
+      "const": "none"
+    }
+  }
+}

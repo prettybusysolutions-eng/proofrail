@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/pilots/facility_outcomes/observation_record.schema.json",
+  "title": "WRN facility pilot ObservationRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "observation_id",
+    "tenant_id",
+    "observer_principal",
+    "observer_role",
+    "observed_subject",
+    "observation_type",
+    "observation_time",
+    "evidence_refs",
+    "findings",
+    "observation_digest",
+    "credential_reference",
+    "independence_class",
+    "record_hash",
+    "signature"
+  ],
+  "properties": {
+    "kind": {
+      "const": "wrn.observation-record.v1"
+    },
+    "observation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "tenant_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "observer_principal": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "observer_role": {
+      "enum": [
+        "provider_observer",
+        "contractor",
+        "inspector"
+      ]
+    },
+    "observed_subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "work_order"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        }
+      }
+    },
+    "observation_type": {
+      "enum": [
+        "provider_work_order_state",
+        "completion_claim",
+        "inspection"
+      ]
+    },
+    "observation_time": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?Z$"
+    },
+    "evidence_refs": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ref",
+          "sha256",
+          "media_type",
+          "captured_at",
+          "captured_by",
+          "facility_id",
+          "area_id"
+        ],
+        "properties": {
+          "ref": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "media_type": {
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "application/json",
+              "text/plain"
+            ]
+          },
+          "captured_at": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?Z$"
+          },
+          "captured_by": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "facility_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "area_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "work_order": {
+          "type": "object"
+        },
+        "criteria": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": [
+              "met",
+              "not_met",
+              "unknown"
+            ]
+          }
+        }
+      }
+    },
+    "observation_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "credential_reference": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "independence_class": {
+      "enum": [
+        "provider_system_record",
+        "performer_claim",
+        "buyer_designated_inspector"
+      ]
+    },
+    "record_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "key_id",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "ed25519"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "value": {
+          "type": "string",
+          "minLength": 80
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/pilots/facility_outcomes/consumption_attestation.schema.json",
+  "title": "WRN pilot signed replay-consumption attestation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "tenant_id",
+    "envelope_digest",
+    "nonce",
+    "executor_principal",
+    "consumed_at",
+    "registry_claim_digest",
+    "record_hash",
+    "signature"
+  ],
+  "properties": {
+    "kind": {
+      "const": "wrn.consumption-attestation.v1"
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "envelope_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "nonce": {
+      "type": "string",
+      "minLength": 16
+    },
+    "executor_principal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "consumed_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+    },
+    "registry_claim_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "record_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "key_id",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "ed25519"
+        },
+        "key_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string",
+          "minLength": 80
+        }
+      }
+    }
+  }
+}

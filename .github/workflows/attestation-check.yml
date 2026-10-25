@@ -29,6 +29,10 @@ jobs:
         run: |
           "$RUNNER_TEMP/proofrail-wheel/bin/python" scripts/verify_installed_artifact.py \
             examples/reproduce_artifact
+      - name: Verify installed wheel uses private authority schema
+        run: |
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/proofrail-wheel/bin/python" -c "from proofrail.envelope import _validator; from importlib.resources import files; schema=files('proofrail').joinpath('authority_schemas', 'action_authority_envelope.schema.json'); assert schema.is_file(), schema; assert _validator().schema['properties']['kind']['const'] == 'proofrail.action-authority-envelope.v1'"
   attestation-check:
     runs-on: ubuntu-latest
     steps:

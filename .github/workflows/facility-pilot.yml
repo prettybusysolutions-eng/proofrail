@@ -1,0 +1,110 @@
+name: Facility outcome pilot
+
+on:
+  pull_request:
+    paths:
+      - 'pilots/facility_outcomes/**'
+      - 'proofrail/**'
+      - 'schemas/**'
+      - 'pyproject.toml'
+      - '.github/workflows/facility-pilot.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'pilots/facility_outcomes/**'
+      - 'proofrail/**'
+      - 'schemas/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install ProofRail and pilot test dependencies
+        run: python -m pip install -e . -r pilots/facility_outcomes/requirements-dev.txt
+      - name: Existing ProofRail suite (unchanged)
+        run: python -m unittest discover -s tests -q
+      - name: Pilot suite (scenarios, attack matrix, bundles)
+        working-directory: pilots/facility_outcomes
+        run: python -m pytest -q tests/ --junitxml=pilot-results.xml
+      - name: Prove five integrated verifier guards are caught by their own tests
+        working-directory: pilots/facility_outcomes
+        run: python review_tools/check_new_verifier_boundaries.py
+      - name: Verify 15 historical verifier mutations remain caught
+        working-directory: pilots/facility_outcomes
+        run: python review_tools/check_previous_survivors.py
+      - name: End-to-end demonstration and offline bundle verification
+        run: |
+          python pilots/facility_outcomes/run_pilot.py --out "$RUNNER_TEMP/wrn-pilot"
+          python pilots/facility_outcomes/verify_bundle.py "$RUNNER_TEMP/wrn-pilot/bundle-A"
+          cp "$RUNNER_TEMP/wrn-pilot/summary.json" pilots/facility_outcomes/demonstration-summary.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: facility-pilot-evidence-python-${{ matrix.python-version }}
+          path: |
+            pilots/facility_outcomes/pilot-results.xml
+            pilots/facility_outcomes/demonstration-summary.json
+          if-no-files-found: error
+          retention-days: 30
+
+  classified-sweep:
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'integration/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install exact-head ProofRail and pilot dependencies
+        run: python -m pip install -e . -r pilots/facility_outcomes/requirements-dev.txt
+      - name: Classify all live pilot and portable-verifier checks on a clean exact head
+        run: |
+          mkdir -p "$RUNNER_TEMP/classified-sweep"
+          cd pilots/facility_outcomes
+          python review_tools/mutate_checks.py "$RUNNER_TEMP/classified-sweep/results.json" 3
+      - name: Display count, commit and invalid cases
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          path = Path(os.environ['RUNNER_TEMP']) / 'classified-sweep/results.json'
+          if not path.exists():
+              raise SystemExit('classified sweep did not produce a result file')
+          data = json.loads(path.read_text())
+          print('HEAD:', data['commit'], 'dirty:', data['tree_dirty'])
+          print('Python:', data['python'])
+          print('Baseline:', data['baseline'])
+          print('Counts:', data['counts'])
+          for r in data['results']:
+              if r['outcome'] != 'killed_valid':
+                  print(r['outcome'].upper(), r['file'], r['line'], r['check'], r.get('cause',''))
+          if data['tree_dirty']:
+              raise SystemExit('cannot accept sweep from dirty tree')
+          if data['counts']['invalid']:
+              raise SystemExit('invalid mutants require classification')
+          PY
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: classified-sweep-python-3-12
+          path: ${{ runner.temp }}/classified-sweep/results.json
+          if-no-files-found: warn
+          retention-days: 30

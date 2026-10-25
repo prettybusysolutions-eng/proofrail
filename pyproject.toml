@@ -21,6 +21,7 @@ proofrail-server = "proofrail.server:main"
 include = ["proofrail*", "integrations*", "schemas*"]
 
 [tool.setuptools.package-data]
+proofrail = ["authority_schemas/*.json"]
 schemas = ["*.json"]
 
 [tool.pytest.ini_options]
