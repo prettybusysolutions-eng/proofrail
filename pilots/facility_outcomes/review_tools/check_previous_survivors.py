@@ -36,22 +36,40 @@ TESTS = {
 
 
 def main():
-    # Select the exact original 15 survivors by file, AST line and check label.
-    # One outcome check label occurs in both success and exception branches.
+    # Select the exact original 15 survivors by file and check label, not by line:
+    # later changes to verify_bundle.py shift line numbers (as #45/#46 do). One
+    # label occurs twice (success and exception branches); such a survivor is
+    # identified by its position among same-label checks in the historical sweep,
+    # and the number of same-label checks must be unchanged.
     historical = json.loads(
         (PILOT / "review_tools/results/sweep-af6018e.json").read_text()
     )
+    if historical["commit"] != "af6018e199cd75519500526d60199bf702709511":
+        raise RuntimeError("historical sweep baseline is not the af6018e measurement")
+
+    def by_label(entries):
+        groups = {}
+        for file, line, label in entries:
+            groups.setdefault((file, label), []).append(line)
+        return {key: sorted(lines) for key, lines in groups.items()}
+
+    historical_lines = by_label((r["file"], r["line"], r["check"]) for r in historical["results"])
     historical_survivors = {
-        (r["file"], r["line"], r["check"])
+        (r["file"], r["check"], historical_lines[(r["file"], r["check"])].index(r["line"]))
         for r in historical["results"] if r["outcome"] == "survived"
     }
-    if len(historical_survivors) != 15 or historical["commit"] != "af6018e199cd75519500526d60199bf702709511":
+    if len(historical_survivors) != 15:
         raise RuntimeError("historical sweep baseline does not match 15 expected survivors")
 
+    current = list(mutants())
+    current_lines = by_label((name, line, label) for name, line, label, _ in current)
     selected = {}
-    for name, line, label, source in mutants():
-        if (name, line, label) not in historical_survivors:
+    for name, line, label, source in current:
+        position = current_lines[(name, label)].index(line)
+        if (name, label, position) not in historical_survivors:
             continue
+        if len(current_lines[(name, label)]) != len(historical_lines[(name, label)]):
+            raise RuntimeError(f"same-label check count changed for {name} {label}; re-map by hand")
         human_name = label[6:].strip("'\\\"")
         if human_name not in TESTS:
             raise RuntimeError(f"unmapped historical survivor: {name}:{line} {label}")
