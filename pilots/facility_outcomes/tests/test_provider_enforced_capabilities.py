@@ -49,6 +49,19 @@ def post_admin(url, path, payload):
     return err.value.code
 
 
+def test_provider_cannot_start_in_accidental_insecure_mode(tmp_path):
+    with pytest.raises(ValueError, match="choose exactly one"):
+        serve(tmp_path / "accidentally-open.db")
+    with pytest.raises(ValueError, match="choose exactly one"):
+        serve(tmp_path / "conflicting-modes.db", trusted_gateways={},
+              insecure_fault_mode=True)
+    server, state = serve(tmp_path / "explicit-tests.db", insecure_fault_mode=True)
+    try:
+        assert state.trusted_gateways is None
+    finally:
+        server.server_close()
+
+
 @pytest.fixture
 def enforced_provider(tmp_path):
     # This is provider-owned trust configuration, not a key obtained from the
