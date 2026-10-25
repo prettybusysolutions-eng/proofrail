@@ -76,8 +76,8 @@ class CrossDomainWitnessTests(unittest.TestCase):
             signed_checkpoint=self.checkpoint if checkpoint is None else checkpoint,
             checkpoint_public_key=self.checkpoint_key.public_key(),
             trusted_witnesses=self.roster if roster is None else roster,
-            expected=self.statement.copy() | {"kind": self.statement["kind"]}
-                     if expected is None else expected,
+            expected=({k: v for k, v in self.statement.items() if k != "kind"}
+                      if expected is None else expected),
             minimum_distinct_operators=threshold,
         )
 
@@ -187,6 +187,53 @@ class CrossDomainWitnessTests(unittest.TestCase):
     def test_threshold_cannot_be_lowered_to_one(self):
         with self.assertRaises(ProofRailError):
             self.verify(threshold=1)
+
+    def test_standalone_offline_cli_accepts_trusted_bundle_and_refuses_wrong_effect(self):
+        import io
+        from contextlib import redirect_stdout
+        from cryptography.hazmat.primitives import serialization
+        from proofrail.exchange_cli import main as cli_main
+
+        def encode(pub):
+            import base64
+            return base64.urlsafe_b64encode(pub.public_bytes(
+                serialization.Encoding.Raw, serialization.PublicFormat.Raw,
+            )).rstrip(b"=").decode()
+
+        source = Path(self.temp.name)
+        external = source / "externally-pinned"
+        external.mkdir()
+        (source / "statement.json").write_text(json.dumps(self.statement))
+        (source / "receipts.json").write_text(json.dumps(self.receipts[:2]))
+        (source / "checkpoint.json").write_text(json.dumps(self.checkpoint))
+        expected = {k: v for k, v in self.statement.items() if k != "kind"}
+        (external / "expected.json").write_text(json.dumps(expected))
+        (external / "checkpoint-key.txt").write_text(
+            encode(self.checkpoint_key.public_key()) + "\n"
+        )
+        roster = {name: {
+            "operator_id": spec["operator_id"], "key_id": spec["key_id"],
+            "public_key": encode(spec["public_key"]),
+        } for name, spec in self.roster.items()}
+        (external / "witnesses.json").write_text(json.dumps(roster))
+        args = [
+            "--statement", str(source / "statement.json"),
+            "--receipts", str(source / "receipts.json"),
+            "--ledger", str(self.ledger),
+            "--checkpoint", str(source / "checkpoint.json"),
+            "--checkpoint-public-key", str(external / "checkpoint-key.txt"),
+            "--trusted-witnesses", str(external / "witnesses.json"),
+            "--expected", str(external / "expected.json"),
+        ]
+        with redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(cli_main(args), 0)
+        self.assertTrue(json.loads(output.getvalue())["valid"])
+        expected["effect_digest"] = "e"*64
+        (external / "expected.json").write_text(json.dumps(expected))
+        with redirect_stdout(io.StringIO()) as refused:
+            self.assertEqual(cli_main(args), 4)
+        self.assertIn("expected_effect_digest_mismatch",
+                      json.loads(refused.getvalue())["errors"])
 
     def test_genesis_and_sequence_are_consistent(self):
         with self.assertRaises(ProofRailError):
