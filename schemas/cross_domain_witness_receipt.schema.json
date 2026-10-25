@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/prettybusysolutions-eng/proofrail/blob/main/schemas/cross_domain_witness_receipt.schema.json",
+  "title": "ProofRail Cross-Domain Witness Receipt v0 (experimental)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "statement_digest",
+    "signer_id",
+    "operator_id",
+    "record_hash",
+    "signature"
+  ],
+  "properties": {
+    "kind": {
+      "const": "proofrail.cross-domain-witness-receipt.v0"
+    },
+    "statement_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "signer_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operator_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "record_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "signature": {
+      "type": "object",
+      "required": [
+        "algorithm",
+        "key_id",
+        "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "const": "ed25519"
+        },
+        "key_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
