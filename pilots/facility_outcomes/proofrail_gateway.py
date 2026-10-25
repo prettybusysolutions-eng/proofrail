@@ -318,10 +318,6 @@ class Gateway:
         consumption = self._consume(envelope)             # single use; from here the authority is spent
         try:
             self._reference(tenant_id, envelope, 'CONSUMED', consumption=consumption, replace=False)
-            attestation = self._attest_consumption(tenant_id, envelope)
-            recorded = self.store.get(tenant_id, 'authority', envelope['envelope_id'])
-            self.store.put(tenant_id, 'authority', envelope['envelope_id'],
-                           {**recorded, 'consumption_attestation': attestation}, replace=True)
         except PilotError as exc:
             if exc.reason == 'record_exists':     # lost a race against a concurrent admission
                 raise PilotError('authority_already_admitted') from None
@@ -350,6 +346,15 @@ class Gateway:
             self.store.audit(tenant_id, 'admission_aborted_after_consumption', envelope['envelope_id'],
                              {'reason': exc.reason})
             raise
+        # Dispatch credentials are created only AFTER the last local revocation,
+        # root and work-state checks succeed. An aborted permit must not leave
+        # behind a gateway-signed receipt usable at the enforcing provider.
+        # Receipt persistence is still ahead of the external POST so any crash
+        # before it fails closed and cannot be exported as verified evidence.
+        attestation = self._attest_consumption(tenant_id, envelope)
+        recorded = self.store.get(tenant_id, 'authority', envelope['envelope_id'])
+        self.store.put(tenant_id, 'authority', envelope['envelope_id'],
+                       {**recorded, 'consumption_attestation': attestation}, replace=True)
         self.store.audit(tenant_id, 'provider_call', envelope['envelope_id'], {'idempotency_key': envelope['record_hash']})
         self.provider_calls += 1
         try:
