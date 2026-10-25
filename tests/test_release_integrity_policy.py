@@ -101,7 +101,7 @@ def assert_secure_release_workflow(workflow: str) -> None:
     # The actual step, not just stray text, must invoke the expected action SHA.
     uses = {}
     for _, body in steps:
-        for match in re.finditer(r"(?m)^        uses: ([\w./-]+)@([^\s#]+)", body):
+        for match in re.finditer(r"(?m)^\s*(?:-\s*)?uses: ([\w./-]+)@([^\s#]+)", body):
             repo, sha = match.groups()
             assert re.fullmatch(r"[a-f0-9]{40}", sha), f"mutable action reference {repo}@{sha}"
             uses[repo] = sha
