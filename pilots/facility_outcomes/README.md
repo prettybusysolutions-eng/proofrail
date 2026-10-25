@@ -39,8 +39,41 @@ offline in five dimensions:
 4. provider-observed execution;
 5. attested physical outcome.
 
-Pass `--trusted-keys` with independently obtained keys to check where the
-signatures came from. Without it, key trust is `self_asserted`.
+Pass `--trusted-keys` with independently obtained keys to authenticate
+both admission-time and export-time signing keys. An issuer removed from the
+export-time roster still needs a separately trusted historical key. Missing pins
+fail trusted verification; a bundle's own key list is not an independent trust
+source. Without trusted pins, key trust is `self_asserted`.
+
+**Consumption claim boundary:** `records/consumption.json` is a snapshot
+of the local replay-registry rows. The gateway now signs
+`records/consumption-attestation.json` after the registry claim commits and
+before the provider write. The verifier checks the signature with the
+historical gateway key and binds the attestation to the exact exported rows.
+This authenticates a **gateway attestation**, not an independently witnessed
+or durably retained registry history. It does not solve joint rollback or
+ledger-tail truncation. An independently held checkpoint/anchor remains a
+separate unsatisfied security gate.
+
+## Spent-authority crash recovery boundary
+
+Two deterministic worker-process crash tests cover the interval after the
+ProofRail replay-registry claim has been committed, but before a provider
+work-order request could be sent:
+
+- **Before an authority business record is written:** the replay registry has
+  spent the permit, but no authority record exists to export. The original
+  permit cannot be replayed; this remains an unresolved incident-recovery
+  gap (L-9).
+- **After CONSUMED is written but before the signed receipt is persisted:**
+  reconciliation records `consumption_receipt_missing`, makes a single signed
+  read-only diagnostic observation, and refuses further reconciliation.
+  Export refuses explicitly, before creating a partial bundle. No automatic
+  retry or re-attestation is authorized (L-10).
+
+The diagnostic checks what the local provider reported at that instant; an
+empty response is **not** independent proof that no side effect occurred.
+Provider authorization and external replay checkpoints remain separate gates.
 
 ## Layout
 
@@ -106,6 +139,8 @@ signatures came from. Without it, key trust is `self_asserted`.
   `af6018e`; #45 and #46 add verifier checks that are not measured here.
   A caught check shows only that some test depends on it; this does not find
   checks nobody wrote, and it is author-run, not independent review.
+
+**Additional coverage work:** draft PR #49 independently catches all 15 original survivors; draft PR #51 tests five new verifier guards. Local integration counts from prior runs must not be republished as an exact result for this combined commit. A full classified sweep on this branch remains required.
 
 ## Limits
 

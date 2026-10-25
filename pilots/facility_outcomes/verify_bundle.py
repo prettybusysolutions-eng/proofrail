@@ -22,11 +22,12 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 from proofrail.envelope import verify_action_authority_envelope  # noqa: E402
+from proofrail.crypto import verify_signature  # noqa: E402
 
 import outcome_verifier  # noqa: E402
 from policy import approval_digest, evidence_root, plan_digest  # noqa: E402
 from proofrail_gateway import ACTION_TYPE, expected_parameters, success_predicate, work_order_target  # noqa: E402
-from records import PilotError, Registry, decode_public, digest, utc  # noqa: E402
+from records import PilotError, Registry, decode_public, digest, utc, validate  # noqa: E402
 from store import verify_chain  # noqa: E402
 
 
@@ -77,6 +78,7 @@ def verify(root: Path, trusted: dict | None = None) -> dict:
         load(root, 'records/approval.json')
     envelope, reference = load(root, 'records/envelope.json'), load(root, 'records/authority_reference.json')
     consumption = load(root, 'records/consumption.json')
+    consumption_attestation = load(root, 'records/consumption-attestation.json')
     identity_then = load(root, 'context/identity-at-admission.json')
     identity_now = load(root, 'context/identity-at-export.json')
     policy = load(root, 'context/policy-at-admission.json')
@@ -88,10 +90,21 @@ def verify(root: Path, trusted: dict | None = None) -> dict:
     snapshot = identity_now
     key_trust = 'self_asserted'
     if trusted is not None:
+        # A signed envelope is verified under its admission-time issuer key.
+        # Trusting ONLY the export-time identity snapshot does not authenticate
+        # that historical key. Pin all identities on which either snapshot relies.
+        # A future key-rotation scheme must prove transitions independently.
         key_trust = 'trusted'
-        for p in snapshot['principals']:
-            r.check('authenticity', f"key of {p['principal_id']} matches the independently trusted key",
-                    trusted.get(p['principal_id']) == p['public_key'], 'untrusted or different key')
+        for phase, identity_snapshot in (('admission', identity_then), ('export', identity_now)):
+            ids = [p['principal_id'] for p in identity_snapshot['principals']]
+            r.check('authenticity', f'{phase} identity snapshot has unique principal IDs',
+                    len(ids) == len(set(ids)), 'duplicate principals')
+            for p in identity_snapshot['principals']:
+                pin = trusted.get(p['principal_id'])
+                r.check('authenticity',
+                        f"{phase} key of {p['principal_id']} matches independently trusted key",
+                        isinstance(pin, str) and pin == p['public_key'],
+                        'missing or mismatched independently trusted historical key')
     registry = Registry.from_snapshot(snapshot)
     required = [('problem', problem, 'problem_reviewer'), ('approval', approval, 'approver')]
     required += [(f"observation {o['observation_id']}", o, {'provider_work_order_state': 'provider_observer',
@@ -110,6 +123,26 @@ def verify(root: Path, trusted: dict | None = None) -> dict:
             r.check('authenticity', f'{name} signed by a registered {role}', False, exc.reason)
     r.check('authenticity', 'audit chain intact from genesis (tail truncation is not detectable)',
             verify_chain(load(root, 'audit/chain.json')))
+
+    # The gateway signed the database rows *after* consumption committed.
+    # Its admission-time key must come from separately pinned historical keys
+    # in trusted mode. This is not an independent registry checkpoint.
+    executor_id = envelope['subject']['principal_id']
+    historical_gateway = next((p for p in identity_then['principals']
+                               if p['principal_id'] == executor_id), None)
+    r.check('authenticity', 'admission-time gateway identity is registered',
+            historical_gateway is not None and 'gateway' in historical_gateway['roles'])
+    try:
+        validate('consumption_attestation', consumption_attestation)
+        if historical_gateway is None:
+            raise PilotError('consumption_gateway_unknown')
+        if consumption_attestation['signature']['key_id'] != historical_gateway['key_id']:
+            raise PilotError('consumption_gateway_key_mismatch')
+        verify_signature(consumption_attestation, decode_public(historical_gateway['public_key']))
+        r.check('authenticity', 'gateway signature authenticates consumption-row attestation', True)
+    except Exception as exc:
+        r.check('authenticity', 'gateway signature authenticates consumption-row attestation',
+                False, getattr(exc, 'reason', type(exc).__name__))
 
     # ---- 3. authority validity
     issuer = next((p for p in identity_then['principals'] if 'authority_issuer' in p['roles']), None)
@@ -139,12 +172,20 @@ def verify(root: Path, trusted: dict | None = None) -> dict:
     r.check('authority', 'success predicate binds the exact parameters',
             envelope['observation_contract']['success_predicate_digest'] == success_predicate(params))
     claim = consumption['claim']
-    r.check('authority', 'consumed once in the ProofRail replay registry, by the named executor',
+    r.check('authority', 'unsigned registry-export snapshot reports one consumption by the named executor',
             claim['permit_hash'] == envelope['record_hash'] and claim['nonce'] == envelope['nonce']
             and claim['executor_id'] == envelope['subject']['principal_id']
             and [e['state'] for e in consumption['events']] == ['EXECUTING', 'CONSUMED'])
     r.check('authority', 'consumed within the envelope validity window',
             utc(envelope['issued_at']) <= utc(claim['consumed_at']) < utc(envelope['expires_at']))
+    r.check('authority', 'gateway attestation binds these exact exported registry rows',
+            consumption_attestation.get('kind') == 'wrn.consumption-attestation.v1'
+            and consumption_attestation.get('tenant_id') == tenant
+            and consumption_attestation.get('envelope_digest') == envelope['record_hash']
+            and consumption_attestation.get('nonce') == envelope['nonce']
+            and consumption_attestation.get('executor_principal') == executor_id
+            and consumption_attestation.get('consumed_at') == claim['consumed_at']
+            and consumption_attestation.get('registry_claim_digest') == digest(consumption))
 
     # ---- 4. provider-observed execution
     recon = next((o for o in observations if o['record_hash'] == reference['reconciliation_reference']), None)
@@ -199,8 +240,12 @@ def verify(root: Path, trusted: dict | None = None) -> dict:
         outcome['settlement'] = {'status': settlements[-1]['authorization_status'],
                                  'money_moved': settlements[-1]['money_moved']}
         r.check('outcome', 'settlement is simulated (no money moved)', all(s['money_moved'] is False for s in settlements))
+    # A signed gateway receipt attests to exported database rows but does not
+    # prove an independently retained registry history or prevent joint rollback.
+    consumption_provenance = 'signed_gateway_attestation_unanchored_not_independent_registry_proof'
     required_dims = ('integrity', 'authenticity', 'authority', 'execution')
     return {'bundle': str(root), 'key_trust': key_trust,
+            'consumption_provenance': consumption_provenance,
             'verified': all(r.passed(d) for d in required_dims) and (not r.dimensions.get('outcome') or r.passed('outcome')),
             'dimensions': {d: {'result': 'PASS' if r.passed(d) else 'FAIL', 'checks': c} for d, c in r.dimensions.items()},
             'physical_outcome': {**outcome, 'nature': 'attested by a buyer-designated inspector under recorded rules; '

@@ -1,7 +1,4 @@
-# ProofRail Known Limitations
-
-Applies to package version 0.6.1. (Earlier editions were headed v0.5; the
-items below are unchanged by that correction.)
+# ProofRail v0.5 Known Limitations
 
 1. Deleting or rolling back both the replay registry and its independently
    retained signed trust checkpoint can erase replay evidence.
@@ -50,3 +47,19 @@ items below are unchanged by that correction.)
     atomic. A later revocation cannot cancel an already dispatched request.
     Multi-process fencing and provider-enforced revocation require additional
     design and evidence; the local lock is not a distributed revocation barrier.
+
+19. Replay-registry initialization now uses an atomic hard link to publish a
+    complete SQLite database only after both replay tables are present. This
+    requires a local filesystem and permissions supporting same-filesystem
+    hard-link creation. If `os.link` is unsupported or prohibited, a newly
+    absent registry cannot be initialized and consumption fails closed. There
+    is no non-atomic fallback. See
+    [replay registry recovery](REPLAY_REGISTRY_RECOVERY.md).
+20. Legacy deployments may contain an existing, incomplete replay-registry
+    file after an older-version crash between file creation and schema setup.
+    Earlier code could create missing tables automatically; this change
+    deliberately refuses to repair an existing file because doing so might
+    erase or misinterpret evidence of spent permits. An operator must verify
+    and reconcile independently retained authority/consumption evidence before
+    any explicit replacement or restart. This is an availability-breaking
+    operational change; see the same recovery procedure.

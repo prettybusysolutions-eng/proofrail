@@ -5,6 +5,7 @@ import os
 import sqlite3
 import tempfile
 from collections.abc import Mapping
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,64 @@ from .core import ProofRailError
 from .crypto import hash_record, sign_record, verify_signature
 
 EMPTY_ROOT = hash_record({"kind": "proofrail.empty-root.v0.5.1"})
+
+
+def ensure_replay_registry(registry_path: str | Path) -> None:
+    """Publish a complete replay registry at a previously absent path.
+
+    sqlite3.connect(path) creates an empty visible file before CREATE TABLE.
+    A concurrent read-only replay check can then observe a missing schema and
+    abort spuriously. Build the SQLite schema in a same-directory private file
+    and atomically link it into place only after closing its writer.
+
+    Existing registries, including damaged ones, are NEVER overwritten or
+    reinitialized: they must fail closed rather than losing spent authorities.
+    The hard-link publication requires a filesystem supporting os.link().
+    """
+    path = Path(registry_path)
+    if path.exists():
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, staged_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    os.close(descriptor)
+    staged = Path(staged_name)
+    try:
+        with closing(sqlite3.connect(staged, isolation_level=None)) as database:
+            # Match the existing registry's WAL-first schema initialization.
+            # Explicit connection close checkpoints and removes staging sidecars
+            # before the complete database is linked into public view.
+            database.execute("PRAGMA journal_mode=WAL")
+            database.execute("PRAGMA synchronous=FULL")
+            # Match the original per-table DDL text as well as its semantics:
+            # the reproducible SQLite fixture preserves sqlite_master.sql bytes.
+            database.execute(
+                """
+            CREATE TABLE IF NOT EXISTS permit_claims (
+                permit_hash TEXT PRIMARY KEY,
+                nonce TEXT NOT NULL UNIQUE,
+                executor_id TEXT NOT NULL,
+                executing_at TEXT NOT NULL,
+                consumed_at TEXT NOT NULL
+            )
+            """
+            )
+            database.execute(
+                """
+            CREATE TABLE IF NOT EXISTS permit_events (
+                sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                permit_hash TEXT NOT NULL,
+                state TEXT NOT NULL,
+                observed_at TEXT NOT NULL,
+                executor_id TEXT NOT NULL
+            )
+            """
+            )
+        try:
+            os.link(staged, path)
+        except FileExistsError:
+            pass  # another publisher won; its closed, complete database is visible
+    finally:
+        staged.unlink(missing_ok=True)
 
 
 def replay_claim_exists(registry_path: str | Path, permit_hash: str) -> bool:

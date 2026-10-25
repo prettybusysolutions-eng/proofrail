@@ -40,6 +40,12 @@ jobs:
       - name: Pilot suite (scenarios, attack matrix, bundles)
         working-directory: pilots/facility_outcomes
         run: python -m pytest -q tests/ --junitxml=pilot-results.xml
+      - name: Prove five integrated verifier guards are caught by their own tests
+        working-directory: pilots/facility_outcomes
+        run: python review_tools/check_new_verifier_boundaries.py
+      - name: Verify 15 historical verifier mutations remain caught
+        working-directory: pilots/facility_outcomes
+        run: python review_tools/check_previous_survivors.py
       - name: End-to-end demonstration and offline bundle verification
         run: |
           python pilots/facility_outcomes/run_pilot.py --out "$RUNNER_TEMP/wrn-pilot"

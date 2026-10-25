@@ -96,7 +96,7 @@ def check(env, problem, plan, approval, now=None):
 
 @pytest.mark.parametrize('changes,expected', [
     ({'approver_principal': 'approver-b'}, 'approver_identity_mismatch'),
-    ({'tenant_id': 'tenant-b'}, 'approval_tenant_mismatch'),   # signed by tenant-a's approver
+    ({'tenant_id': 'tenant-b'}, 'approval_tenant_mismatch'),
     ({'approved_plan_digest': 'b' * 64}, 'approval_scope_changed'),
     ({'approved_provider': 'P-099'}, 'provider_changed'),
     ({'currency': 'EUR'}, 'currency_mismatch'),
@@ -145,7 +145,6 @@ def test_schema_validation_and_timestamps(env):
     assert reason(lambda: validate('problem_record', {})) == 'invalid_problem_record'
     assert reason(lambda: utc('2026-10-23T13:00:00+00:00')) == 'invalid_timestamp'   # offset form is ambiguous here
     assert reason(lambda: utc('not a timeZ')) == 'invalid_timestamp'
-    # Without the trailing-Z requirement, dropping the last character would accept any suffix as UTC.
     assert reason(lambda: utc('2026-10-23T13:00:00Q')) == 'invalid_timestamp'
     assert reason(lambda: utc(None)) == 'invalid_timestamp'
 
@@ -344,3 +343,45 @@ def test_export_guards(env):
     assert reason(lambda: export_case(env.w['buyer-a'], env.p, 'tenant-a', pid, env.tmp / 'taken')) \
         == 'export_destination_exists'
     assert reason(lambda: _claim(env.p.replay_registry, 'f' * 64)) == 'consumption_record_missing'
+
+
+# ------------------------------------------------------------------ consumption receipt guards
+
+@pytest.mark.parametrize('corrupt', ['nonce', 'executor', 'events'])
+def test_receipt_is_not_signed_over_inconsistent_registry_rows(env, monkeypatch, corrupt):
+    """The gateway re-reads the committed registry rows and refuses to attest rows that do not
+    match the envelope it just spent; no provider call follows."""
+    import proofrail_gateway
+    problem, plan, approval, envelope = approved(env)
+    real = proofrail_gateway.read_registry_claim
+
+    def inconsistent(path, permit_hash):
+        rows = copy.deepcopy(real(path, permit_hash))
+        if corrupt == 'nonce':
+            rows['claim']['nonce'] = 'n' * 32
+        elif corrupt == 'executor':
+            rows['claim']['executor_id'] = 'someone-else'
+        else:
+            rows['events'] = rows['events'][:1]
+        return rows
+    monkeypatch.setattr(proofrail_gateway, 'read_registry_claim', inconsistent)
+    assert reason(lambda: env.p.admit('tenant-a', envelope)) == 'registry_consumption_inconsistent'
+    assert env.count() == 0
+
+
+def test_export_refuses_an_admission_aborted_after_its_receipt(env, monkeypatch):
+    """A receipt exists, but admission was aborted before the provider call: not exportable."""
+    problem, plan, approval, envelope = approved(env)
+    gateway = env.p.gateways['tenant-a']
+    real = gateway._consume
+
+    def revoke_then_consume(e):
+        env.p.revoke_approval(env.w['admin-a'], 'tenant-a', approval['approval_id'])
+        return real(e)
+    monkeypatch.setattr(gateway, '_consume', revoke_then_consume)
+    assert reason(lambda: env.p.admit('tenant-a', envelope)) == 'state_changed_during_admission'
+    stored = env.p.store.get('tenant-a', 'authority', envelope['envelope_id'])
+    assert 'consumption_attestation' in stored and stored['aborted'] == 'state_changed_during_admission'
+    assert reason(lambda: export_case(env.w['buyer-a'], env.p, 'tenant-a', problem['problem_id'],
+                                      env.tmp / 'aborted')) == 'authority_admission_aborted'
+    assert not (env.tmp / 'aborted').exists() and env.count() == 0

@@ -15,8 +15,21 @@ parser = argparse.ArgumentParser()
 for flag in ('--world', '--provider', '--tenant', '--envelope', '--out'):
     parser.add_argument(flag, required=True)
 parser.add_argument('--timeout', type=float, default=None)
+parser.add_argument('--test-crash-after', choices=['registry-commit', 'authority-record'],
+                    default=None, help=argparse.SUPPRESS)
 args = parser.parse_args()
 world = load_world(Path(args.world), args.provider, provider_timeout=args.timeout)
+
+# Deliberate process exits for isolated crash-window regression testing only.
+# They fire at deterministic hooks BEFORE any provider create call.
+if args.test_crash_after:
+    import os
+    gateway = world.pilot.gateways[args.tenant]
+    if args.test_crash_after == 'registry-commit':
+        gateway._reference = lambda *a, **kw: os._exit(72)
+    elif args.test_crash_after == 'authority-record':
+        gateway._attest_consumption = lambda *a, **kw: os._exit(73)
+
 try:
     result = {'outcome': 'admitted', **{k: v for k, v in world.pilot.admit(
         args.tenant, json.loads(Path(args.envelope).read_text())).items() if k != 'reference'}}

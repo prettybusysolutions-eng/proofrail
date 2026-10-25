@@ -104,3 +104,20 @@ The matrix with test names and side-effect counts is in
   in telemetry" is not testable yet.
 - **L-8 Evidence deletion.** Evidence blobs are not stored, so "deleted evidence
   referenced by an accepted claim" is not testable yet.
+
+- **L-9 Spent registry claim with no business record.** A process can exit immediately
+  after committing the replay claim and before writing an authority record.
+  No provider create call was attempted in the deterministic worker crash test.
+  The original authority is spent and cannot be retried. Export has no admitted
+  authority to reference and fails; an explicit incident-recovery workflow using
+  independently retained authority material is not implemented. The existing
+  local audit log does not record that crash window.
+- **L-10 Spent authority record with no signed consumption attestation.**
+  A process can exit after writing the CONSUMED business record and before
+  signing/persisting the gateway receipt. `Gateway.reconcile()` now fails
+  closed with `consumption_receipt_missing`, persists an admission-abort marker
+  and a read-only provider diagnostic, and writes an audit entry. Export refuses
+  *before creating output*. The diagnostic is a single observation of current
+  provider state and does not independently prove that no effect occurred,
+  especially with eventual consistency or a dishonest provider. There is no
+  automatic reissue, replay, retroactive signature or monetary side effect.
