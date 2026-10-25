@@ -23,14 +23,27 @@ Future prereleases built under the proposed workflow have a signed Sigstore-back
 
 ```sh
 repo=prettybusysolutions-eng/proofrail
+tag=vX.Y.Z  # the exact future release you downloaded above
 signer=prettybusysolutions-eng/proofrail/.github/workflows/pilot-release.yml
+
+# GitHub's commits endpoint resolves lightweight and annotated tags to the
+# source commit. Derive this independently from the downloaded assets.
+source_sha="$(gh api "repos/$repo/commits/$tag" --jq '.sha')"
+case "$source_sha" in
+  *[!0-9a-f]*|'') echo "Invalid source SHA" >&2; exit 1 ;;
+esac
+test "${#source_sha}" -eq 40 || exit 1
+
 for artifact in ./*.whl ./*.tar.gz ./SHA256SUMS ./provenance.json ./independent-review-inputs.zip; do
     test -f "$artifact" || exit 1
-    gh attestation verify "$artifact" --repo "$repo" --signer-workflow "$signer" || exit 1
+    gh attestation verify "$artifact" --repo "$repo" \
+      --signer-workflow "$signer" \
+      --source-ref "refs/heads/main" \
+      --source-digest "$source_sha" || exit 1
 done
 ```
 
-Check the verified certificate's workflow repository and source commit against the GitHub release tag's intended commit. A signer-workflow check narrows the trusted actor compared with repository-only verification. To run an offline verification, separately obtain the trusted root and attestation bundles according to [GitHub's offline verification guide](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/verify-attestations-offline).
+This command requires each asset's attestation to match the **same exact tag commit**, trusted repository workflow, and main-branch source ref. If a release asset, signer, or source commit differs, verification fails. A signer-workflow check narrows the trusted actor compared with repository-only verification. To run an offline verification, separately obtain the trusted root and attestation bundles according to [GitHub's offline verification guide](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/verify-attestations-offline).
 
 The proposed publishing workflow performs these checks **before** `gh release create`. If an attestation cannot be minted or verified, publication fails; it must not silently fall back to unsigned release assets.
 
