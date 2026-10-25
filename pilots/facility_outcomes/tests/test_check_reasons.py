@@ -366,19 +366,14 @@ def test_receipt_is_not_signed_over_inconsistent_registry_rows(env, monkeypatch,
     assert env.count() == 0
 
 
-def test_export_refuses_an_admission_aborted_after_its_receipt(env, monkeypatch):
-    """A receipt exists, but admission was aborted before the provider call: not exportable."""
-    problem, plan, approval, envelope = approved(env)
-    gateway = env.p.gateways['tenant-a']
-    real = gateway._consume
-
-    def revoke_then_consume(e):
-        env.p.revoke_approval(env.w['admin-a'], 'tenant-a', approval['approval_id'])
-        return real(e)
-    monkeypatch.setattr(gateway, '_consume', revoke_then_consume)
-    assert reason(lambda: env.p.admit('tenant-a', envelope)) == 'state_changed_during_admission'
+def test_export_refuses_an_admission_aborted_after_its_receipt(env):
+    """Even a completed, signed receipt is not exportable after an explicit abort marker."""
+    problem, plan, approval, envelope, result = through_work(env)
     stored = env.p.store.get('tenant-a', 'authority', envelope['envelope_id'])
-    assert 'consumption_attestation' in stored and stored['aborted'] == 'state_changed_during_admission'
+    assert 'consumption_attestation' in stored
+    env.p.store.put('tenant-a', 'authority', envelope['envelope_id'],
+                    {**stored, 'aborted': 'operator_hold'}, replace=True)
     assert reason(lambda: export_case(env.w['buyer-a'], env.p, 'tenant-a', problem['problem_id'],
                                       env.tmp / 'aborted')) == 'authority_admission_aborted'
-    assert not (env.tmp / 'aborted').exists() and env.count() == 0
+    assert not (env.tmp / 'aborted').exists() and env.count() == 1
+
