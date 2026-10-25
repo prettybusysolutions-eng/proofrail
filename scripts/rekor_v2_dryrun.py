@@ -79,6 +79,8 @@ def build_rekor_v2_request(
         pubkey.verify(detached_signature, statement_bytes, ec.ECDSA(hashes.SHA256()))
     except InvalidSignature as exc:
         raise ProofRailError("rekor_detached_signature_invalid") from exc
+    except ProofRailError:
+        raise
     except (ValueError, TypeError, cbor2.CBORDecodeError) as exc:
         raise ProofRailError("rekor_input_encoding_invalid") from exc
 
