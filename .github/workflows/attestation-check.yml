@@ -29,6 +29,10 @@ jobs:
         run: |
           "$RUNNER_TEMP/proofrail-wheel/bin/python" scripts/verify_installed_artifact.py \
             examples/reproduce_artifact
+      - name: Verify packaged cross-domain exchange entry point
+        run: |
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/proofrail-wheel/bin/proofrail-exchange" --help > /dev/null
   attestation-check:
     runs-on: ubuntu-latest
     steps:
