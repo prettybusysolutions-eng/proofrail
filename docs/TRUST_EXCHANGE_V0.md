@@ -80,6 +80,37 @@ governing consortium, verifies a provider effect, or enforces a merge.** It
 establishes only the cryptographically checkable agreement primitive that such
 systems would need.
 
+## Offline verification from the installed package
+
+The portable profile has strict machine-readable contracts:
+`schemas/cross_domain_witness_statement.schema.json` and
+`schemas/cross_domain_witness_receipt.schema.json`. The verifier is shipped
+as the `proofrail-exchange` entry point in the ProofRail wheel.
+
+```sh
+proofrail-exchange \
+  --statement /received-bundle/witness-statement.json \
+  --receipts /received-bundle/witness-receipts.json \
+  --ledger /received-bundle/ledger.jsonl \
+  --checkpoint /received-bundle/signed-checkpoint.json \
+  --checkpoint-public-key /trusted-operator/checkpoint-public-key.txt \
+  --trusted-witnesses /trusted-operator/pinned-witness-keys.json \
+  --expected /trusted-operator/pinned-expectations.json
+```
+
+The JSON roster maps signer IDs to `operator_id`, `key_id`, and `public_key`
+(URL-safe base64-encoded Ed25519 public keys); the external expectations file
+contains every statement field **except `kind`**, including
+`previous_checkpoint_digest` and `sequence`. Signature and exact-context
+checks fail closed. Exit code `0` indicates the narrow cryptographic
+verification passed, `4` indicates a refused bundle, and `2` indicates
+invalid inputs. **The verifier never downloads a trusted key from the
+bundle**. A user who copies the keys/expected state from that same bundle has
+not established an external trust root.
+
+This CLI performs no live provider calls, network requests, agent approvals,
+merges, witness signing or registry writes.
+
 ## Concrete adoption test
 
 A meaningful next demonstration would require:
