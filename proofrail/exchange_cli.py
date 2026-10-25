@@ -13,6 +13,7 @@ from importlib.resources import files
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
+from jsonschema.exceptions import ValidationError, SchemaError
 
 from .anchor import decode_public_key
 from .core import ProofRailError
@@ -37,10 +38,9 @@ def main(argv=None):
         expected = _json(args.expected)
         if not isinstance(receipts, list):
             raise ProofRailError("receipts must be a list")
-        for name, instance in (("statement", statement),):
-            schema = json.loads(files("schemas").joinpath(
-                "cross_domain_witness_statement.schema.json").read_text(encoding="utf-8"))
-            Draft202012Validator(schema).validate(instance)
+        schema = json.loads(files("schemas").joinpath(
+            "cross_domain_witness_statement.schema.json").read_text(encoding="utf-8"))
+        Draft202012Validator(schema).validate(statement)
         receipt_schema = json.loads(files("schemas").joinpath(
             "cross_domain_witness_receipt.schema.json").read_text(encoding="utf-8"))
         validator = Draft202012Validator(receipt_schema)
@@ -71,7 +71,7 @@ def main(argv=None):
         print(json.dumps(result, sort_keys=True, indent=2))
         return 0 if result["valid"] else 4
     except (OSError, ValueError, KeyError, TypeError, ProofRailError,
-            json.JSONDecodeError, Exception) as exc:
+            ValidationError, SchemaError) as exc:
         # Include validation exceptions (jsonschema.ValidationError) without
         # dumping sensitive bundle material or writing back to any input file.
         print(json.dumps({"valid": False, "error": type(exc).__name__}),
