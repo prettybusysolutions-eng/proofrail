@@ -123,7 +123,7 @@ def verify_scitt_checkpoint_statement(
             raise ProofRailError("cose_shape_invalid")
         protected, unprotected, payload, signature = items
         if (not isinstance(protected, bytes) or not protected
-            or not isinstance(unprotected, dict) or unprotected
+            or not isinstance(unprotected, Mapping) or unprotected
             or not isinstance(payload, bytes) or not isinstance(signature, bytes)):
             raise ProofRailError("cose_components_invalid")
         headers = cbor2.loads(protected)
