@@ -102,9 +102,10 @@ def analyze_one(repo, pull, *, permits_dir=None, public_key=None, trust_policy=N
 
     if reread is not None:
         last = safe_pull_fields(reread)
-        if (last["head_sha"] != observed["head_sha"]
-            or last["base_sha"] != observed["base_sha"]
-            or last["draft"] != observed["draft"]):
+        if any(last[field] != observed[field] for field in (
+            "head_sha", "head_ref", "base_sha", "base_ref",
+            "draft", "state", "merged", "mergeable"
+        )):
             reasons.append("state_changed_between_reads")
         observed["last_read_head_sha"] = last["head_sha"]
         observed["last_read_base_sha"] = last["base_sha"]
