@@ -44,8 +44,27 @@ A valid report should receive:
 5. regression evidence
 6. coordinated disclosure timing when applicable
 
-No response-time guarantee is offered until a staffed public security contact
-is established.
+### Response targets and staffing boundary
+
+For privately reported vulnerabilities, the proposed maintainer **targets** are:
+
+- acknowledge receipt within **7 calendar days**;
+- triage the affected boundary and communicate next steps within **14 calendar days**;
+- provide a status update at least every **30 calendar days** until coordinated closure;
+- coordinate disclosure timing with the reporter, weighing exploitation risk,
+  affected releases, available mitigations and a normally reviewed **90-day**
+  disclosure window rather than publishing exploit details immediately.
+
+These are **targets, not an SLA or a guarantee**. The repository has not
+independently established a staffed public security contact or 24/7 coverage.
+Until an administrator confirms the private reporting route, assigns maintainers
+and accepts the timetable, do not claim this policy is operationally enforced.
+A reporter should receive a private, safe channel before providing sensitive
+reproduction material.
+
+Report receipt, severity classification and disclosure decisions remain human
+maintainer responsibilities. AI-generated triage is advisory and must not
+unilaterally publish vulnerability details or approve a release.
 
 ## High-Value Report Areas
 
