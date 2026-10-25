@@ -40,6 +40,9 @@ jobs:
       - name: Pilot suite (scenarios, attack matrix, bundles)
         working-directory: pilots/facility_outcomes
         run: python -m pytest -q tests/ --junitxml=pilot-results.xml
+      - name: Verify 15 formerly surviving offline verifier guards are test-sensitive
+        working-directory: pilots/facility_outcomes
+        run: python review_tools/check_previous_survivors.py
       - name: End-to-end demonstration and offline bundle verification
         run: |
           python pilots/facility_outcomes/run_pilot.py --out "$RUNNER_TEMP/wrn-pilot"
