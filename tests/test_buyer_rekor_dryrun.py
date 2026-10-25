@@ -16,6 +16,8 @@ from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import hashes
 
 from proofrail.buyer_highwater import BuyerHighWaterStore
 from proofrail.checkpoint import create_checkpoint
@@ -37,7 +39,7 @@ class BuyerHighWaterAndRekorTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.issuer = Ed25519PrivateKey.generate()
         self.checkpoint_signer = Ed25519PrivateKey.generate()
-        self.detached = Ed25519PrivateKey.generate()
+        self.detached = ec.generate_private_key(ec.SECP256R1())
         self.store = BuyerHighWaterStore(self.root / "buyer-only.sqlite3")
 
     def snapshot(self, sequence, predecessor=None, count=None):
@@ -187,14 +189,14 @@ class BuyerHighWaterAndRekorTests(unittest.TestCase):
     def rekor_materials(self):
         first = self.snapshot(1)
         statement = first[3]
-        signature = self.detached.sign(statement)
+        signature = self.detached.sign(statement, ec.ECDSA(hashes.SHA256()))
         public_der = self.detached.public_key().public_bytes(
             serialization.Encoding.DER,
             serialization.PublicFormat.SubjectPublicKeyInfo,
         )
         return statement, signature, public_der
 
-    def test_rekor_request_is_exact_v2_hashedrekord_with_sha256_detached_ed25519(self):
+    def test_rekor_request_is_exact_v2_hashedrekord_with_sha256_detached_p256_ecdsa(self):
         import hashlib
         statement, signature, der = self.rekor_materials()
         payload = build_rekor_v2_request(statement, signature, der)
@@ -204,16 +206,19 @@ class BuyerHighWaterAndRekorTests(unittest.TestCase):
                          hashlib.sha256(statement).digest())
         self.assertEqual(base64.b64decode(entry["signature"]["content"]), signature)
         verifier = entry["signature"]["verifier"]
-        self.assertEqual(verifier["keyDetails"], "PKIX_ED25519")
+        self.assertEqual(verifier["keyDetails"], "PKIX_ECDSA_P256_SHA_256")
         self.assertEqual(base64.b64decode(verifier["publicKey"]["rawBytes"]), der)
         self.assertNotIn(statement, json.dumps(payload).encode())
         self.assertNotIn("privateKey", json.dumps(payload))
 
     def test_rekor_signature_and_spki_mismatch_are_denied(self):
         statement, signature, der = self.rekor_materials()
+        wrong_sig = ec.generate_private_key(ec.SECP256R1()).sign(
+            statement, ec.ECDSA(hashes.SHA256())
+        )
         with self.assertRaisesRegex(ProofRailError, "rekor_detached_signature_invalid"):
-            build_rekor_v2_request(statement, b"x"*64, der)
-        unrelated = Ed25519PrivateKey.generate().public_key().public_bytes(
+            build_rekor_v2_request(statement, wrong_sig, der)
+        unrelated = ec.generate_private_key(ec.SECP256R1()).public_key().public_bytes(
             serialization.Encoding.DER,
             serialization.PublicFormat.SubjectPublicKeyInfo,
         )
@@ -221,6 +226,12 @@ class BuyerHighWaterAndRekorTests(unittest.TestCase):
             build_rekor_v2_request(statement, signature, unrelated)
         with self.assertRaisesRegex(ProofRailError, "rekor_input_encoding_invalid"):
             build_rekor_v2_request(b"hello", signature, der)
+        ed25519_der = Ed25519PrivateKey.generate().public_key().public_bytes(
+            serialization.Encoding.DER,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        with self.assertRaisesRegex(ProofRailError, "rekor_public_key_must_be_ecdsa_p256"):
+            build_rekor_v2_request(statement, signature, ed25519_der)
 
     def test_dry_run_cli_does_not_send_or_reuse_existing_output_directory(self):
         statement, signature, der = self.rekor_materials()
