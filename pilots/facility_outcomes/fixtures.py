@@ -49,7 +49,7 @@ def start_provider(workdir: Path, port: int = 0):
     port_file.unlink(missing_ok=True)
     proc = subprocess.Popen([sys.executable, '-I', str(HERE / 'provider_simulator.py'),
                              '--db', str(workdir / 'provider.sqlite3'), '--port-file', str(port_file),
-                             '--port', str(port)],
+                             '--port', str(port), '--insecure-fault-mode'],
                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     for _ in range(200):
         if port_file.exists() and port_file.read_text().strip():
