@@ -119,7 +119,7 @@ def verify_scitt_checkpoint_statement(
         if not isinstance(sign1, cbor2.CBORTag) or sign1.tag != COSE_TAG_SIGN1:
             raise ProofRailError("cose_tag_invalid")
         items = sign1.value
-        if not isinstance(items, list) or len(items) != 4:
+        if not isinstance(items, (list, tuple)) or len(items) != 4:
             raise ProofRailError("cose_shape_invalid")
         protected, unprotected, payload, signature = items
         if (not isinstance(protected, bytes) or not protected
@@ -149,7 +149,7 @@ def verify_scitt_checkpoint_statement(
         checked = verify_checkpoint(checkpoint, ledger_path, public_key=checkpoint_public_key)
         if not checked["valid"]:
             raise ProofRailError("checkpoint_or_ledger_invalid")
-    except (ProofRailError, ValueError, TypeError, KeyError, cbor2.CBORDecodeError, cbor2.CBORDecodeValueError) as exc:
+    except (ProofRailError, ValueError, TypeError, KeyError, cbor2.CBORDecodeError) as exc:
         reasons.append(str(exc) if isinstance(exc, ProofRailError) else "malformed_statement")
     return {
         "valid": not reasons,
