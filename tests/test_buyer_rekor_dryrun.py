@@ -251,7 +251,7 @@ class BuyerHighWaterAndRekorTests(unittest.TestCase):
         self.assertEqual(rekor_main(args), 0)
         req = json.loads((target / "rekor-v2-request.json").read_text())
         self.assertEqual(req["hashedRekordRequestV002"]["signature"]["verifier"]["keyDetails"],
-                         "PKIX_ED25519")
+                         "PKIX_ECDSA_P256_SHA_256")
         meta = json.loads((target / "dry-run-metadata.json").read_text())
         self.assertFalse(meta["submitted"])
         self.assertFalse(meta["log_receipt_verified"])
