@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/prettybusysolutions-eng/proofrail/blob/main/schemas/cross_domain_witness_statement.schema.json",
+  "title": "ProofRail Cross-Domain Witness Statement v0 (experimental)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "authority_digest",
+    "effect_digest",
+    "outcome_digest",
+    "checkpoint_digest",
+    "previous_checkpoint_digest",
+    "sequence",
+    "execution_domain"
+  ],
+  "properties": {
+    "kind": {
+      "const": "proofrail.cross-domain-witness-statement.v0"
+    },
+    "authority_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "effect_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "outcome_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "checkpoint_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "previous_checkpoint_digest": {
+      "oneOf": [
+        {
+          "const": "GENESIS"
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      ]
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "execution_domain": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

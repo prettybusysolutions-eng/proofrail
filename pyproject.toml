@@ -16,6 +16,7 @@ dependencies = [
 [project.scripts]
 proofrail = "proofrail.cli:main"
 proofrail-server = "proofrail.server:main"
+proofrail-exchange = "proofrail.exchange_cli:main"
 
 [tool.setuptools.packages.find]
 include = ["proofrail*", "integrations*", "schemas*"]
