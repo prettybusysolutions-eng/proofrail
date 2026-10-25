@@ -1,0 +1,1023 @@
+{
+ "commit": "af6018e199cd75519500526d60199bf702709511",
+ "tree_dirty": false,
+ "python": "3.13.16",
+ "baseline": "unmutated copy passes",
+ "counts": {
+  "survived": 15,
+  "killed_valid": 115,
+  "invalid": 0
+ },
+ "results": [
+  {
+   "file": "proofrail_gateway.py",
+   "line": 98,
+   "check": "require 'issuer_role_required'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_components_require_their_roles",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 107,
+   "check": "require 'approval_revoked'",
+   "outcome": "killed_valid",
+   "test": "tests/test_authority_attacks.py::test_revoked_before_issuance",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 109,
+   "check": "require 'work_not_approved'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_issuer_refuses_a_case_that_is_no_longer_approved",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 139,
+   "check": "require 'provider_origin'",
+   "outcome": "killed_valid",
+   "test": "tests/test_adapter_attacks.py::test_provider_origin_is_fixed",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 161,
+   "check": "require 'observer_role_required'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_components_require_their_roles",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 199,
+   "check": "require 'gateway_role_required'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_components_require_their_roles",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 200,
+   "check": "require 'separate_replay_registry_required'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_components_require_their_roles",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 233,
+   "check": "require 'invalid_envelope'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_malformed_envelopes",
+   "reason": "AttributeError: 'str' object has no attribute 'get'"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 235,
+   "check": "require 'tenant_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_isolation_and_recovery.py::test_other_tenants_gateway_cannot_spend_this_tenants_authority",
+   "reason": "AssertionError: assert ('not_found' == 'tenant_mismatch'"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 240,
+   "check": "require 'approval_scope_changed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_authority_attacks.py::test_validly_signed_other_approval_digest",
+   "reason": "IndexError: list index out of range"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 247,
+   "check": "require 'issuer_not_trusted'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_gateway_trusts_only_a_registered_issuer",
+   "reason": "AssertionError: assert 'issuer_changed' == 'issuer_not_trusted'"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 249,
+   "check": "require 'issuer_changed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_authority_attacks.py::test_issuer_role_other_than_verifier",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 251,
+   "check": "require 'issuer_key_changed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_authority_attacks.py::test_forged_issuer_with_another_key",
+   "reason": "AssertionError: assert 'invalid_envelope' == 'issuer_key_changed'"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 252,
+   "check": "require 'subject_changed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_authority_attacks.py::test_subject_is_another_executor",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 254,
+   "check": "require 'checkpoint_authority_not_supported'",
+   "outcome": "killed_valid",
+   "test": "tests/test_authority_attacks.py::test_checkpoint_bearing_authority_not_supported",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 264,
+   "check": "require 'authority_not_yet_valid'",
+   "outcome": "killed_valid",
+   "test": "tests/test_authority_attacks.py::test_issued_in_the_future",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 265,
+   "check": "require 'predicate_changed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_authority_attacks.py::test_success_predicate_changed",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 312,
+   "check": "require 'invalid_envelope'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_malformed_envelopes",
+   "reason": "TypeError: list indices must be integers or slices, not str"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 325,
+   "check": "require 'authority_already_admitted'",
+   "outcome": "killed_valid",
+   "test": "tests/test_authority_attacks.py::test_replay_registry_rolled_back_alone",
+   "reason": "AssertionError: assert ('state_root_changed' == 'authority_already_admitted'"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 442,
+   "check": "require 'admission_aborted_before_provider_call'",
+   "outcome": "killed_valid",
+   "test": "tests/test_authority_attacks.py::test_revoked_during_admission_stops_the_provider_call",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 443,
+   "check": "require 'reconciliation_not_pending'",
+   "outcome": "killed_valid",
+   "test": "tests/test_adapter_attacks.py::test_status_changing_between_reads_does_not_flip_reconciliation",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 447,
+   "check": "require 'reconciliation_issued_provider_write'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_reconciliation_that_writes_is_refused",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "proofrail_gateway.py",
+   "line": 349,
+   "check": "require 'state_changed_during_admission'",
+   "outcome": "killed_valid",
+   "test": "tests/test_authority_attacks.py::test_revoked_during_admission_stops_the_provider_call",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 23,
+   "check": "require 'no_policy_for_tenant'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_tenant_without_policy",
+   "reason": "KeyError: 'tenant-z'"
+  },
+  {
+   "file": "policy.py",
+   "line": 31,
+   "check": "require 'provider_not_approved'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_plan_checks[changes4-provider_not_approved]",
+   "reason": "KeyError: 'P-099'"
+  },
+  {
+   "file": "policy.py",
+   "line": 38,
+   "check": "require 'plan_digest_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_plan_digest_must_recompute",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 39,
+   "check": "require 'plan_problem_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_plan_checks[changes0-plan_problem_mismatch]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 40,
+   "check": "require 'plan_target_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_plan_checks[changes1-plan_target_mismatch]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 42,
+   "check": "require 'problem_not_confirmed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_problem_must_be_confirmed",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 43,
+   "check": "require 'problem_type_not_permitted'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_policy_must_permit_the_problem[allowed_problem_types-problem_type_not_permitted]",
+   "reason": "AssertionError: assert 'policy_changed' == 'problem_type_not_permitted'"
+  },
+  {
+   "file": "policy.py",
+   "line": 44,
+   "check": "require 'risk_class_not_permitted'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_policy_must_permit_the_problem[allowed_risk_classes-risk_class_not_permitted]",
+   "reason": "AssertionError: assert 'policy_changed' == 'risk_class_not_permitted'"
+  },
+  {
+   "file": "policy.py",
+   "line": 45,
+   "check": "require 'policy_changed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_plan_checks[changes6-policy_changed]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 46,
+   "check": "require 'currency_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_plan_checks[changes2-currency_mismatch]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 47,
+   "check": "require 'cost_exceeds_policy'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_plan_checks[changes3-cost_exceeds_policy]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 50,
+   "check": "require 'invalid_completion_window'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_plan_checks[changes5-invalid_completion_window]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 55,
+   "check": "require 'evidence_root_inconsistent'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_problem_evidence_root_must_match_its_refs",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 56,
+   "check": "require 'problem_confirmed_by_its_reporter'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_problem_cannot_be_confirmed_by_its_reporter",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 60,
+   "check": "require 'approver_identity_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_approval_checks[changes0-approver_identity_mismatch]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 61,
+   "check": "require 'approval_digest_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_approval_digest_must_recompute",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 62,
+   "check": "require 'approval_tenant_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_approval_checks[changes1-approval_tenant_mismatch]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 63,
+   "check": "require 'approval_scope_changed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_approval_checks[changes2-approval_scope_changed]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 64,
+   "check": "require 'provider_changed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_approval_checks[changes3-provider_changed]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 65,
+   "check": "require 'currency_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_approval_checks[changes4-currency_mismatch]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 66,
+   "check": "require 'cost_exceeds_approval'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_approval_checks[changes5-cost_exceeds_approval]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 67,
+   "check": "require 'cost_exceeds_policy'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_approval_checks[changes6-cost_exceeds_policy]",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 69,
+   "check": "require 'approval_not_yet_valid'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_approval_time_checks",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 70,
+   "check": "require 'approval_expired'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_approval_time_checks",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "policy.py",
+   "line": 71,
+   "check": "require 'approval_validity_too_long'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_approval_time_checks",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 36,
+   "check": "if 'observer_identity_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_qualification_reasons",
+   "reason": "AssertionError: assert None == 'observer_identity_mismatch'"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 38,
+   "check": "if 'not_an_independent_inspection'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_qualification_reasons",
+   "reason": "AssertionError: assert None == 'not_an_independent_inspection'"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 40,
+   "check": "if 'inspector_not_designated_by_buyer'",
+   "outcome": "killed_valid",
+   "test": "tests/test_outcome_attacks.py::test_inspector_not_designated_by_the_buyer",
+   "reason": "AssertionError: assert 'inspector_not_designated_by_buyer' in ['performer_claim_is_not_outcome_evidence']"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 42,
+   "check": "if 'inspector_not_independent_of_performer'",
+   "outcome": "killed_valid",
+   "test": "tests/test_outcome_attacks.py::test_inspector_employed_by_the_provider",
+   "reason": "AssertionError: assert 'VERIFIED' == 'INSUFFICIENT_EVIDENCE'"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 44,
+   "check": "if 'observation_for_other_work_order'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_qualification_reasons",
+   "reason": "AssertionError: assert None == 'observation_for_other_work_order'"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 48,
+   "check": "if 'inspection_time_invalid'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_qualification_reasons",
+   "reason": "AssertionError: assert 'evidence_predates_work_order' == 'inspection_time_invalid'"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 50,
+   "check": "if 'inspection_after_allowed_window'",
+   "outcome": "killed_valid",
+   "test": "tests/test_outcome_attacks.py::test_inspection_after_the_allowed_window",
+   "reason": "AssertionError: assert 'inspection_after_allowed_window' in ['performer_claim_is_not_outcome_evidence']"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 52,
+   "check": "if 'observation_digest_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_qualification_reasons",
+   "reason": "AssertionError: assert None == 'observation_digest_mismatch'"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 55,
+   "check": "if 'inspection_without_evidence'",
+   "outcome": "killed_valid",
+   "test": "tests/test_outcome_attacks.py::test_inspection_without_evidence",
+   "reason": "AssertionError: assert 'inspection_without_evidence' in ['performer_claim_is_not_outcome_evidence']"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 59,
+   "check": "if 'evidence_location_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_outcome_attacks.py::test_photo_from_a_different_facility",
+   "reason": "AssertionError: assert 'VERIFIED' == 'INSUFFICIENT_EVIDENCE'"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 62,
+   "check": "if 'evidence_predates_work_order'",
+   "outcome": "killed_valid",
+   "test": "tests/test_outcome_attacks.py::test_photo_captured_before_the_work_order_existed",
+   "reason": "AssertionError: assert 'evidence_predates_work_order' in ['performer_claim_is_not_outcome_evidence']"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 64,
+   "check": "if 'evidence_reused_from_problem_report'",
+   "outcome": "killed_valid",
+   "test": "tests/test_outcome_attacks.py::test_old_photo_reused_from_the_problem_report",
+   "reason": "AssertionError: assert 'evidence_reused_from_problem_report' in ['performer_claim_is_not_outcome_evidence']"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 73,
+   "check": "require 'execution_not_reconciled'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_assessment_preconditions",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 75,
+   "check": "require 'acceptance_criteria_changed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_outcome_attacks.py::test_acceptance_criteria_changed_after_work_began",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 78,
+   "check": "require 'reviewer_not_permitted'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_assessment_preconditions",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 79,
+   "check": "require 'reviewer_not_independent_of_performer'",
+   "outcome": "killed_valid",
+   "test": "tests/test_outcome_attacks.py::test_performer_cannot_be_the_reviewer",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "outcome_verifier.py",
+   "line": 84,
+   "check": "require 'reconciliation_observation_missing'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_assessment_preconditions",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 27,
+   "check": "if 'work_order_not_reconciled_for_this_authority'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_settlement_rule_reasons",
+   "reason": "AssertionError: assert [] == ['work_order_...is_authority']"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 29,
+   "check": "if 'work_order_changed_since_reconciliation'",
+   "outcome": "killed_valid",
+   "test": "tests/test_adapter_attacks.py::test_provider_record_changed_after_reconciliation_blocks_settlement",
+   "reason": "AssertionError: assert 'SIMULATED_AUTHORIZED' == 'DENIED'"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 40,
+   "check": "if 'outcome_not_verified'",
+   "outcome": "killed_valid",
+   "test": "tests/test_financial_attacks.py::test_rejected_outcome_cannot_be_accepted_or_paid",
+   "reason": "AssertionError: assert ['outcome_pre...ance_missing'] == ['outcome_not...ance_missing']"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 42,
+   "check": "if 'outcome_previously_rejected_or_disputed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_financial_attacks.py::test_rejected_outcome_cannot_be_accepted_or_paid",
+   "reason": "AssertionError: assert ['outcome_not...ance_missing'] == ['outcome_not...ance_missing']"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 44,
+   "check": "if 'authorizer_not_independent'",
+   "outcome": "killed_valid",
+   "test": "tests/test_financial_attacks.py::test_reviewer_cannot_also_authorize_settlement",
+   "reason": "AssertionError: assert [] == ['authorizer_not_independent']"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 47,
+   "check": "if 'buyer_acceptance_missing'",
+   "outcome": "killed_valid",
+   "test": "tests/test_financial_attacks.py::test_rejected_outcome_cannot_be_accepted_or_paid",
+   "reason": "AttributeError: 'NoneType' object has no attribute 'get'"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 62,
+   "check": "if 'invoice_missing'",
+   "outcome": "killed_valid",
+   "test": "tests/test_financial_attacks.py::test_no_invoice",
+   "reason": "AttributeError: 'NoneType' object has no attribute 'get'"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 24,
+   "check": "require 'authorizer_not_permitted'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_settlement_rule_reasons",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 56,
+   "check": "if 'acceptance_not_bound_to_latest_verdict'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_settlement_rule_reasons",
+   "reason": "AssertionError: assert [] == ['acceptance_...test_verdict']"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 59,
+   "check": "if 'buyer_disputed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_financial_attacks.py::test_buyer_disputes_after_acceptance",
+   "reason": "AssertionError: assert ([] == ['buyer_disputed']"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 71,
+   "check": "if 'invoice_for_other_work_order'",
+   "outcome": "killed_valid",
+   "test": "tests/test_financial_attacks.py::test_invoice_for_a_different_work_order",
+   "reason": "AssertionError: assert [] == ['invoice_for...r_work_order']"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 73,
+   "check": "if 'currency_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_financial_attacks.py::test_currency_mismatch",
+   "reason": "AssertionError: assert [] == ['currency_mismatch']"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 75,
+   "check": "if 'amount_exceeds_approved_cap'",
+   "outcome": "killed_valid",
+   "test": "tests/test_financial_attacks.py::test_amount_above_the_approved_cap",
+   "reason": "AssertionError: assert [] == ['amount_exce...approved_cap']"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 52,
+   "check": "if 'buyer_identity_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_settlement_rule_reasons",
+   "reason": "AssertionError: assert [] == ['buyer_identity_mismatch']"
+  },
+  {
+   "file": "settlement_simulator.py",
+   "line": 67,
+   "check": "if 'invoice_not_from_approved_provider'",
+   "outcome": "killed_valid",
+   "test": "tests/test_financial_attacks.py::test_invoice_from_someone_other_than_the_provider",
+   "reason": "AssertionError: assert [] == ['invoice_not...ved_provider']"
+  },
+  {
+   "file": "records.py",
+   "line": 50,
+   "check": "require f'invalid_{name}'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_schema_validation_and_timestamps",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "records.py",
+   "line": 61,
+   "check": "require 'invalid_timestamp'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_schema_validation_and_timestamps",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "records.py",
+   "line": 140,
+   "check": "require 'unknown_role'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_registry_guards",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "records.py",
+   "line": 141,
+   "check": "require 'duplicate_principal'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_registry_guards",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "records.py",
+   "line": 163,
+   "check": "require 'duplicate_principal'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_registry_guards",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "records.py",
+   "line": 164,
+   "check": "require 'key_does_not_match_principal'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_registry_guards",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "records.py",
+   "line": 177,
+   "check": "require 'designation_requires_tenant_buyer'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_designation_guards",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "records.py",
+   "line": 180,
+   "check": "require 'designee_not_inspector'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_designation_guards",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "records.py",
+   "line": 188,
+   "check": "require 'unknown_principal'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_registry_guards",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "records.py",
+   "line": 194,
+   "check": "require 'signature_missing'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_signer_guards",
+   "reason": "AttributeError: 'NoneType' object has no attribute 'get'"
+  },
+  {
+   "file": "records.py",
+   "line": 196,
+   "check": "require 'unknown_signing_key'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_signer_guards",
+   "reason": "AssertionError: assert 'signature_invalid' == 'unknown_signing_key'"
+  },
+  {
+   "file": "records.py",
+   "line": 201,
+   "check": "require 'signer_role_not_permitted'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_signer_guards",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "records.py",
+   "line": 202,
+   "check": "require 'signer_tenant_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_signer_guards",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "pilot.py",
+   "line": 48,
+   "check": "require 'actor_tenant_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_isolation_and_recovery.py::test_cross_tenant_mutation_is_refused[buyer-b-decide]",
+   "reason": "AssertionError: assert 'no_verdict' in ('actor_tenant_mismatch', 'signer_tenant_mismatch')"
+  },
+  {
+   "file": "pilot.py",
+   "line": 51,
+   "check": "require 'actor_tenant_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_pilot_guards",
+   "reason": "AssertionError: assert 'transition_not_allowed' == 'actor_tenant_mismatch'"
+  },
+  {
+   "file": "pilot.py",
+   "line": 145,
+   "check": "require 'revocation_not_permitted'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_pilot_guards",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "pilot.py",
+   "line": 173,
+   "check": "require 'execution_not_reconciled'",
+   "outcome": "killed_valid",
+   "test": "tests/test_outcome_attacks.py::test_completion_claim_after_cancellation_is_refused",
+   "reason": "IndexError: list index out of range"
+  },
+  {
+   "file": "pilot.py",
+   "line": 216,
+   "check": "require 'actor_tenant_mismatch'",
+   "outcome": "killed_valid",
+   "test": "tests/test_isolation_and_recovery.py::test_cross_tenant_mutation_is_refused[qa-b-assess]",
+   "reason": "AssertionError: assert 'reviewer_not_permitted' in ('actor_tenant_mismatch', 'signer_tenant_mismatch')"
+  },
+  {
+   "file": "pilot.py",
+   "line": 255,
+   "check": "require 'no_verdict'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_pilot_guards",
+   "reason": "IndexError: list index out of range"
+  },
+  {
+   "file": "pilot.py",
+   "line": 317,
+   "check": "require 'case_not_closed'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_pilot_guards",
+   "reason": "IndexError: list index out of range"
+  },
+  {
+   "file": "pilot.py",
+   "line": 258,
+   "check": "require 'outcome_not_verified'",
+   "outcome": "killed_valid",
+   "test": "tests/test_financial_attacks.py::test_rejected_outcome_cannot_be_accepted_or_paid",
+   "reason": "AssertionError: assert 'transition_not_allowed' == 'outcome_not_verified'"
+  },
+  {
+   "file": "store.py",
+   "line": 54,
+   "check": "require 'unknown_kind'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_pilot_guards",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "store.py",
+   "line": 66,
+   "check": "require 'not_found'",
+   "outcome": "killed_valid",
+   "test": "tests/test_adapter_attacks.py::test_success_response_for_a_different_operation_is_not_attribution",
+   "reason": "TypeError: 'NoneType' object is not subscriptable"
+  },
+  {
+   "file": "evidence_export.py",
+   "line": 34,
+   "check": "require 'consumption_record_missing'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_export_guards",
+   "reason": "TypeError: 'NoneType' object is not iterable"
+  },
+  {
+   "file": "evidence_export.py",
+   "line": 50,
+   "check": "require 'export_not_permitted'",
+   "outcome": "killed_valid",
+   "test": "tests/test_bundle.py::test_export_requires_a_tenant_evidence_role",
+   "reason": "Failed: DID NOT RAISE PilotError"
+  },
+  {
+   "file": "evidence_export.py",
+   "line": 52,
+   "check": "require 'export_destination_exists'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_export_guards",
+   "reason": "FileExistsError: [Errno 17] File exists: '/tmp/pytest-of-root/pytest-1962/test_export_guards0/taken'"
+  },
+  {
+   "file": "evidence_export.py",
+   "line": 57,
+   "check": "require 'case_has_no_single_admitted_authority'",
+   "outcome": "killed_valid",
+   "test": "tests/test_check_reasons.py::test_export_guards",
+   "reason": "IndexError: list index out of range"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 61,
+   "check": "check 'no missing or unlisted files'",
+   "outcome": "killed_valid",
+   "test": "tests/test_bundle.py::test_command_line_exit_codes",
+   "reason": "assert 0 == 1"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 64,
+   "check": "check 'every file matches SHA256SUMS'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 66,
+   "check": "check 'manifest lists the same digests'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 68,
+   "check": "check 'bundle format recognised'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 111,
+   "check": "check 'audit chain intact from genesis (tail truncation is not detectable)'",
+   "outcome": "killed_valid",
+   "test": "tests/test_bundle.py::test_tampering_fails_the_right_dimension_even_with_new_checksums[audit/chain.json-<lambda>-authenticity]",
+   "reason": "assert not True"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 116,
+   "check": "check 'issuer present in the admission-time identity snapshot'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 120,
+   "check": "check 'state inputs describe these records at admission'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 124,
+   "check": "check 'plan and approval digests recompute'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 136,
+   "check": "check 'issuer is the tenant authority issuer acting as verifier'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 139,
+   "check": "check 'success predicate binds the exact parameters'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 142,
+   "check": "check 'consumed once in the ProofRail replay registry, by the named executor'",
+   "outcome": "killed_valid",
+   "test": "tests/test_bundle.py::test_tampering_fails_the_right_dimension_even_with_new_checksums[records/consumption.json-<lambda>-authority]",
+   "reason": "assert not True"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 146,
+   "check": "check 'consumed within the envelope validity window'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 151,
+   "check": "check 'authority reference is RECONCILED'",
+   "outcome": "killed_valid",
+   "test": "tests/test_bundle.py::test_tampering_fails_the_right_dimension_even_with_new_checksums[records/authority_reference.json-<lambda>-execution]",
+   "reason": "AssertionError: assert 'PASS' == 'FAIL'"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 153,
+   "check": "check 'reconciling observation is included'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 159,
+   "check": "check 'observation digest matches its findings'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 160,
+   "check": "check 'exactly one provider order matching every authorized parameter'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 162,
+   "check": "check 'the matching order is the one the reference names'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 201,
+   "check": "check 'settlement is simulated (no money moved)'",
+   "outcome": "survived"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 93,
+   "check": "check f\"key of {p['principal_id']} matches the independently trusted key\"",
+   "outcome": "killed_valid",
+   "test": "tests/test_bundle.py::test_trusted_keys_upgrade_and_mismatch",
+   "reason": "assert (not True)"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 134,
+   "check": "check 'envelope signature, roots, approval and exact effect (ProofRail verifier)'",
+   "outcome": "killed_valid",
+   "test": "tests/test_bundle.py::test_tampering_fails_the_right_dimension_even_with_new_checksums[records/envelope.json-<lambda>-authority]",
+   "reason": "assert not True"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 190,
+   "check": "check 'verdict reproduces from the included observations'",
+   "outcome": "killed_valid",
+   "test": "tests/test_bundle.py::test_removed_inspection_means_the_verdict_no_longer_reproduces",
+   "reason": "assert (not True)"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 110,
+   "check": "check f'{name} signed by a registered {role}'",
+   "outcome": "killed_valid",
+   "test": "tests/test_bundle.py::test_tampering_fails_the_right_dimension_even_with_new_checksums[records/approval.json-<lambda>-authenticity]",
+   "reason": "AssertionError: assert 'PASS' == 'FAIL'"
+  },
+  {
+   "file": "verify_bundle.py",
+   "line": 195,
+   "check": "check 'verdict reproduces from the included observations'",
+   "outcome": "survived"
+  }
+ ]
+}

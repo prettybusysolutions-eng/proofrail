@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proofrail.dev/pilots/facility_outcomes/settlement_decision.schema.json",
+  "title": "WRN facility pilot SettlementDecision (simulated)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "settlement_id",
+    "tenant_id",
+    "work_order_id",
+    "outcome_id",
+    "invoice_id",
+    "approved_amount",
+    "currency",
+    "authorization_status",
+    "denial_reasons",
+    "duplicate_check_result",
+    "dispute_status",
+    "simulation_reference",
+    "settlement_policy_digest",
+    "authorizer_principal",
+    "decided_at",
+    "money_moved",
+    "record_hash",
+    "signature"
+  ],
+  "properties": {
+    "kind": {
+      "const": "wrn.settlement-decision.v1"
+    },
+    "settlement_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "tenant_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "work_order_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "outcome_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "invoice_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "approved_amount": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000000
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "authorization_status": {
+      "enum": [
+        "SIMULATED_AUTHORIZED",
+        "DENIED"
+      ]
+    },
+    "denial_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+      }
+    },
+    "duplicate_check_result": {
+      "enum": [
+        "UNIQUE",
+        "DUPLICATE"
+      ]
+    },
+    "dispute_status": {
+      "enum": [
+        "NONE",
+        "DISPUTED"
+      ]
+    },
+    "simulation_reference": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "settlement_policy_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "authorizer_principal": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "decided_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?Z$"
+    },
+    "money_moved": {
+      "const": false
+    },
+    "record_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "key_id",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "ed25519"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "value": {
+          "type": "string",
+          "minLength": 80
+        }
+      }
+    }
+  }
+}
