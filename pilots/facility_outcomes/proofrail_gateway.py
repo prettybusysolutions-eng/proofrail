@@ -261,6 +261,11 @@ class Gateway:
             raise
         except Exception as exc:  # PermitError carries a stable .code; anything else is an invalid envelope
             raise PilotError(getattr(exc, 'code', None) or 'invalid_envelope') from None
+        # Not-before. Core main does not check it (finding F-1), so this is the only enforcement
+        # until core #44 merges. With #44, verify_action_authority_envelope raises the same reason
+        # first and this line becomes a redundant second check (sweep of #41 stack + #44 + #48:
+        # it survives removal, and test_authority_attacks still sees 'authority_not_yet_valid').
+        # Keep it until #44 is on main; then remove it or keep it as documented defence in depth.
         require(utc(envelope['issued_at']) <= self.clock.now(), 'authority_not_yet_valid')
         require(envelope['observation_contract']['success_predicate_digest'] == success_predicate(expected),
                 'predicate_changed')
