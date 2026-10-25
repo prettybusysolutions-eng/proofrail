@@ -23,7 +23,7 @@ interoperability comparison before designing another action-receipt format.
 ## What this spike constructs
 
 `proofrail/scitt_checkpoint.py` exports one RFC 9943-style signed statement:
-CBOR tag 18 (COSE_Sign1), EdDSA (-8), protected content type
+CBOR tag 18 (COSE_Sign1), Ed25519 (-19, RFC 9864), protected content type
 `application/vnd.proofrail.checkpoint+json` (experimental and not a registered
 media type), protected key identifier, CWT Claims map 15 with issuer and subject
 labels 1 and 2, and an RFC 8785 canonical JSON payload.
@@ -38,10 +38,91 @@ claims; it verifies COSE signature, checkpoint signature and checkpoint
 commitment against the original ledger. Hash-chain truncation is detected
 *only* against the retained checkpoint, and does not prove external retention.
 
+## Algorithm migration and independent COSE interoperability
+
+New statements use the fully specified RFC 9864 **Ed25519 (-19)** identifier.
+The verifier can accept deprecated **EdDSA (-8)** only under a configurable
+legacy migration policy (allow_legacy_eddsa=True by default; pass False to
+reject it). Signing legacy -8 requires an explicit algorithm=-8 argument.
+Check the chosen transparency service actually accepts -19 before publishing.
+
+The author-side review found two-way interoperability for the *legacy -8*
+form with pycose 1.1.0 in an environment with cbor2 5.6.5. This pycose
+version does not recognize -19 and fails to decode *any* COSE message with
+cbor2 6.x due to decoded CBOR array representation changes. Keep pycose's
+old dependency pins isolated from ProofRail's normal cbor2 5.x/6.x support.
+
+~~~sh
+python3.11 -m venv /tmp/proofrail-pycose-interop
+/tmp/proofrail-pycose-interop/bin/python -m pip install -e . -r requirements/interop-pycose.txt
+/tmp/proofrail-pycose-interop/bin/python scripts/check_scitt_pycose.py
+~~~
+
+Independent pycose agreement on legacy encoding does **not** prove a real
+SCITT transparency service accepts the newly emitted -19 format.
+
+## Receipts attached after registration (RFC 9942)
+
+The issuer-signed COSE_Sign1 may have exactly one unprotected header
+parameter: integer label **394**, containing a nonempty array of
+CBOR-encoded COSE receipt bytes. The verifier now accepts bounded receipts
+with the expected outer COSE structure; rejects unknown unprotected fields
+and malformed attachments; and never promotes receipt presence into proof.
+
+**Important:** verify_scitt_checkpoint_statement is still an **issuer
+signature and local checkpoint verifier**, not an RFC 9942 receipt verifier.
+Even if a signed statement with attached receipts returns valid=True,
+transparency_receipt_verified always remains false. Calling it with
+require_transparency_receipt=True fails closed until a real receipt verifier
+is implemented. A separate implementation must verify every receipt's
+transparency-service signature and VDS/VDP inclusion or consistency proof
+against a separately trusted service key. Changing an unprotected receipt
+does not invalidate the issuer signature; this is expected.
+
+## Rolled-back statements can have legitimate old receipts
+
+An old statement can be correctly signed and included in a transparency log
+despite a later checkpoint being registered. The signature and inclusion
+receipt cannot prove which checkpoint is the latest.
+
+For *offline equality with a caller-pinned tip*, pass pinned_latest to the
+verification function, containing exactly:
+
+~~~json
+{
+  "issuer": "urn:proofrail:issuer:example",
+  "subject": "urn:proofrail:stream:customer-a",
+  "execution_domain": "github:owner/repo",
+  "sequence": 2,
+  "checkpoint_digest": "<64-character lowercase SHA-256 digest>"
+}
+~~~
+
+This value must come from an **independently authenticated latest-state
+source**, not from the presented statement or its bundle. The routine
+refuses mismatched sequence, digest or scope, but intentionally reports
+externally_verified_latest_log_state_proven=false: it does not establish
+whether the caller's pinned tip is real, consistent or current.
+
+**SCITT does not mandate a general "latest record for issuer+subject"
+query.** A real deployment needs an authenticated monitor/index that
+tracks the entire relevant registration stream, verifies SCITT receipts and
+append-only consistency, and retains monotonic state outside the issuer's
+control. Choose a transparency service only after confirming a supported
+history query / monitor route. Use a **stable CWT subject for the checkpoint
+stream**; changing the subject on every checkpoint breaks that comparison.
+
+The local rollback regression uses an old COSE statement with a *structural,
+unverified placeholder receipt* and an independently supplied fixture tip
+for the later checkpoint. It proves the expected-value guard works; it
+does not demonstrate authentic receipt verification, service "latest" API,
+or external checkpoint custody.
+
 ## What is deliberately not built
 
-- No network call or SCITT service registration; no VDS receipt or inclusion
-  proof, consistency proof, history query, third-party custody or watcher.
+- No network call or SCITT service registration; no **verified** VDS receipt
+  or inclusion/consistency proof, authenticated latest-state query,
+  third-party custody or watcher.
 - No representation that digest commitments by themselves prove approvals,
   prevention of replay, or real provider-side effects.
 - No assumed interoperability with a particular SCITT registration API,
