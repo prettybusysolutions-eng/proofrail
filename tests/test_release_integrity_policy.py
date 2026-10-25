@@ -51,7 +51,7 @@ def release_steps(workflow: str) -> tuple[str, list[tuple[str, str]]]:
                 bodies.append((current_name, "\n".join(current_lines)))
             current_lines = [line]
             match = re.fullmatch(r"      - name: (.+)", line)
-            current_name = match.group(1) if match else "<unnamed>"
+            current_name = match.group(1) if match else f"<unnamed:{len(bodies)}>"
         elif current_name is not None:
             current_lines.append(line)
         elif line.strip():
