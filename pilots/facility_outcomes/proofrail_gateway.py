@@ -447,6 +447,8 @@ class Gateway:
         state = stored['reference']['authority_state']
         # Preserve an explicit earlier admission refusal. The missing-receipt
         # recovery path is only for crashes with no recorded abort decision.
+        if stored.get('aborted') == 'consumption_receipt_missing':
+            raise PilotError('consumption_receipt_missing')
         require(not stored.get('aborted'), 'admission_aborted_before_provider_call', stored.get('aborted', ''))
         # A crash between the durable replay-registry claim and the durable
         # signed receipt cannot be treated like a provider-call timeout.
