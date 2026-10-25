@@ -25,6 +25,7 @@ authorized parameters reconciles.
 """
 from __future__ import annotations
 
+import base64
 import json
 import secrets
 import sqlite3
@@ -354,7 +355,13 @@ class Gateway:
         try:
             status, response = self.provider.call(
                 'POST', '/v1/tenants/%s/work-orders' % quote(tenant_id), checked['parameters'],
-                headers={'Idempotency-Key': envelope['record_hash']})
+                headers={
+                    'Idempotency-Key': envelope['record_hash'],
+                    'X-ProofRail-Envelope': base64.b64encode(
+                        json.dumps(envelope, sort_keys=True).encode()).decode(),
+                    'X-ProofRail-Consumption': base64.b64encode(
+                        json.dumps(attestation, sort_keys=True).encode()).decode(),
+                })
             claimed = response if status in (200, 201) and isinstance(response, dict) else None
             outcome = 'claimed_success' if claimed else UNKNOWN
         except PilotError:
