@@ -36,27 +36,36 @@ TESTS = {
 
 
 def main():
-    # Select the exact original 15 survivors by file, AST line and check label.
-    # One outcome check label occurs in both success and exception branches.
+    # Historical source line numbers shift when new verifier guards are
+    # inserted. Preserve the original published target *labels* and distinguish
+    # the duplicated outcome name by requiring its PilotError-handler branch.
     historical = json.loads(
         (PILOT / "review_tools/results/sweep-af6018e.json").read_text()
     )
     historical_survivors = {
-        (r["file"], r["line"], r["check"])
-        for r in historical["results"] if r["outcome"] == "survived"
+        r["check"][6:].strip("'\\\"")
+        for r in historical["results"]
+        if r["outcome"] == "survived" and r["file"] == "verify_bundle.py"
     }
-    if len(historical_survivors) != 15 or historical["commit"] != "af6018e199cd75519500526d60199bf702709511":
-        raise RuntimeError("historical sweep baseline does not match 15 expected survivors")
+    if historical_survivors != set(TESTS) or historical["commit"] != "af6018e199cd75519500526d60199bf702709511":
+        raise RuntimeError("historical evidence no longer matches the 15 semantic targets")
 
+    original_lines = (PILOT / "verify_bundle.py").read_text().splitlines()
     selected = {}
     for name, line, label, source in mutants():
-        if (name, line, label) not in historical_survivors:
+        if name != "verify_bundle.py" or not label.startswith("check "):
             continue
         human_name = label[6:].strip("'\\\"")
-        if human_name not in TESTS:
-            raise RuntimeError(f"unmapped historical survivor: {name}:{line} {label}")
+        if human_name not in historical_survivors:
+            continue
+        if human_name == "verdict reproduces from the included observations":
+            # At the old sweep's :195 the guard belonged to the exception path,
+            # not the successful direct-comparison path with the same label.
+            nearby = "\\n".join(original_lines[max(0, line - 3): line + 2])
+            if "except PilotError" not in nearby:
+                continue
         if human_name in selected:
-            raise RuntimeError(f"duplicate historical survivor: {human_name}")
+            raise RuntimeError(f"duplicate semantic guard: {human_name}")
         selected[human_name] = (name, line, label, source)
     if set(selected) != set(TESTS):
         raise RuntimeError(f"expected 15 unique mutants; missing={set(TESTS) - set(selected)}; extra={set(selected) - set(TESTS)}")
