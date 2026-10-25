@@ -25,12 +25,13 @@ authorized parameters reconciles.
 """
 from __future__ import annotations
 
+import base64
 import json
 import secrets
 import sqlite3
 import uuid
 from contextlib import closing
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError
@@ -38,6 +39,7 @@ from urllib.parse import quote
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
 from proofrail.core import ProofRailError
+from proofrail.crypto import hash_record
 from proofrail.envelope import mint_action_authority_envelope, verify_action_authority_envelope
 from proofrail.permit import PERMIT_ISSUER_ROLES
 from proofrail.trust import ensure_replay_registry, replay_claim_exists
@@ -292,6 +294,32 @@ class Gateway:
         validate('consumption_attestation', signed)
         return signed
 
+    def _provider_capability(self, tenant_id: str, envelope: dict, body: dict) -> str:
+        """Short-lived signed scope for one provider create action.
+
+        Issued only inside admit() after the permit consumption and gateway
+        receipt have been persisted. The provider independently verifies this
+        signature against its own configured trusted gateway public key.
+        """
+        now = datetime.now(timezone.utc).replace(microsecond=0)
+        stamp = lambda value: value.strftime('%Y-%m-%dT%H:%M:%SZ')
+        path = '/v1/tenants/%s/work-orders' % quote(tenant_id)
+        record = {
+            'kind': 'wrn.provider-create-capability.v1',
+            'tenant_id': tenant_id,
+            'principal_id': self.identity.principal.principal_id,
+            'method': 'POST',
+            'path': path,
+            'client_id': self.provider.client_id,
+            'idempotency_key': envelope['record_hash'],
+            'request_digest': hash_record(body),
+            'issued_at': stamp(now),
+            'expires_at': stamp(now + timedelta(minutes=1)),
+        }
+        signed = self.identity.sign(record)
+        encoded = json.dumps(signed, separators=(',', ':'), sort_keys=True).encode('utf-8')
+        return base64.urlsafe_b64encode(encoded).rstrip(b'=').decode('ascii')
+
     def _reference(self, tenant_id: str, envelope: dict, state: str, *, consumption=None, operation=None,
                    reconciliation=None, replace=True) -> dict:
         ref = {'kind': 'wrn.execution-authority-reference.v1', 'tenant_id': tenant_id,
@@ -360,12 +388,14 @@ class Gateway:
             self.store.audit(tenant_id, 'admission_aborted_after_consumption', envelope['envelope_id'],
                              {'reason': exc.reason})
             raise
+        capability = self._provider_capability(tenant_id, envelope, checked['parameters'])
         self.store.audit(tenant_id, 'provider_call', envelope['envelope_id'], {'idempotency_key': envelope['record_hash']})
         self.provider_calls += 1
         try:
             status, response = self.provider.call(
                 'POST', '/v1/tenants/%s/work-orders' % quote(tenant_id), checked['parameters'],
-                headers={'Idempotency-Key': envelope['record_hash']})
+                headers={'Idempotency-Key': envelope['record_hash'],
+                         'X-ProofRail-Capability': capability})
             claimed = response if status in (200, 201) and isinstance(response, dict) else None
             outcome = 'claimed_success' if claimed else UNKNOWN
         except PilotError:

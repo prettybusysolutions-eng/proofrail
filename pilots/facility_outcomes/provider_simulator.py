@@ -1,6 +1,8 @@
 """Work-order provider simulator: a real HTTP server with its own persistent store.
 
-    python provider_simulator.py --db /tmp/provider.db --port-file /tmp/port [--port 0]
+    python provider_simulator.py --db /tmp/provider.db --port-file /tmp/port
+        --trusted-gateways /path/to/provider-owned-keys.json [--port 0]
+    # Explicit insecure testing ONLY: --insecure-fault-mode
 
 Endpoints (JSON):
   POST /v1/tenants/{tenant}/work-orders               create (Idempotency-Key required)
@@ -24,10 +26,14 @@ This is a test provider. It is not a model of any specific vendor's API.
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import sqlite3
 import threading
 import time
+from datetime import datetime, timedelta, timezone
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from proofrail.crypto import hash_record, verify_signature
 from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -38,8 +44,11 @@ FIELDS = ('facility_id', 'area_id', 'provider_id', 'problem_id', 'plan_id', 'pla
 
 
 class ProviderState:
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path, trusted_gateways: dict | None = None):
         self.db_path = Path(db_path)
+        # None intentionally preserves insecure fault-simulation mode. A map,
+        # including an empty map, enables fail-closed provider authorization.
+        self.trusted_gateways = trusted_gateways
         self.lock = threading.Lock()
         self.fault = {'mode': None, 'seconds': 0}
         self.persistent = set()
@@ -60,6 +69,54 @@ class ProviderState:
             mode, seconds = self.fault['mode'], self.fault['seconds']
             self.fault = {'mode': None, 'seconds': 0}
             return mode, seconds
+
+    def authorize_create(self, tenant: str, key: str, client_id: str, body: dict, token: str | None):
+        """Verify a signed, scoped gateway capability using provider-owned trust pins.
+
+        Authorization is checked at the provider, before the fault injection
+        path or any SQLite write. Gateway headers alone confer no authority.
+        """
+        if self.trusted_gateways is None:
+            return True, None  # insecure simulator mode, explicitly opt-in at deployment
+        pin = self.trusted_gateways.get(tenant)
+        if not isinstance(pin, dict) or not token or len(token) > 12000:
+            return False, 'capability_required'
+        try:
+            raw = base64.urlsafe_b64decode(token + '=' * (-len(token) % 4))
+            if len(raw) > 9000:
+                return False, 'capability_oversized'
+            cap = json.loads(raw)
+            if not isinstance(cap, dict):
+                return False, 'invalid_capability'
+            expected_fields = {
+                'kind': 'wrn.provider-create-capability.v1',
+                'tenant_id': tenant,
+                'method': 'POST',
+                'path': f'/v1/tenants/{tenant}/work-orders',
+                'client_id': client_id,
+                'idempotency_key': key,
+                'request_digest': hash_record(body),
+                'principal_id': pin['principal_id'],
+            }
+            if any(cap.get(k) != v for k, v in expected_fields.items()):
+                return False, 'capability_scope_mismatch'
+            if cap.get('signature', {}).get('key_id') != pin['key_id']:
+                return False, 'capability_key_mismatch'
+            stamp = lambda value: datetime.fromisoformat(value.replace('Z', '+00:00'))
+            issued, expiry = stamp(cap['issued_at']), stamp(cap['expires_at'])
+            now = datetime.now(timezone.utc)
+            if issued.tzinfo is None or expiry.tzinfo is None:
+                return False, 'invalid_capability_time'
+            if issued > now + timedelta(seconds=30) or expiry <= now or expiry <= issued:
+                return False, 'capability_expired_or_future'
+            if expiry - issued > timedelta(minutes=2):
+                return False, 'capability_too_long'
+            raw_key = base64.b64decode(pin['public_key'], validate=True)
+            verify_signature(cap, Ed25519PublicKey.from_public_bytes(raw_key))
+        except (ValueError, TypeError, KeyError, AttributeError, OverflowError, Exception):
+            # Do not disclose signature/parser internals or attempt fallback authorization.
+            return False, 'invalid_capability'
+        return True, None
 
     def create(self, tenant, key, body, *, honour_idempotency=True):
         with self.lock, closing(self.db()) as db:
@@ -131,6 +188,8 @@ def make_handler(state: ProviderState):
             parts = urlsplit(self.path)
             segs = parts.path.strip('/').split('/')
             if parts.path == '/admin/fault':
+                if state.trusted_gateways is not None:
+                    return self.reply(403, {'error': 'admin_fault_disabled_in_enforced_mode'})
                 b = self.body()
                 if b['mode'] in ('no_idempotency', 'status_flap'):
                     state.persistent.add(b['mode'])
@@ -138,6 +197,8 @@ def make_handler(state: ProviderState):
                     state.fault = {'mode': b['mode'], 'seconds': b.get('seconds', 0)}
                 return self.reply(200, {'armed': b['mode']})
             if parts.path == '/admin/status':
+                if state.trusted_gateways is not None:
+                    return self.reply(403, {'error': 'admin_status_disabled_in_enforced_mode'})
                 b = self.body()
                 with closing(state.db()) as db:
                     db.execute('UPDATE orders SET status=? WHERE tenant_id=? AND work_order_id=?',
@@ -147,9 +208,17 @@ def make_handler(state: ProviderState):
                 tenant, key = segs[2], self.headers.get('Idempotency-Key')
                 if not key or not self.headers.get('X-Client-Id'):
                     return self.reply(400, {'error': 'idempotency_key_and_client_required'})
-                body = self.body()
-                if any(k not in body for k in FIELDS):
+                try:
+                    body = self.body()
+                except (ValueError, TypeError):
+                    return self.reply(400, {'error': 'invalid_body'})
+                if not isinstance(body, dict) or any(k not in body for k in FIELDS):
                     return self.reply(400, {'error': 'missing_fields'})
+                authorized, reason = state.authorize_create(
+                    tenant, key, self.headers.get('X-Client-Id'), body,
+                    self.headers.get('X-ProofRail-Capability'))
+                if not authorized:
+                    return self.reply(403, {'error': reason})
                 mode, seconds = state.take_fault()
                 if mode == 'drop_without_effect':
                     self.close_connection = True
@@ -161,7 +230,8 @@ def make_handler(state: ProviderState):
                                                      **{k: body[k] for k in FIELDS}, 'status': 'open'}
                     return self.reply(201, fake)
                 code, order = state.create(tenant, key, body,
-                                           honour_idempotency='no_idempotency' not in state.persistent)
+                                           honour_idempotency=(state.trusted_gateways is not None or
+                                                                'no_idempotency' not in state.persistent))
                 if mode == 'timeout_after_accept':
                     time.sleep(seconds)
                 if mode == 'malformed':
@@ -173,8 +243,11 @@ def make_handler(state: ProviderState):
     return Handler
 
 
-def serve(db_path: Path, port: int = 0):
-    state = ProviderState(db_path)
+def serve(db_path: Path, port: int = 0, *, trusted_gateways: dict | None = None,
+          insecure_fault_mode: bool = False):
+    if insecure_fault_mode == (trusted_gateways is not None):
+        raise ValueError('choose exactly one provider mode: trusted gateways or explicit insecure fault tests')
+    state = ProviderState(db_path, trusted_gateways=trusted_gateways)
     server = ThreadingHTTPServer(('127.0.0.1', port), make_handler(state))
     server.daemon_threads = True
     return server, state
@@ -185,8 +258,15 @@ def main():
     parser.add_argument('--db', type=Path, required=True)
     parser.add_argument('--port', type=int, default=0)
     parser.add_argument('--port-file', type=Path, required=True)
+    modes = parser.add_mutually_exclusive_group(required=True)
+    modes.add_argument('--trusted-gateways', type=Path,
+                       help='JSON tenant-to-externally-pinned gateway identity map; enables enforced mode')
+    modes.add_argument('--insecure-fault-mode', action='store_true',
+                       help='explicitly disable provider auth for local failure-injection tests only')
     args = parser.parse_args()
-    server, _ = serve(args.db, args.port)
+    trusted = json.loads(args.trusted_gateways.read_text()) if args.trusted_gateways else None
+    server, _ = serve(args.db, args.port, trusted_gateways=trusted,
+                      insecure_fault_mode=args.insecure_fault_mode)
     args.port_file.write_text(str(server.server_address[1]))
     server.serve_forever()
 
