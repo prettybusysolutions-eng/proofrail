@@ -40,10 +40,16 @@ evidence gates.
 
 The pilot publication workflow builds a wheel and source distribution from one
 exact main commit, repeats the source suite, and verifies installed-wheel
-reproduction and tamper rejection before creating a prerelease. Assets include
-SHA256SUMS and unsigned workflow provenance containing the source commit and run.
-An existing release is never replaced automatically. Verify checksums before
-installation; provenance metadata is not a signature or independent review.
+reproduction and tamper rejection before creating a prerelease. Historical v0.6.0/v0.6.1 prereleases include SHA256SUMS and unsigned workflow
+provenance metadata identifying the source commit and run. Neither historical
+release has the signed build attestations now proposed in draft governance work.
+
+The next release workflow revision is intended to be manually initiated,
+attest every release asset using Sigstore-backed GitHub provenance and verify
+each attestation before publishing. An existing tag or release must never be
+silently replaced. See `RELEASING.md` and
+`docs/VERIFY_RELEASE_ATTESTATIONS.md`. A configured workflow is not a verified
+signing practice until its first signed release is independently checked.
 
 Publishing the pilot does not satisfy independent semantic review or external
 reproduction. Both remain distinct, externally supplied evidence gates.
