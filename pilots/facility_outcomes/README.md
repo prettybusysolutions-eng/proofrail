@@ -39,8 +39,18 @@ offline in five dimensions:
 4. provider-observed execution;
 5. attested physical outcome.
 
-Pass `--trusted-keys` with independently obtained keys to check where the
-signatures came from. Without it, key trust is `self_asserted`.
+Pass `--trusted-keys` with independently obtained keys to authenticate
+both admission-time and export-time signing keys. An issuer removed from the
+export-time roster still needs a separately trusted historical key. Missing pins
+fail trusted verification; a bundle's own key list is not an independent trust
+source. Without trusted pins, key trust is `self_asserted`.
+
+**Remaining proof boundary:** `records/consumption.json` is an unsigned
+export of the local replay-registry rows. A valid digest/inventory and a
+trusted signing key do *not* prove those rows were durably retained or that the
+registry was not rolled back. The verifier reports this limitation explicitly.
+An authoritative signed consumption receipt and an independently retained
+checkpoint/anchor are separate follow-up controls, not claims of this change.
 
 ## Layout
 
