@@ -10,7 +10,11 @@ authority check, or prove an independent transparency witness.
 Use Sigstore Rekor v2 for independent publication when authorized. Rekor v2
 has a documented POST /api/v2/log/entries interface taking
 hashedRekordRequestV002, including a base64 SHA-256 artifact digest, detached
-signature and an Ed25519 DER SubjectPublicKeyInfo public key. It has **no
+signature and a DER SubjectPublicKeyInfo public key. Rekor v2 hashedrekord
+requires a **prehash-compatible** signing algorithm; its server rejects pure
+Ed25519 PKIX_ED25519. The outer artifact signature in this dry run is ECDSA
+P-256 with SHA-256 (PKIX_ECDSA_P256_SHA_256). The original inner SCITT
+COSE signature remains Ed25519 (-19). It has **no
 latest-by-stream search index**; monitors read tiles/checkpoints instead.
 Do not submit to rekor.sigstore.dev's removed v1 API or hardcode the current
 tile shard. Resolve actual writable shard from Sigstore's authenticated
@@ -72,11 +76,11 @@ scripts/rekor_v2_dryrun.py consumes only these three previously created,
 publicly shareable artifacts:
 
 1. Signed ProofRail COSE_Sign1 statement (binary)
-2. Raw Ed25519 **detached signature over those exact COSE bytes**
-3. The detached signature key's public key in standard X.509
-   SubjectPublicKeyInfo DER form (NOT raw 32-byte Ed25519 key)
+2. ASN.1 DER ECDSA P-256 SHA-256 **detached signature over those exact COSE bytes**
+3. The detached ECDSA P-256 signature key's public key in standard X.509
+   SubjectPublicKeyInfo DER form (not a raw point or PEM text)
 
-The script validates that the detached signature actually covers the COSE
+The script validates that the ECDSA-SHA256 detached signature covers the COSE
 bytes and then writes two files: rekor-v2-request.json (the documented
 hashedRekordRequestV002 API request body) and dry-run-metadata.json.
 It writes nothing to GitHub or Rekor and contains no network transport or
@@ -87,10 +91,12 @@ From a checkout on this branch, in an environment with project dependencies:
 ~~~sh
 # Example: operator signs an already-created COSE file locally.
 # NEVER commit the private key or upload it to an agent.
-openssl pkeyutl -sign -rawin -inkey /buyer/private-ed25519.pem \
-  -in /buyer/signed-checkpoint-statement.cose \
-  -out /buyer/rekor-detached-signature.bin
-openssl pkey -in /buyer/private-ed25519.pem -pubout -outform DER \
+openssl ecparam -name prime256v1 -genkey -noout \
+  -out /buyer/rekor-p256-private.pem
+openssl dgst -sha256 -sign /buyer/rekor-p256-private.pem \
+  -out /buyer/rekor-detached-signature.bin \
+  /buyer/signed-checkpoint-statement.cose
+openssl pkey -in /buyer/rekor-p256-private.pem -pubout -outform DER \
   -out /buyer/rekor-public-key.spki.der
 
 python scripts/rekor_v2_dryrun.py \
@@ -111,6 +117,13 @@ Dry-run verification checks the **detached Rekor artifact signature** only.
 It does not recheck that the COSE issuer statement's underlying authority,
 consumption and reconciliation are true; that requires separate ProofRail
 and independent provider evidence verification.
+
+**The request has not been submitted to a live Rekor server, and server
+algorithm policy might change.** The server implementation currently checks
+for prehash capability (see sigstore/rekor-tiles
+pkg/types/hashedrekord/hashedrekord.go), which is why pure Ed25519 was
+replaced with ECDSA P-256 here. Use a separately permissioned service-acceptance
+check before treating the body as supported.
 
 **No automatic upload step follows this command.** Actual submission must
 be separately authorized and implemented after confirming Rekor's currently
@@ -151,8 +164,9 @@ research/pilot work. #3, #5 and #6 are not implemented here.
 - Concurrent updates: exactly one advance, remaining attempts idempotent.
 - Rollback **of buyer DB itself**: succeeds and is demonstrated as a negative
   capability boundary.
-- Rekor request SHA-256 digest, raw detached signature, Ed25519 DER
-  public key format match documented v2 shape; forged key/signature refused.
+- Rekor request SHA-256 digest, raw detached signature, ECDSA P-256 DER
+  public key format match documented v2 shape; forged key/signature and
+  unsupported pure Ed25519 key refused.
 - Dry-run produces no side effects and refuses overwriting previous output.
 
 ## Decisions NOT bypassed
