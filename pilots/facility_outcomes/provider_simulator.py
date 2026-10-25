@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+import sys
 import threading
 import time
 from contextlib import closing
@@ -33,6 +34,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+# This server is deliberately launched with python -I by the fault harness.
+# Use only its own source directory, not caller-provided PYTHONPATH, for the
+# sibling provider authority validator.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from provider_authority import ProviderAuthorityError, authorize_create
 
 FIELDS = ('facility_id', 'area_id', 'provider_id', 'problem_id', 'plan_id', 'plan_digest', 'scope_revision',
