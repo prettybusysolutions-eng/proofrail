@@ -121,6 +121,31 @@ def test_real_gateway_consumes_then_provider_checks_exact_signed_scope(enforced_
         assert code == 403, (override, code, reason)
         assert state.count() == 1
 
+    # Malformed but otherwise correctly scoped signed-record content must
+    # fail cryptographic verification, not be accepted as a client header.
+    forged = json.loads(base64.urlsafe_b64decode(token + "=" * (-len(token) % 4)))
+    forged["signature"]["value"] = "A" * 86
+    forged_token = base64.urlsafe_b64encode(
+        json.dumps(forged, separators=(",", ":")).encode()).rstrip(b"=").decode()
+    code, reason = post(url, "tenant-a", params, key=envelope["record_hash"],
+                        client=gateway.provider.client_id, capability=forged_token)
+    assert code == 403 and reason["error"] == "invalid_capability"
+    assert state.count() == 1
+
+    # Provider pins are authoritative. A valid gateway signature fails once
+    # the provider's separately configured trusted key disagrees with it.
+    original_pin = state.trusted_gateways["tenant-a"]["public_key"]
+    try:
+        state.trusted_gateways["tenant-a"]["public_key"] = (
+            world.ids["gateway-b"].principal.public_key
+        )
+        code, reason = post(url, "tenant-a", params, key=envelope["record_hash"],
+                            client=gateway.provider.client_id, capability=token)
+        assert code == 403 and reason["error"] == "invalid_capability"
+        assert state.count() == 1
+    finally:
+        state.trusted_gateways["tenant-a"]["public_key"] = original_pin
+
     # A real gateway signature over stale authority is still expired at the
     # provider. Gateway identity alone cannot override the wall-clock bound.
     signed = json.loads(base64.urlsafe_b64decode(token + "=" * (-len(token) % 4)))
