@@ -43,9 +43,12 @@ repeat of an identical signed request returns the *same* idempotent work
 order; it never creates a second order. Fault-injection/admin mutation POST
 endpoints are disabled when enforcement is enabled.
 
-The simulator defaults to an intentionally insecure **fault-testing mode**
-when the trusted-key file is absent, so the pre-existing failure-mode tests
-remain reproducible. **Do not deploy that mode as an authorization boundary.**
+Startup must select **exactly one mode**. Provide `--trusted-gateways`
+for provider authorization, or explicitly supply `--insecure-fault-mode` for
+local failure-injection tests. With neither option, the server refuses to
+start. The pre-existing synthetic test fixtures explicitly choose the insecure
+mode to preserve fault scenarios. **Never deploy that testing mode as an
+authorization boundary.**
 
 ## What this establishes
 
