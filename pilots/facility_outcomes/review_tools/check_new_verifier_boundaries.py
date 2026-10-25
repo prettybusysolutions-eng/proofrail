@@ -51,9 +51,10 @@ def candidates(source):
     tree = ast.parse(source)
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "check":
-            if len(node.args) < 3 or not isinstance(node.args[1], ast.Constant):
+            if len(node.args) < 3:
                 continue
-            name = node.args[1].value
+            name = node.args[1].value if isinstance(node.args[1], ast.Constant) else None
+            label_source = ast.unparse(node.args[1])
             if name in {
                 "admission-time gateway identity is registered",
                 "unsigned registry-export snapshot reports one consumption by the named executor",
@@ -61,7 +62,7 @@ def candidates(source):
                 key = "registered_gateway_role" if name.startswith("admission-") else "consumption_binding"
                 start, stop = location(source, node.args[2]), location(source, node.args[2], end=True)
                 result.setdefault(key, []).append((start, stop, "True"))
-            if isinstance(name, str) and name.endswith(" identity snapshot has unique principal IDs"):
+            if "identity snapshot has unique principal IDs" in label_source:
                 start, stop = location(source, node.args[2]), location(source, node.args[2], end=True)
                 result.setdefault("unique_principals", []).append((start, stop, "True"))
         if isinstance(node, ast.Raise) and isinstance(node.exc, ast.Call):
