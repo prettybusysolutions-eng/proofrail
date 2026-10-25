@@ -1,10 +1,7 @@
 name: Publish tested pilot
+# Publishing is a maintainer-initiated, reviewed act, never a side effect
+# of changing a workflow or package metadata file.
 on:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/pilot-release.yml
-      - pyproject.toml
   workflow_dispatch:
 permissions:
   contents: read
@@ -13,9 +10,13 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish-pilot:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -57,12 +58,36 @@ jobs:
           (dist/'provenance.json').write_text(json.dumps({'version':version,'source_commit':os.environ['GITHUB_SHA'], 'repository':os.environ['GITHUB_REPOSITORY'], 'workflow_run':os.environ['GITHUB_RUN_ID'], 'artifacts':artifacts, 'status':'tested pilot; independent semantic review and external reproduction pending', 'signature':'unsigned workflow metadata'},indent=2)+'\n')
           pathlib.Path('/tmp/release-tag').write_text('v'+version)
           PY
+      - name: Sign build provenance of every release asset
+        uses: actions/attest@v4
+        with:
+          # This includes wheel, source archive, independent review inputs,
+          # checksum list and the explicitly unsigned workflow metadata.
+          # The Sigstore-backed attestation is separate from provenance.json.
+          subject-path: 'dist/*'
+      - name: Verify every release asset's signed provenance before publishing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          for asset in dist/*; do
+            test -f "$asset"
+            gh attestation verify "$asset" --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/pilot-release.yml"
+          done
       - name: Publish idempotent exact-commit pilot release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           tag="$(cat /tmp/release-tag)"
+          test "$GITHUB_REF" = 'refs/heads/main'
+          # Never let a preexisting tag be retargeted or republished.
+          if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+            echo "Tag already exists; refusing a repeat version release."
+            exit 1
+          fi
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release already exists; refusing to replace its tag or assets."
             exit 1
@@ -70,7 +95,7 @@ jobs:
           cat > /tmp/release-notes.md <<EOF
           Tested ProofRail pilot reference implementation from commit $GITHUB_SHA.
 
-          Includes installable wheel, source distribution, SHA256SUMS and unsigned workflow provenance metadata. CI runs the test suite and installed-wheel reproduction with tamper rejection before publication.
+          Includes installable wheel, source distribution, SHA256SUMS and workflow provenance metadata. Each release asset is bound to a Sigstore-backed signed build provenance attestation, minted and verified against this repository's release workflow before publication. Verify it with gh attestation verify (see docs/VERIFY_RELEASE_ATTESTATIONS.md). provenance.json remains unsigned metadata, not a signature.
 
           Independent semantic review, independently authored external reproduction, production key custody and operational hardening remain incomplete. This release does not certify those gates.
           EOF
