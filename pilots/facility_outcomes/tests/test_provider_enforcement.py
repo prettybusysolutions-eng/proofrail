@@ -311,13 +311,8 @@ def test_expired_authority_is_refused(enforced):
 
 # ------------------------------------------------------------------ known gap
 
-@pytest.mark.xfail(strict=True, reason=(
-    'GAP: the gateway signs the consumption receipt BEFORE its post-consumption re-check. '
-    'When that re-check aborts admission (revocation, role change), the stored envelope and '
-    'receipt still form a valid pair, and a holder can present it directly to the enforcing '
-    'provider within the validity window. Fix: sign the provider-facing token only after the '
-    're-check passes, or bind it to the gateway connection.'))
-def test_authority_the_gateway_aborted_cannot_be_used_directly(enforced, monkeypatch):
+def test_aborted_authority_has_no_provider_usable_consumption_receipt(enforced, monkeypatch):
+    """A revoked admission never gets a provider-usable receipt."""
     problem, plan, approval, envelope = approve(enforced)
     gateway = enforced.p.gateways['tenant-a']
     real = gateway._consume
@@ -325,11 +320,22 @@ def test_authority_the_gateway_aborted_cannot_be_used_directly(enforced, monkeyp
     def revoke_then_consume(e):
         enforced.p.revoke_approval(enforced.w['admin-a'], 'tenant-a', approval['approval_id'])
         return real(e)
+
     monkeypatch.setattr(gateway, '_consume', revoke_then_consume)
     with pytest.raises(PilotError) as exc:
         enforced.p.admit('tenant-a', envelope)
     assert exc.value.reason == 'state_changed_during_admission'
     assert enforced.count() == 0
-    status, reply = direct(enforced, *credentials(enforced, envelope))
-    assert status == 403, reply                    # currently 201: the provider creates the order
+
+    stored = enforced.p.store.get('tenant-a', 'authority', envelope['envelope_id'])
+    assert stored['aborted'] == 'state_changed_during_admission'
+    assert 'consumption_attestation' not in stored
+
+    # Only the genuine issuer-signed envelope exists; a direct caller lacks
+    # any valid post-final-check gateway receipt. The provider refuses.
+    headers = {'Idempotency-Key': envelope['record_hash'],
+               'X-ProofRail-Envelope': pack(envelope)}
+    status, reply = post(enforced, 'tenant-a',
+                         dict(envelope['effect']['parameters']), headers)
+    assert (status, reply['error']) == (403, 'authority_header_missing_or_oversized')
     assert enforced.count() == 0
