@@ -3,7 +3,9 @@
 
 Inputs are a previously signed COSE_Sign1 statement, an Ed25519 signature
 made OVER THOSE EXACT COSE BYTES (detached, not the COSE issuer signature),
-and the signing key's DER SubjectPublicKeyInfo public-key bytes.
+and the signing key's DER SubjectPublicKeyInfo public-key bytes. Rekor v2
+hashedrekord requires a prehash signing algorithm: pure Ed25519 is NOT
+supported for this outer detached signature. Use ECDSA P-256 SHA-256.
 
 A request file is NOT a Rekor log receipt. This script cannot make network
 requests, upload data, or perform a release; external publication requires
@@ -21,7 +23,8 @@ from pathlib import Path
 import cbor2
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import hashes
 
 from proofrail.core import ProofRailError
 
@@ -40,13 +43,15 @@ def build_rekor_v2_request(
 ) -> dict:
     """Encode the documented Rekor v2 hashedRekordRequestV002 shape.
 
-    The public key is Ed25519 DER SPKI, not a raw 32-byte key. This produces
+    The public key is ECDSA P-256 DER SPKI; the signature is DER ASN.1
+    ECDSA-SHA256 over the raw COSE statement. This produces
     no inclusion proof, signed checkpoint, timestamp, or authenticated latest.
     """
     if (type(statement_bytes) is not bytes
         or not 1 <= len(statement_bytes) <= MAX_STATEMENT_BYTES):
         raise ProofRailError("signed_statement_invalid_size")
-    if type(detached_signature) is not bytes or len(detached_signature) != 64:
+    if (type(detached_signature) is not bytes
+        or not 64 <= len(detached_signature) <= 80):
         raise ProofRailError("rekor_detached_signature_invalid_size")
     if (type(public_key_der) is not bytes
         or not 1 <= len(public_key_der) <= MAX_PUBKEY_DER_BYTES):
@@ -64,13 +69,14 @@ def build_rekor_v2_request(
         if type(cose_signature) is not bytes or not cose_signature:
             raise ProofRailError("artifact_cose_signature_missing")
         pubkey = serialization.load_der_public_key(public_key_der)
-        if not isinstance(pubkey, Ed25519PublicKey):
-            raise ProofRailError("rekor_public_key_must_be_ed25519")
+        if (not isinstance(pubkey, ec.EllipticCurvePublicKey)
+            or not isinstance(pubkey.curve, ec.SECP256R1)):
+            raise ProofRailError("rekor_public_key_must_be_ecdsa_p256")
         if pubkey.public_bytes(
             serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
         ) != public_key_der:
             raise ProofRailError("rekor_public_key_der_not_canonical")
-        pubkey.verify(detached_signature, statement_bytes)
+        pubkey.verify(detached_signature, statement_bytes, ec.ECDSA(hashes.SHA256()))
     except InvalidSignature as exc:
         raise ProofRailError("rekor_detached_signature_invalid") from exc
     except (ValueError, TypeError, cbor2.CBORDecodeError) as exc:
@@ -83,7 +89,7 @@ def build_rekor_v2_request(
                 "content": _b64(detached_signature),
                 "verifier": {
                     "publicKey": {"rawBytes": _b64(public_key_der)},
-                    "keyDetails": "PKIX_ED25519",
+                    "keyDetails": "PKIX_ECDSA_P256_SHA_256",
                 },
             },
         },
