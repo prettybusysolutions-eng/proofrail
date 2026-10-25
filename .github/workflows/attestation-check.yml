@@ -129,3 +129,19 @@ jobs:
           fi
       - name: Show case payload
         run: cat cases/CASE-0001/case.json
+
+  scitt-pycose-interop:
+    # Isolated test only: pycose 1.1.0 cannot parse -19 or cbor2 6 arrays.
+    # No network registration, repo writes, releases or production credentials.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.11"
+      - name: Install pinned independent COSE test stack
+        run: python -m pip install -e . -r requirements/interop-pycose.txt
+      - name: Check two-way legacy COSE interoperability and -19 local verifier
+        run: python scripts/check_scitt_pycose.py
