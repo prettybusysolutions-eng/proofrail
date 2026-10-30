@@ -29,6 +29,7 @@ _SHA = re.compile(r"[0-9a-fA-F]{40}\Z")
 _SEGMENT = re.compile(r"[a-zA-Z0-9_.-]+\Z")
 _EFFECT_FIELDS = frozenset((
     "action_type", "repository", "pull_number", "expected_head_sha",
+    "expected_base_ref",
 ))
 _MAX_RESPONSE_BYTES = 262144
 
@@ -159,8 +160,11 @@ def observe_github_merge(
         repository = _repository(effect["repository"])
         number = effect["pull_number"]
         head = effect["expected_head_sha"]
+        base_ref = effect["expected_base_ref"]
         if type(number) is not int or number <= 0 or not isinstance(head, str) or not _SHA.fullmatch(head):
             raise ValueError("invalid PR identifier or expected SHA")
+        if not isinstance(base_ref, str) or not base_ref or len(base_ref) > 240 or any(c in base_ref for c in "\\r\\n"):
+            raise ValueError("invalid expected base branch")
         observed = _utc_now(now)
         issued = _time(authorization.get("issued_at"))
         expires = _time(authorization.get("expires_at"))
@@ -182,6 +186,8 @@ def observe_github_merge(
         return _result("unexpected_repository_or_rename")
     if type(pull.get("number")) is not int or pull["number"] != number:
         return _result("unexpected_pr_number")
+    if base.get("ref") != base_ref:
+        return _result("unexpected_base_branch")
     github_head = pull.get("head")
     actual_head = github_head.get("sha") if isinstance(github_head, Mapping) else None
     if not isinstance(actual_head, str) or not _SHA.fullmatch(actual_head):
