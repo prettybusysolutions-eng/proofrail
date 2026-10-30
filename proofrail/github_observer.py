@@ -64,7 +64,9 @@ class GitHubReadOnlyPullTransport:
                 "Authorization": "Bearer " + self._token,
                 "Accept": "application/vnd.github+json",
                 "User-Agent": "ProofRail-ReadOnly-Observer/0",
-                "X-GitHub-Api-Version": "2026-03-10",
+                # This older supported API version exposes merge_commit_sha.
+                # GitHub 2026-03-10 removed that field from PR responses.
+                "X-GitHub-Api-Version": "2022-11-28",
             })
             response = conn.getresponse()
             if response.status != 200:
