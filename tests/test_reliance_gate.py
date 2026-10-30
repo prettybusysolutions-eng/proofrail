@@ -183,3 +183,113 @@ class RelianceGateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RelianceHardeningTests(unittest.TestCase):
+    """Review regression: signed extensions, clock drift, and reliance reuse."""
+
+    setUp = RelianceGateTests.setUp
+    sign_observation = RelianceGateTests.sign_observation
+    evaluate = RelianceGateTests.evaluate
+
+    def _resign_auth(self, **extra):
+        body = {k: v for k, v in self.authority.items() if k not in ("record_hash", "signature")}
+        body.update(extra)
+        auth = sign_record(body, self.issuer, key_id="issuer-1")
+        obs = {k: v for k, v in self.observation.items() if k not in ("record_hash", "signature")}
+        obs["authorization_hash"] = auth["record_hash"]
+        return auth, self.sign_observation(obs)
+
+    def _resign_obs(self, **updates):
+        body = {k: v for k, v in self.observation.items() if k not in ("record_hash", "signature")}
+        body.update(updates)
+        return self.sign_observation(body)
+
+    def test_signed_constraint_verifier_cannot_evaluate_is_refused(self):
+        auth, obs = self._resign_auth(conditions={"requires_second_approver": True})
+        self.assertEqual(
+            self.evaluate(a=auth, o=obs)["reasons"],
+            ["unrecognized_authorization_fields"],
+        )
+
+    def test_contradictory_extra_observation_field_refused(self):
+        obs = self._resign_obs(provider_status="rolled_back")
+        self.assertEqual(
+            self.evaluate(o=obs)["reasons"], ["unrecognized_observation_fields"]
+        )
+
+    def test_bounded_clock_skew_only_when_configured(self):
+        from datetime import timedelta
+        auth, obs = self._resign_auth(issued_at="2030-01-01T12:00:02Z")
+        body = {k: v for k, v in obs.items() if k not in ("record_hash", "signature")}
+        body["observed_at"] = "2030-01-01T12:00:03Z"
+        obs = self.sign_observation(body)
+        self.assertFalse(self.evaluate(a=auth, o=obs)["accepted"])
+        self.assertTrue(
+            self.evaluate(a=auth, o=obs, max_clock_skew=timedelta(seconds=5))["accepted"]
+        )
+        self.assertEqual(
+            self.evaluate(max_clock_skew=timedelta(seconds=-1))["reasons"],
+            ["invalid_clock_skew"],
+        )
+
+    def test_relying_party_can_refuse_accepted_evidence(self):
+        seen = set()
+        def already(auth_hash, event_id):
+            key = (auth_hash, event_id)
+            if key in seen:
+                return True
+            seen.add(key)
+            return False
+        self.assertTrue(self.evaluate(already_accepted=already)["accepted"])
+        self.assertEqual(
+            self.evaluate(already_accepted=already)["reasons"],
+            ["evidence_already_relied_on"],
+        )
+
+    def test_skew_is_actually_bounded_by_five_minutes(self):
+        from datetime import timedelta
+        self.assertEqual(
+            self.evaluate(max_clock_skew=timedelta(hours=1))["reasons"],
+            ["invalid_clock_skew"],
+        )
+        self.assertEqual(
+            self.evaluate(max_clock_skew="5 seconds")["reasons"],
+            ["invalid_clock_skew"],
+        )
+
+    def test_nested_unknown_signed_fields_are_refused(self):
+        auth, obs = self._resign_auth(
+            signer={"principal_id": "trusted-authz", "requires_human": True}
+        )
+        self.assertEqual(
+            self.evaluate(a=auth, o=obs)["reasons"],
+            ["unrecognized_authorization_fields"],
+        )
+        altered = self._resign_obs(
+            signer={"principal_id": "trusted-provider", "provider_status": "rolled_back"}
+        )
+        self.assertEqual(
+            self.evaluate(o=altered)["reasons"],
+            ["unrecognized_observation_fields"],
+        )
+
+    def test_replay_check_failure_fails_closed(self):
+        def broken(_auth_hash, _event_id):
+            raise ConnectionError("store not reachable")
+        self.assertEqual(
+            self.evaluate(already_accepted=broken)["reasons"],
+            ["replay_check_unavailable"],
+        )
+        self.assertFalse(self.evaluate(already_accepted=broken)["accepted"])
+        self.assertEqual(
+            self.evaluate(already_accepted=123)["reasons"],
+            ["invalid_replay_checker"],
+        )
+
+    def test_invalid_nested_observation_signature_fields_refused(self):
+        modified = copy.deepcopy(self.observation)
+        modified["signature"]["unchecked_claim"] = True
+        self.assertEqual(
+            self.evaluate(o=modified)["reasons"], ["unrecognized_observation_fields"]
+        )
