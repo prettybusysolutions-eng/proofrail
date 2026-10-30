@@ -57,6 +57,19 @@ squash, or rebase commit after merge; it is **not** equivalent to the PR's
 `head.sha`. We check the authorized PR head separately, and use the resulting
 merge SHA as the observed provider event identity.
 
+**Verified live compatibility finding (Oct 30, 2026):** GitHub REST
+`2026-03-10` removed `merge_commit_sha` from pull-request payloads.
+With that API version, the real read-only observation of merged PR #39
+returned `merged=true` but `merge_commit_sha=null`, and ProofRail
+correctly withheld acceptance. The observer now pins the **still-supported
+`2022-11-28` REST API version**, which returned the merge commit and allowed
+the five-scenario live test to pass. GitHub currently lists support for
+`2022-11-28` through March 10, 2028; replace this dependency with a
+reviewed, version-compatible provider event identifier before then.
+
+GitHub's own REST API changelog documents this removal:
+https://github.com/github/rest-api-description/blob/main/descriptions/api.github.com/CHANGELOG.md
+
 Reference: https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request
 
 ## Integration sketch
