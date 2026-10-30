@@ -6,8 +6,8 @@ provider observations before signing; self-asserted normalization is not proof.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
-from datetime import datetime, timezone
+from collections.abc import Callable, Mapping
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from cryptography.hazmat.primitives import serialization
@@ -20,6 +20,27 @@ from .crypto import verify_signature
 AUTH_KIND = "proofrail.reliance.authorization.v0"
 OBS_KIND = "proofrail.reliance.observation.v0"
 OUTCOMES = frozenset(("applied", "failed", "unknown"))
+_SIGNED_FIELDS = frozenset(("kind", "signer", "record_hash", "signature"))
+AUTH_FIELDS = _SIGNED_FIELDS | {"decision", "issued_at", "expires_at", "effect"}
+OBS_FIELDS = _SIGNED_FIELDS | {
+    "authorization_hash", "observed_at", "provider",
+    "provider_event_id", "effect", "outcome",
+}
+SIGNER_FIELDS = frozenset(("principal_id",))
+SIGNATURE_FIELDS = frozenset(("algorithm", "key_id", "value"))
+# Huge caller-selected tolerances must not make expired permits acceptable.
+MAX_CLOCK_SKEW = timedelta(minutes=5)
+
+
+def _has_unknown_fields(record: Mapping[str, Any], permitted: frozenset[str] | set[str]) -> bool:
+    if set(record) - permitted:
+        return True
+    signer = record.get("signer")
+    signature = record.get("signature")
+    return (
+        not isinstance(signer, Mapping) or bool(set(signer) - SIGNER_FIELDS)
+        or not isinstance(signature, Mapping) or bool(set(signature) - SIGNATURE_FIELDS)
+    )
 
 
 def _time(value: Any) -> datetime:
@@ -69,13 +90,20 @@ def assess_reliance(
     expected_effect: Mapping[str, Any],
     expected_provider: str,
     now: datetime | None = None,
+    max_clock_skew: timedelta = timedelta(0),
+    already_accepted: Callable[[str, str], bool] | None = None,
 ) -> dict[str, Any]:
     """Assess a *recorded* action outcome with buyer-supplied trust anchors.
 
     No caller-supplied 'verified' flags are honored. Key identity, signer
     identity, exact effect, source, expiration and the receipt binding are
-    tested here. ACCEPT means only that the separately pinned signers
-    issued consistent records claiming the specified outcome.
+    tested here. Unknown signed fields are refused instead of ignored.
+    max_clock_skew is capped at five minutes, default zero.
+    already_accepted is only a relying-party replay lookup; callers need
+    an independently durable, atomic acceptance reservation to prevent
+    concurrent reuse. It is not provider-side single-use enforcement.
+    ACCEPT means only that the separately pinned signers issued consistent
+    records claiming the specified outcome.
     """
     reasons: list[str] = []
 
@@ -109,8 +137,18 @@ def assess_reliance(
         return refuse("untrusted_key_material")
     if a_key == o_key or authority_principal == observer_principal:
         return refuse("separate_signers_required")
+    if (
+        not isinstance(max_clock_skew, timedelta)
+        or max_clock_skew < timedelta(0)
+        or max_clock_skew > MAX_CLOCK_SKEW
+    ):
+        return refuse("invalid_clock_skew")
+    if already_accepted is not None and not callable(already_accepted):
+        return refuse("invalid_replay_checker")
     if authorization.get("kind") != AUTH_KIND:
         return refuse("unrecognized_authorization_kind")
+    if _has_unknown_fields(authorization, AUTH_FIELDS):
+        return refuse("unrecognized_authorization_fields")
     if not _bound_signer(authorization, authority_principal, authority_key_id):
         return refuse("unexpected_authorization_signer")
     try:
@@ -131,13 +169,15 @@ def assess_reliance(
         clock = clock.astimezone(timezone.utc)
     except (ValueError, TypeError, OverflowError):
         return refuse("invalid_authorization_time")
-    if expiry <= issued or issued > clock or expiry <= clock:
+    if expiry <= issued or issued > clock + max_clock_skew or expiry <= clock - max_clock_skew:
         return refuse("authorization_not_current")
 
     if observation is None:
         return refuse("provider_observation_missing", "INSUFFICIENT_EVIDENCE")
     if observation.get("kind") != OBS_KIND:
         return refuse("unrecognized_observation_kind")
+    if _has_unknown_fields(observation, OBS_FIELDS):
+        return refuse("unrecognized_observation_fields")
     if not _bound_signer(observation, observer_principal, observer_key_id):
         return refuse("unexpected_observer_signer")
     try:
@@ -157,13 +197,20 @@ def assess_reliance(
         observed = _time(observation.get("observed_at"))
     except (ValueError, TypeError, OverflowError):
         return refuse("invalid_observation_time")
-    if observed < issued or observed > clock:
+    if observed < issued or observed > clock + max_clock_skew:
         return refuse("observation_outside_observed_interval")
     outcome = observation.get("outcome")
     if not isinstance(outcome, str) or outcome not in OUTCOMES:
         return refuse("invalid_observed_outcome")
     if outcome != "applied":
         return refuse("outcome_not_confirmed", "INSUFFICIENT_EVIDENCE")
+    if already_accepted is not None:
+        try:
+            if already_accepted(authorization["record_hash"], event_id):
+                return refuse("evidence_already_relied_on")
+        except Exception:
+            # Replay-check service unavailable: fail closed.
+            return refuse("replay_check_unavailable", "INSUFFICIENT_EVIDENCE")
 
     return {
         "verdict": "ACCEPT_RECORDED_OUTCOME",
