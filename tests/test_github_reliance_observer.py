@@ -24,6 +24,7 @@ EFFECT = {
     "repository": "example-co/critical",
     "pull_number": 42,
     "expected_head_sha": A_SHA,
+    "expected_base_ref": "main",
 }
 
 
@@ -133,6 +134,13 @@ class GithubRelianceObserverTests(unittest.TestCase):
                 result, _ = self.observe(pull(merged=False, state=state))
                 self.assertEqual(result["observation"]["outcome"], expected)
                 self.assertFalse(self.rely(result["observation"])["accepted"])
+
+    def test_wrong_destination_branch_is_not_signed(self):
+        data = pull()
+        data["base"]["ref"] = "release/production"
+        result, _ = self.observe(data)
+        self.assertFalse(result["recorded"])
+        self.assertEqual(result["reason"], "unexpected_base_branch")
 
     def test_repository_rename_or_wrong_pr_never_signed(self):
         for data in (pull(repo="renamed/project"), pull(number=87)):
