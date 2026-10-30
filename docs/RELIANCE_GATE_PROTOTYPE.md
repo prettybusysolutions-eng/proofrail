@@ -75,6 +75,35 @@ Positive and negative test inputs are generated in memory with temporary keys.
 No live cloud API, production actor identity, buyer transaction, or external
 service is exercised.
 
+## October 30 hardening review
+
+The optional verifier now refuses unknown top-level signed attributes and
+unrecognized nested signer/signature attributes. Unverified signed requirements
+must never be ignored as if they were checked.
+
+The optional `max_clock_skew` is zero by default and limited to five minutes.
+Clock tolerance relaxes a freshness check; it is not evidence of historical
+authorization or a trusted time source.
+
+The optional `already_accepted(authorization_hash, provider_event_id)`
+callback can withhold acceptance if evidence was previously used. **It is
+not an atomic claim-and-commit protocol**: a read-then-write checker can race
+with another consumer. A paying or deploying system must use a durable,
+transactional unique reservation and idempotent provider effect handling
+before calling this "single use" in a business workflow. If the callback
+raises an exception, verification returns `INSUFFICIENT_EVIDENCE`.
+
+The signature format's `key_id` is metadata inside the detached signature
+object and is not itself covered by the existing `sign_record` signature;
+acceptance is still constrained by an out-of-band pinned public key and
+expected key ID. Do not claim the identifier is independently signed.
+A versioned protocol design should cryptographically bind or authenticate
+all security-significant metadata before standardization.
+
+The tests use generated identities and records. They do not validate any
+vendor adapter, independent custody, concurrent replay reservation, or
+externally signed GitHub event.
+
 ## Critical integration barriers
 
 1. **Vendor-neutral does not mean natively integrated.** A partner must
