@@ -160,7 +160,7 @@ def assess_reliance(
     if observed < issued or observed > clock:
         return refuse("observation_outside_observed_interval")
     outcome = observation.get("outcome")
-    if outcome not in OUTCOMES:
+    if not isinstance(outcome, str) or outcome not in OUTCOMES:
         return refuse("invalid_observed_outcome")
     if outcome != "applied":
         return refuse("outcome_not_confirmed", "INSUFFICIENT_EVIDENCE")
