@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import re
 import sqlite3
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
@@ -66,7 +67,7 @@ class SQLiteAcceptanceLedger:
             raise ValueError("acceptance database must be an ordinary file")
         if os.name == "posix" and self.path.stat().st_mode & 0o077:
             raise PermissionError("acceptance database must not be group/world accessible")
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             connection.execute("BEGIN IMMEDIATE")
             try:
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
@@ -85,12 +86,33 @@ class SQLiteAcceptanceLedger:
                     )
                     """
                 )
-                # Reject an unrelated database that happens to declare v1
-                # but lacks the two replay constraints.
-                indexes = connection.execute(
+                # Check the exact uniqueness semantics, not merely index counts.
+                schema_columns = [
+                    row[1] for row in connection.execute(
+                        "PRAGMA table_info(acceptance_reservations)"
+                    )
+                ]
+                if schema_columns != [
+                    "relying_party", "provider", "authorization_hash",
+                    "provider_event_id", "reserved_at",
+                ]:
+                    raise ValueError("acceptance ledger schema columns mismatch")
+                unique_keys = []
+                for index_row in connection.execute(
                     "PRAGMA index_list(acceptance_reservations)"
-                ).fetchall()
-                if sum(1 for row in indexes if row[2]) < 2:
+                ):
+                    if index_row[2]:
+                        name = index_row[1].replace('"', '""')
+                        key_columns = tuple(
+                            entry[2] for entry in connection.execute(
+                                f'PRAGMA index_info("{name}")'
+                            )
+                        )
+                        unique_keys.append(key_columns)
+                if (
+                    ("relying_party", "authorization_hash") not in unique_keys
+                    or ("relying_party", "provider", "provider_event_id") not in unique_keys
+                ):
                     raise ValueError("acceptance uniqueness constraints missing")
                 connection.execute(f"PRAGMA user_version={_SCHEMA_VERSION}")
                 connection.execute("COMMIT")
@@ -102,7 +124,7 @@ class SQLiteAcceptanceLedger:
         conn = sqlite3.connect(
             str(self.path), timeout=self.timeout_seconds, isolation_level=None
         )
-        conn.execute("PRAGMA busy_timeout=5000")
+        conn.execute(f"PRAGMA busy_timeout={int(self.timeout_seconds * 1000)}")
         conn.execute("PRAGMA synchronous=FULL")
         return conn
 
@@ -121,7 +143,7 @@ class SQLiteAcceptanceLedger:
         if not isinstance(authorization_hash, str) or not _HASH.fullmatch(authorization_hash):
             raise ValueError("authorization_hash must be 64 lowercase hex characters")
         # One atomic writer transaction, including uniqueness enforcement.
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             conn.execute("BEGIN IMMEDIATE")
             try:
                 conn.execute(
