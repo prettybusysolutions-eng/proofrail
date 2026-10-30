@@ -23,9 +23,12 @@ trusted issuer key) is current and matches the caller's exact expected effect:
   "action_type": "github_merge",
   "repository": "example-co/critical",
   "pull_number": 42,
-  "expected_head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  "expected_head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "expected_base_ref": "main"
 }
 ```
+
+The v0 observer requires the exact destination base ref and checks the returned GitHub base.ref; a changed destination branch is refused without creating signed evidence.
 
 The v0 observer **rejects extra effect fields**, rather than pretending
 it can verify constraints that the one PR GET response cannot establish.
