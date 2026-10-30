@@ -163,7 +163,7 @@ def observe_github_merge(
         base_ref = effect["expected_base_ref"]
         if type(number) is not int or number <= 0 or not isinstance(head, str) or not _SHA.fullmatch(head):
             raise ValueError("invalid PR identifier or expected SHA")
-        if not isinstance(base_ref, str) or not base_ref or len(base_ref) > 240 or any(c in base_ref for c in "\\r\\n"):
+        if not isinstance(base_ref, str) or not base_ref or len(base_ref) > 240 or any(ord(c) < 32 for c in base_ref):
             raise ValueError("invalid expected base branch")
         observed = _utc_now(now)
         issued = _time(authorization.get("issued_at"))
