@@ -1,0 +1,91 @@
+name: Live GitHub Reliance Observer Check
+
+# A new workflow cannot be manually dispatched through GitHub UI until it
+# exists on the default branch. A tightly scoped read-only PR self-trial
+# provides real GitHub GET evidence before any merge.
+on:
+  workflow_dispatch:
+    inputs:
+      merged_pr:
+        description: "Already merged PR to observe"
+        required: true
+        default: "39"
+      base_ref:
+        description: "Branch that historical PR merged into"
+        required: true
+        default: "main"
+      open_pr:
+        description: "Optional still-open PR number"
+        required: false
+      open_base_ref:
+        description: "Actual target branch of optional open PR"
+        required: false
+  pull_request:
+    paths:
+      - ".github/workflows/live-github-observer.yml"
+      - "scripts/live_github_observer_check.py"
+      - "scripts/reverify_live_evidence.py"
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  read-only-live-trial:
+    # Avoid running on forks or other PRs: the PR-triggered exception applies
+    # only to the branch that contains this prototype and no external secrets.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.head.ref == 'test/live-github-reliance-evidence-20261030')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install experimental ProofRail
+        run: python -m pip install -e .
+      - name: Observe actual GitHub PRs using only GET and synthetic authorizations
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGED_PR: ${{ github.event_name == 'pull_request' && '39' || inputs.merged_pr }}
+          BASE_REF: ${{ github.event_name == 'pull_request' && 'main' || inputs.base_ref }}
+          OPEN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || inputs.open_pr }}
+          OPEN_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || inputs.open_base_ref }}
+        shell: bash
+        run: |
+          args=(--repository "$GITHUB_REPOSITORY" --merged-pr "$MERGED_PR" --base-ref "$BASE_REF" --out live-evidence.json)
+          if [[ -n "$OPEN_PR" ]]; then
+            args+=(--open-pr "$OPEN_PR" --open-base-ref "$OPEN_BASE_REF")
+          fi
+          python scripts/live_github_observer_check.py "${args[@]}"
+      - name: Self-check evidence with git-derived head and ephemeral keys (NOT independent review)
+        if: success()
+        env:
+          MERGED_PR: ${{ github.event_name == 'pull_request' && '39' || inputs.merged_pr }}
+          BASE_REF: ${{ github.event_name == 'pull_request' && 'main' || inputs.base_ref }}
+          OPEN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || inputs.open_pr }}
+          OPEN_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || inputs.open_base_ref }}
+        shell: bash
+        run: |
+          AUTH=$(python -c 'import json;print(json.load(open("live-evidence.json"))["trust_anchors"]["authority"]["public_key_hex"])')
+          OBS=$(python -c 'import json;print(json.load(open("live-evidence.json"))["trust_anchors"]["observer"]["public_key_hex"])')
+          HEAD=$(git ls-remote origin "refs/pull/${MERGED_PR}/head" | cut -f1)
+          args=(--repository "$GITHUB_REPOSITORY" --merged-pr "$MERGED_PR" --merged-head "$HEAD" --base-ref "$BASE_REF")
+          if [[ -n "$OPEN_PR" ]]; then
+            args+=(--open-pr "$OPEN_PR" --open-base-ref "$OPEN_BASE_REF")
+          fi
+          python scripts/reverify_live_evidence.py live-evidence.json --authority-key "$AUTH" --observer-key "$OBS" "${args[@]}"
+      - name: Preserve synthetic evidence for externally pinned review
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: live-github-reliance-evidence
+          path: live-evidence.json
+          retention-days: 7
+          if-no-files-found: warn
