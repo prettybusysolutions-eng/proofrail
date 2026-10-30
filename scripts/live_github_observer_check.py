@@ -80,6 +80,20 @@ def run(args: argparse.Namespace, transport=None) -> tuple[dict, int]:
     auth_key, observer_key = Ed25519PrivateKey.generate(), Ed25519PrivateKey.generate()
     if transport is None:
         transport = GitHubReadOnlyPullTransport(os.environ.get("GITHUB_TOKEN", ""))
+    # Log only nonsecret public PR metadata when diagnosing a live mismatch.
+    try:
+        probe = transport.get_pull(args.repository, args.merged_pr)
+        print("LIVE_PR_GET_METADATA " + json.dumps({
+            "number": probe.get("number"),
+            "merged": probe.get("merged"),
+            "state": probe.get("state"),
+            "merged_at": probe.get("merged_at"),
+            "merge_commit_sha": probe.get("merge_commit_sha"),
+            "head_sha": (probe.get("head") or {}).get("sha"),
+            "base_ref": (probe.get("base") or {}).get("ref"),
+        }, sort_keys=True))
+    except Exception as exc:
+        print("LIVE_PR_GET_UNAVAILABLE " + type(exc).__name__)
     merged_head, head_time = pr_head_from_git(args.merged_pr)
     base_tip = branch_tip_from_git(args.base_ref)
     if merged_head == base_tip:
