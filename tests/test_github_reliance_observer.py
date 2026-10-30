@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import tempfile
 import unittest
+from unittest.mock import patch
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from proofrail.acceptance_ledger import SQLiteAcceptanceLedger
 from proofrail.crypto import sign_record
-from proofrail.github_observer import observe_github_merge
+from proofrail.github_observer import GitHubReadOnlyPullTransport, observe_github_merge
 from proofrail.reliance import assess_reliance
 
 
@@ -214,6 +215,39 @@ class GithubRelianceObserverTests(unittest.TestCase):
             "acquiring-team", "github", other["record_hash"],
             accepted["observation"]["provider_event_id"],
         ))
+
+
+class GitHubTransportContractTests(unittest.TestCase):
+    def test_get_only_uses_supported_merge_sha_api_contract(self):
+        """A real 2026-03-10 API call omitted merge_commit_sha on PR #39."""
+        class FakeResponse:
+            status = 200
+            def read(self, limit):
+                return b'{"number": 39, "merged": true}'
+
+        class FakeConnection:
+            def __init__(self):
+                self.requests = []
+                self.closed = False
+            def request(self, method, path, headers=None):
+                self.requests.append((method, path, dict(headers or {})))
+            def getresponse(self):
+                return FakeResponse()
+            def close(self):
+                self.closed = True
+
+        connection = FakeConnection()
+        with patch("proofrail.github_observer.http.client.HTTPSConnection", return_value=connection) as mk:
+            value = GitHubReadOnlyPullTransport("fake-test-token").get_pull(
+                "prettybusysolutions-eng/proofrail", 39
+            )
+        self.assertEqual(value["number"], 39)
+        self.assertTrue(connection.closed)
+        mk.assert_called_once_with("api.github.com", timeout=10.0)
+        method, path, headers = connection.requests[0]
+        self.assertEqual(method, "GET")
+        self.assertEqual(path, "/repos/prettybusysolutions-eng/proofrail/pulls/39")
+        self.assertEqual(headers["X-GitHub-Api-Version"], "2022-11-28")
 
 
 if __name__ == "__main__":
