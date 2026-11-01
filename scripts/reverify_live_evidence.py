@@ -27,7 +27,7 @@ EXPECTED = {
 
 
 def verify(package: dict, *, authority_hex: str, observer_hex: str,
-           repository: str, merged_pr: int, merged_head: str,
+           repository: str, repository_id: int, merged_pr: int, merged_head: str,
            base_ref: str, open_pr: int | None = None,
            open_base_ref: str | None = None) -> tuple[bool, list[str]]:
     failures = []
@@ -38,6 +38,8 @@ def verify(package: dict, *, authority_hex: str, observer_hex: str,
         return False, ["invalid_source_metadata"]
     if package.get("repository") != repository:
         failures.append("wrong_repository")
+    if type(repository_id) is not int or repository_id <= 0 or package.get("repository_id") != repository_id:
+        failures.append("wrong_repository_id")
     for key, value in (
         ("merged_pr", merged_pr),
         ("merged_pr_head", merged_head),
@@ -88,6 +90,8 @@ def verify(package: dict, *, authority_hex: str, observer_hex: str,
                 failures.append(name + ":scenario_expectation_changed")
             if eff.get("repository") != repository:
                 failures.append(name + ":wrong_effect_repository")
+            if type(eff.get("repository_id")) is not int or eff["repository_id"] != repository_id:
+                failures.append(name + ":wrong_effect_repository_id")
             if name != "E_open_PR" and eff.get("pull_number") != merged_pr:
                 failures.append(name + ":wrong_effect_pr")
             if name == "A_exact_merge_RETROSPECTIVE":
@@ -140,6 +144,7 @@ def main() -> int:
     p.add_argument("--authority-key", required=True)
     p.add_argument("--observer-key", required=True)
     p.add_argument("--repository", required=True)
+    p.add_argument("--repository-id", required=True, type=int)
     p.add_argument("--merged-pr", type=int, required=True)
     p.add_argument("--merged-head", required=True, help="40-character head SHA obtained from git independently of evidence JSON")
     p.add_argument("--base-ref", required=True)
@@ -157,7 +162,7 @@ def main() -> int:
             pkg,
             authority_hex=args.authority_key,
             observer_hex=args.observer_key,
-            repository=args.repository,
+            repository=args.repository, repository_id=args.repository_id,
             merged_pr=args.merged_pr, merged_head=args.merged_head,
             base_ref=args.base_ref,
             open_pr=args.open_pr, open_base_ref=args.open_base_ref,
