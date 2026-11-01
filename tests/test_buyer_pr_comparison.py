@@ -189,6 +189,35 @@ class BuyerPRComparisonTests(unittest.TestCase):
             return BytesResponse(json.dumps(github_pr()).encode())
         get_pull(REPO, 42, opener=opener)
 
+    def test_default_transport_installs_redirect_refusal(self):
+        from proofrail.github_pr_compare import _NoRedirect
+
+        class FakeOpener:
+            def open(self, req, timeout=15):
+                return BytesResponse(json.dumps(github_pr()).encode())
+
+        with patch("proofrail.github_pr_compare.urllib.request.build_opener",
+                   return_value=FakeOpener()) as builder:
+            get_pull(REPO, 42, token="buyer-token")
+            self.assertEqual(len(builder.call_args.args), 1)
+            redirector = builder.call_args.args[0]
+            self.assertIsInstance(redirector, _NoRedirect)
+            request = __import__("urllib.request", fromlist=["Request"]).Request(
+                "https://api.github.com/repos/example/repo/pulls/42",
+                headers={"Authorization": "Bearer buyer-token"},
+            )
+            self.assertIsNone(redirector.redirect_request(
+                request, None, 302, "Moved", {}, "https://attacker.invalid/collect"
+            ))
+
+    def test_future_merge_and_inconsistent_unmerged_timestamp_fail_closed(self):
+        for item in (
+            github_pr(merged_at="2999-01-01T00:00:00Z"),
+            github_pr(merged=False, state="closed", merged_at="2026-10-30T12:30:05Z"),
+        ):
+            with self.subTest(item=item):
+                self.assertEqual(self.compare(item)["summary"]["unavailable"], 1)
+
     def test_malformed_and_huge_network_responses_refused(self):
         for raw in (b"[]", b"{broken", b"x" * 256001):
             with self.subTest(length=len(raw)):
