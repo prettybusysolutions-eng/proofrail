@@ -33,12 +33,13 @@ permissions:
 jobs:
   read-only-live-trial:
     # Avoid running on forks or other PRs: the PR-triggered exception applies
-    # only to the branch that contains this prototype and no external secrets.
+    # only to the two named draft trial branches and no external secrets.
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
        github.event.pull_request.head.repo.full_name == github.repository &&
-       github.event.pull_request.head.ref == 'test/live-github-reliance-evidence-20261030')
+       (github.event.pull_request.head.ref == 'test/live-github-reliance-evidence-20261030' ||
+        github.event.pull_request.head.ref == 'feat/repository-id-premerge-anchor-20261101'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
