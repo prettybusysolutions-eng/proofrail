@@ -152,6 +152,58 @@ class ObserverAnchorTests(unittest.TestCase):
         self.assertEqual(result["observation"]["outcome"], "applied")
         self.assertEqual(t.calls[-1], ("GET_STATUS", REPO, HEAD, 1))
 
+    def test_context_capitalization_must_match_signed_context_exactly(self):
+        effect, auth = self.anchored()
+        for alternate in ("ProofRail/Permit", "PROOFRAIL/PERMIT",
+                          "proofrail/Permit"):
+            with self.subTest(alternate=alternate):
+                t = FakeTransport(statuses=[[
+                    self.status(auth, context=alternate),
+                ]])
+                result = self.observe(t, effect=effect, auth=auth)
+                self.assertEqual(result["observation"]["outcome"], "failed")
+                self.assertEqual(result["reason"], "signed_github_observation")
+        # Exact status context remains accepted; this is not a blanket denial.
+        exact = self.observe(FakeTransport(statuses=[[
+            self.status(auth, context="proofrail/permit"),
+        ]]), effect=effect, auth=auth)
+        self.assertEqual(exact["observation"]["outcome"], "applied")
+
+    def test_issuer_clock_lead_is_accepted_only_within_five_seconds(self):
+        effect, auth = self.anchored()
+        for time_text, outcome in (
+            ("2030-01-01T09:59:54Z", "failed"),  # six seconds early
+            ("2030-01-01T09:59:55Z", "applied"),  # boundary: five seconds
+            ("2030-01-01T09:59:58Z", "applied"),  # two seconds early
+            ("2030-01-01T10:00:00Z", "applied"), # no skew needed
+        ):
+            with self.subTest(status_created_at=time_text):
+                t = FakeTransport(statuses=[[
+                    self.status(auth, at=time_text),
+                ]])
+                result = self.observe(t, effect=effect, auth=auth)
+                self.assertEqual(result["observation"]["outcome"], outcome)
+
+    def test_clock_skew_never_allows_status_at_or_after_merge(self):
+        effect, auth = self.anchored()
+        for time_text in ("2030-01-01T11:30:00Z", "2030-01-01T11:30:01Z"):
+            with self.subTest(status_created_at=time_text):
+                result = self.observe(FakeTransport(statuses=[[
+                    self.status(auth, at=time_text)
+                ]]), effect=effect, auth=auth)
+                self.assertEqual(result["observation"]["outcome"], "failed")
+
+    def test_clock_skew_does_not_override_superseding_failed_status(self):
+        effect, auth = self.anchored()
+        before_issuance = self.status(auth, at="2030-01-01T09:59:58Z")
+        later_failure = self.status(auth, state="failure",
+                                    at="2030-01-01T11:20:00Z")
+        result = self.observe(
+            FakeTransport(statuses=[[later_failure, before_issuance]]),
+            effect=effect, auth=auth,
+        )
+        self.assertEqual(result["observation"]["outcome"], "failed")
+
     def test_no_anchor_causes_signed_failure(self):
         effect, auth = self.anchored()
         t = FakeTransport()
