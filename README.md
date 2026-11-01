@@ -47,9 +47,20 @@ customer source code or cloud account**. After obtaining the source and
 installing dependencies (using your own approved package mirror if needed),
 the reproduction check runs locally. It validates the bundled evidence's
 internal consistency, not the identity of a trusted external issuer.
-For independent **origin** verification, pin trusted public keys from a
-separately controlled channel; copying the keys from the bundle is not
-independent verification.
+For an evaluation with independently provisioned trust keys, the verifier
+accepts a directory of public keys that the buyer has pinned separately:
+
+```bash
+.venv/bin/proofrail reproduce PATH/TO/EVIDENCE-BUNDLE --trusted-keys DIR
+```
+
+`DIR` must contain trusted public keys corresponding to the issuers of that
+specific evidence bundle; unrelated keys will correctly fail verification.
+**The public demo has no independently established issuer identity or key
+source**: its test keys are included in this repository. Copying those keys
+from the demo into `DIR` does not prove origin, even if verification passes.
+Origin verification becomes meaningful with buyer-controlled or otherwise
+independently authenticated issuers and their separately pinned public keys.
 
 **Suggested buyer-operated evaluation:** run the verifier internally, attempt
 the [documented tamper check](docs/QUICKSTART.md), and share only a
