@@ -22,6 +22,7 @@ M_SHA = "c" * 40
 EFFECT = {
     "action_type": "github_merge",
     "repository": "example-co/critical",
+    "repository_id": 777,
     "pull_number": 42,
     "expected_head_sha": A_SHA,
     "expected_base_ref": "main",
@@ -32,7 +33,7 @@ def pull(*, head=A_SHA, merged=True, at="2030-01-01T11:30:00Z",
          repo="example-co/critical", number=42, state=None):
     return {
         "number": number,
-        "base": {"repo": {"full_name": repo}, "ref": "main"},
+        "base": {"repo": {"full_name": repo, "id": 777}, "ref": "main"},
         "head": {"sha": head},
         "merged": merged,
         "state": state or ("closed" if merged else "open"),
@@ -110,7 +111,7 @@ class GithubRelianceObserverTests(unittest.TestCase):
         self.assertEqual(result["observation"]["outcome"], "applied")
         self.assertEqual(
             result["observation"]["provider_event_id"],
-            f"github:example-co/critical#42:{M_SHA}",
+            "github:repo:777:pr:42:merged",
         )
         self.assertTrue(self.rely(result["observation"])["accepted"])
         self.assertEqual(self.rely(result["observation"])["reasons"],
@@ -154,7 +155,7 @@ class GithubRelianceObserverTests(unittest.TestCase):
             ConnectionError("private token missing"),
             {"message": "permission denied"},
             pull(merged=True, at="nonsense"),
-            {**pull(), "merge_commit_sha": None},
+            {**pull(), "merged_at": None},
         ):
             with self.subTest(data=repr(data)):
                 result, _ = self.observe(data)
