@@ -70,6 +70,14 @@ observation of your **actual GitHub PRs**, the customer controls whether and
 how a read-only GitHub API observer runs and retains all credentials; this is a
 separate, permissioned step and not a fully offline check.
 
+For a **buyer-operated baseline of real GitHub PRs**, the separate
+`proofrail compare-github-prs` command compares an internal CSV of independently
+recorded expected head commits and target branches to read-only GitHub PR data.
+It requires no retrospective signed ProofRail authorization, but it **cannot
+prove an actual historical approval**. See the
+[buyer PR comparison guide](docs/BUYER_GITHUB_PR_COMPARISON.md) for exact CLI
+usage, evidence boundaries, and exit codes.
+
 **Current limits:** a passing demo does not prove that historical merges had
 human approval, that an outside reviewer trusts the issuer, or that GitHub
 blocks an unauthorized merge. Repository-ID binding and pre-merge status-anchor
