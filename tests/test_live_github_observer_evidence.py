@@ -30,7 +30,7 @@ class FakeReadOnly:
         if number == 39:
             return {
                 "number": 39,
-                "base": {"repo": {"full_name": REPO}, "ref": BASE},
+                "base": {"repo": {"full_name": REPO, "id": 1269387883}, "ref": BASE},
                 "head": {"sha": HEAD},
                 "merged": True,
                 "state": "closed",
@@ -40,7 +40,7 @@ class FakeReadOnly:
         if number == 68:
             return {
                 "number": 68,
-                "base": {"repo": {"full_name": REPO}, "ref": OPEN_BASE},
+                "base": {"repo": {"full_name": REPO, "id": 1269387883}, "ref": OPEN_BASE},
                 "head": {"sha": OPEN_HEAD},
                 "merged": False,
                 "state": "open",
@@ -67,7 +67,7 @@ class LiveTrialSelfCheckTests(unittest.TestCase):
             raise AssertionError("wrong git PR")
 
         args = SimpleNamespace(
-            repository=REPO, merged_pr=39, base_ref=BASE,
+            repository=REPO, repository_id=1269387883, merged_pr=39, base_ref=BASE,
             open_pr=68, open_base_ref=OPEN_BASE,
         )
         with patch("scripts.live_github_observer_check.pr_head_from_git", side_effect=pr_git):
@@ -76,7 +76,7 @@ class LiveTrialSelfCheckTests(unittest.TestCase):
         self.args = dict(
             authority_hex=self.package["trust_anchors"]["authority"]["public_key_hex"],
             observer_hex=self.package["trust_anchors"]["observer"]["public_key_hex"],
-            repository=REPO, merged_pr=39, merged_head=HEAD,
+            repository=REPO, repository_id=1269387883, merged_pr=39, merged_head=HEAD,
             base_ref=BASE, open_pr=68, open_base_ref=OPEN_BASE,
         )
 

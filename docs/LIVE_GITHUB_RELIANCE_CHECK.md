@@ -49,7 +49,7 @@ python scripts/reverify_live_evidence.py live-evidence.json \
   --authority-key <pinned-test-issuer-hex> \
   --observer-key <pinned-test-observer-hex> \
   --expected-sha256 <pinned-job-log-digest> \
-  --repository prettybusysolutions-eng/proofrail \
+  --repository prettybusysolutions-eng/proofrail --repository-id 1269387883 \
   --merged-pr 39 --merged-head <independently-read-git-pr-head-sha> \
   --base-ref main \
   --open-pr <still-open-trial-PR-number> \
@@ -83,3 +83,12 @@ This remains an experimental testing branch. Independent semantic review,
 non-retrospective real signed authority, durable external observation custody,
 operator-controlled keys, a buyer-agreed GitHub-native baseline, and
 well-scoped production admission remain outstanding.
+
+## Repository identity format update (draft follow-on)
+
+The follow-on observer requires the GitHub numeric `repository_id` in every
+signed effect and in the separately pinned offline re-verifier arguments.
+Old evidence packages created by PR #69's earlier format are not migrated
+or retrospectively upgraded. The new event-ID format requires a fresh local
+ledger namespace. Anchored authorizations are optional and not issued by the
+synthetic retrospective trial.

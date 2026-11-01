@@ -33,12 +33,13 @@ permissions:
 jobs:
   read-only-live-trial:
     # Avoid running on forks or other PRs: the PR-triggered exception applies
-    # only to the branch that contains this prototype and no external secrets.
+    # only to the two named draft trial branches and no external secrets.
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' &&
        github.event.pull_request.head.repo.full_name == github.repository &&
-       github.event.pull_request.head.ref == 'test/live-github-reliance-evidence-20261030')
+       (github.event.pull_request.head.ref == 'test/live-github-reliance-evidence-20261030' ||
+        github.event.pull_request.head.ref == 'feat/repository-id-premerge-anchor-20261101'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -53,13 +54,14 @@ jobs:
       - name: Observe actual GitHub PRs using only GET and synthetic authorizations
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY_ID: ${{ github.repository_id }}
           MERGED_PR: ${{ github.event_name == 'pull_request' && '39' || inputs.merged_pr }}
           BASE_REF: ${{ github.event_name == 'pull_request' && 'main' || inputs.base_ref }}
           OPEN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || inputs.open_pr }}
           OPEN_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || inputs.open_base_ref }}
         shell: bash
         run: |
-          args=(--repository "$GITHUB_REPOSITORY" --merged-pr "$MERGED_PR" --base-ref "$BASE_REF" --out live-evidence.json)
+          args=(--repository "$GITHUB_REPOSITORY" --repository-id "$REPOSITORY_ID" --merged-pr "$MERGED_PR" --base-ref "$BASE_REF" --out live-evidence.json)
           if [[ -n "$OPEN_PR" ]]; then
             args+=(--open-pr "$OPEN_PR" --open-base-ref "$OPEN_BASE_REF")
           fi
@@ -68,6 +70,7 @@ jobs:
         if: success()
         env:
           MERGED_PR: ${{ github.event_name == 'pull_request' && '39' || inputs.merged_pr }}
+          REPOSITORY_ID: ${{ github.repository_id }}
           BASE_REF: ${{ github.event_name == 'pull_request' && 'main' || inputs.base_ref }}
           OPEN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || inputs.open_pr }}
           OPEN_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || inputs.open_base_ref }}
@@ -76,7 +79,7 @@ jobs:
           AUTH=$(python -c 'import json;print(json.load(open("live-evidence.json"))["trust_anchors"]["authority"]["public_key_hex"])')
           OBS=$(python -c 'import json;print(json.load(open("live-evidence.json"))["trust_anchors"]["observer"]["public_key_hex"])')
           HEAD=$(git ls-remote origin "refs/pull/${MERGED_PR}/head" | cut -f1)
-          args=(--repository "$GITHUB_REPOSITORY" --merged-pr "$MERGED_PR" --merged-head "$HEAD" --base-ref "$BASE_REF")
+          args=(--repository "$GITHUB_REPOSITORY" --repository-id "$REPOSITORY_ID" --merged-pr "$MERGED_PR" --merged-head "$HEAD" --base-ref "$BASE_REF")
           if [[ -n "$OPEN_PR" ]]; then
             args+=(--open-pr "$OPEN_PR" --open-base-ref "$OPEN_BASE_REF")
           fi
