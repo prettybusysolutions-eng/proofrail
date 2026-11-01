@@ -22,6 +22,54 @@ This supports a narrow, testable claim: the authority primitive is not tied to
 GitHub. It does not claim that every execution domain is already supported or
 that the pilot components are production infrastructure.
 
+## For Security and Release Teams
+
+**Can a reviewer verify that an automated change matched the authority granted
+for that exact change, without trusting the agent's own success message?**
+
+ProofRail's current reference implementation demonstrates signed, single-use
+action permits, provider reconciliation and portable verification. Its GitHub
+merge adapter and SQLite migration adapter are testable examples, not
+production-certified integrations.
+
+### Start without exposing your private repositories
+
+Run the **public, synthetic reproduction package on your own machine**:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install .
+.venv/bin/proofrail reproduce examples/reproduce_artifact/
+```
+
+This first check requires **no private repository access, GitHub token,
+customer source code or cloud account**. After obtaining the source and
+installing dependencies (using your own approved package mirror if needed),
+the reproduction check runs locally. It validates the bundled evidence's
+internal consistency, not the identity of a trusted external issuer.
+For independent **origin** verification, pin trusted public keys from a
+separately controlled channel; copying the keys from the bundle is not
+independent verification.
+
+**Suggested buyer-operated evaluation:** run the verifier internally, attempt
+the [documented tamper check](docs/QUICKSTART.md), and share only a
+customer-approved pass/fail summary or redacted findings. No customer data needs
+to be sent to the ProofRail maintainer for this first step. For any later
+observation of your **actual GitHub PRs**, the customer controls whether and
+how a read-only GitHub API observer runs and retains all credentials; this is a
+separate, permissioned step and not a fully offline check.
+
+**Current limits:** a passing demo does not prove that historical merges had
+human approval, that an outside reviewer trusts the issuer, or that GitHub
+blocks an unauthorized merge. Repository-ID binding and pre-merge status-anchor
+checks are still under review in [draft PR #70](https://github.com/prettybusysolutions-eng/proofrail/pull/70);
+live enforcement using a disposable GitHub App remains a
+[separate release gate](https://github.com/prettybusysolutions-eng/proofrail/issues/71).
+
+[10-minute reproducible quickstart](docs/QUICKSTART.md) ·
+[Trust boundaries](docs/TRUST_BOUNDARIES.md) ·
+[Known limitations](docs/KNOWN_LIMITATIONS.md)
+
 ## Why It Exists
 
 An audit log can show what an agent says it did. It does not necessarily prove:
