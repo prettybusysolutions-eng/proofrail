@@ -212,7 +212,7 @@ def compare_prs(
         "source": "GitHub REST API GET /pulls/{number}; unsigned provider response",
         "expected_values_source": "buyer-supplied CSV; not authenticated by ProofRail",
         "authorization_proven": False,
-        "no_gitHub_writes": True,
+        "no_github_writes": True,
         "summary": summary,
         "results": results,
         "limitations": [
