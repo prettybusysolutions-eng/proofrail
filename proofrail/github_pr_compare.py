@@ -33,6 +33,13 @@ class ProviderUnavailable(Exception):
     """Provider data is unavailable or not safely interpretable."""
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Refuse redirects: a bearer token must never leave api.github.com."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def read_expectations(path: str | Path) -> list[dict[str, Any]]:
     """Accept only a small, exact-schema CSV; reject ambiguous rows."""
     raw = Path(path).read_bytes()
@@ -93,7 +100,9 @@ def get_pull(repository: str, number: int, *, token: str = "", opener: Callable[
         headers["Authorization"] = "Bearer " + token
     req = urllib.request.Request(url, headers=headers, method="GET")
     try:
-        fn = opener or urllib.request.urlopen
+        # urllib's default opener follows redirects. Use a strict opener so
+        # even a compromised/misconfigured API response cannot redirect tokens.
+        fn = opener or urllib.request.build_opener(_NoRedirect()).open
         with fn(req, timeout=15) as resp:
             raw = resp.read(_MAX_RESPONSE_BYTES + 1)
         if len(raw) > _MAX_RESPONSE_BYTES:
@@ -158,8 +167,11 @@ def compare_prs(
                     or type(merged) is not bool or state not in ("open", "closed")):
                 raise ProviderUnavailable("incomplete or malformed GitHub PR data")
             merged_at = _iso_time(pull.get("merged_at")) if merged else None
-            if merged and state != "closed":
+            if (merged and state != "closed") or (not merged and pull.get("merged_at") is not None):
                 raise ProviderUnavailable("contradictory GitHub PR merge state")
+            if merged_at is not None:
+                if datetime.fromisoformat(merged_at.replace("Z", "+00:00")) > datetime.now(timezone.utc):
+                    raise ProviderUnavailable("GitHub merge time is in the future")
             entry["github"] = {
                 "repository": name,
                 "repository_id": repo_id,
