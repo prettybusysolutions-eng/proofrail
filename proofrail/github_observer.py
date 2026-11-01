@@ -13,7 +13,7 @@ import http.client
 import json
 import re
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
@@ -35,6 +35,9 @@ _EFFECT_FIELDS = _REQUIRED_EFFECT_FIELDS | {"pre_merge_anchor"}
 _ANCHOR_FIELDS = frozenset(("type", "context", "creator_id"))
 _MAX_RESPONSE_BYTES = 262144
 _MAX_STATUS_PAGES = 10
+# Fixed tolerance for issuer clock ahead of GitHub's status timestamp.
+# Do not make this buyer-selected; it weakens chronological assurance.
+_MAX_ANCHOR_CLOCK_SKEW = timedelta(seconds=5)
 _SUPPORTED_API_VERSIONS = frozenset(("2022-11-28", "2026-03-10"))
 
 
@@ -155,10 +158,14 @@ def _anchor_result(
 
     The newest same-context status recorded before merge must be a matching
     success from the buyer-pinned creator, carrying the precise authorization
-    hash. Ambiguous second-resolution chronology fails closed.
+    hash. Allow at most five seconds of bounded issuer-clock lead over
+    GitHub's status created_at, but still require a status strictly before
+    the merge. Ambiguous second-resolution chronology fails closed.
     """
     candidates: list[tuple[datetime, Mapping[str, Any]]] = []
-    context = anchor["context"].casefold()
+    # Use the exact signed status context; case folding could accept a
+    # different context than the repository's native required status.
+    context = anchor["context"]
     try:
         for page in range(1, _MAX_STATUS_PAGES + 1):
             statuses = transport.get_statuses(repository, head, page)
@@ -170,7 +177,7 @@ def _anchor_result(
                 supplied_context = status.get("context")
                 if not isinstance(supplied_context, str):
                     return "unavailable"
-                if supplied_context.casefold() != context:
+                if supplied_context != context:
                     continue
                 timestamp = _time(status.get("created_at"))
                 # GitHub exposes status times only to the second. An anchor
@@ -190,7 +197,7 @@ def _anchor_result(
         return "failed"
     latest_time = max(t for t, _ in candidates)
     latest = [status for t, status in candidates if t == latest_time]
-    if len(latest) != 1 or latest_time < issued:
+    if len(latest) != 1 or latest_time < issued - _MAX_ANCHOR_CLOCK_SKEW:
         return "failed"
     status = latest[0]
     creator = status.get("creator")
