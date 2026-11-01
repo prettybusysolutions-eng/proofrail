@@ -72,6 +72,8 @@ def public_hex(key: Ed25519PrivateKey) -> str:
 
 
 def run(args: argparse.Namespace, transport=None) -> tuple[dict, int]:
+    if type(args.repository_id) is not int or args.repository_id <= 0:
+        raise ValueError("positive expected repository ID required")
     if args.merged_pr <= 0 or (args.open_pr is not None and args.open_pr <= 0):
         raise ValueError("PR numbers must be positive")
     if args.open_pr is not None and not args.open_base_ref:
@@ -103,6 +105,7 @@ def run(args: argparse.Namespace, transport=None) -> tuple[dict, int]:
         return {
             "action_type": "github_merge",
             "repository": args.repository,
+            "repository_id": args.repository_id,
             "pull_number": pr,
             "expected_head_sha": head,
             "expected_base_ref": base,
@@ -191,6 +194,7 @@ def run(args: argparse.Namespace, transport=None) -> tuple[dict, int]:
     package = {
         "kind": "proofrail.live-github-observer-check.v0",
         "repository": args.repository,
+        "repository_id": args.repository_id,
         "evaluated_at": z(now),
         "read_only": True,
         "evidence_type": "live GitHub GET + SYNTHETIC signed retrospective authorizations",
@@ -228,6 +232,7 @@ def run(args: argparse.Namespace, transport=None) -> tuple[dict, int]:
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--repository", required=True)
+    p.add_argument("--repository-id", required=True, type=int)
     p.add_argument("--merged-pr", type=int, required=True)
     p.add_argument("--base-ref", required=True)
     p.add_argument("--open-pr", type=int)
