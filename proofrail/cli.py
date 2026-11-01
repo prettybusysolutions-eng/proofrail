@@ -159,6 +159,16 @@ def build_parser() -> argparse.ArgumentParser:
     github_demo = demo_commands.add_parser("github-merge-authority")
     github_demo.add_argument("--out-dir", default="proofrail-demo")
     github_demo.set_defaults(handler=handle_github_demo)
+
+    compare = commands.add_parser(
+        "compare-github-prs",
+        help="read-only comparison of buyer-supplied PR facts against GitHub",
+    )
+    compare.add_argument("--repository", required=True, metavar="OWNER/REPO")
+    compare.add_argument("--input", required=True, metavar="EXPECTED.csv")
+    compare.add_argument("--output", required=True, metavar="RESULTS.json")
+    compare.add_argument("--repository-id", type=int, help="optional pinned numeric GitHub repository ID")
+    compare.set_defaults(handler=handle_compare_github_prs)
     return parser
 
 
@@ -364,6 +374,11 @@ def handle_reproduce(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
     return 0 if result["valid"] else 4
+
+
+def handle_compare_github_prs(args: argparse.Namespace) -> int:
+    from .github_pr_compare import run_comparison
+    return run_comparison(args)
 
 
 def handle_github_demo(args: argparse.Namespace) -> int:

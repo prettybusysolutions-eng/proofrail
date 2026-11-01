@@ -1,0 +1,45 @@
+name: Buyer PR Comparison Read-Only Smoke
+
+on:
+  pull_request:
+    paths:
+      - "proofrail/github_pr_compare.py"
+      - "proofrail/cli.py"
+      - "tests/test_buyer_pr_comparison.py"
+      - ".github/workflows/buyer-pr-comparison-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  live-public-pr-get:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install comparison CLI
+        run: python -m pip install -e .
+      - name: Compare a known real merged GitHub PR (no historic approval asserted)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s\n' \
+            'pull_number,expected_head_sha,expected_base_ref' \
+            '72,6d5fbda1136c492d1abf9229841559c8e3645d5f,main' > "$RUNNER_TEMP/expected.csv"
+          proofrail compare-github-prs \
+            --repository prettybusysolutions-eng/proofrail \
+            --repository-id 1269387883 \
+            --input "$RUNNER_TEMP/expected.csv" \
+            --output "$RUNNER_TEMP/report.json"
+          python - "$RUNNER_TEMP/report.json" <<'PY'
+          import json, sys
+          report = json.load(open(sys.argv[1], encoding="utf-8"))
+          assert report["summary"] == {"total": 1, "match": 1, "mismatch": 0, "unavailable": 0}, report["summary"]
+          assert report["authorization_proven"] is False
+          assert report["results"][0]["authorization_proven"] is False
+          print("PASS live GET: PR facts matched; historical authorization NOT asserted")
+          PY
