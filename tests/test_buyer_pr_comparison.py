@@ -68,6 +68,13 @@ class BuyerPRComparisonTests(unittest.TestCase):
         self.assertFalse(v["results"][0]["authorization_proven"])
         self.assertEqual(v["results"][0]["github"]["merged_at"], "2026-10-30T12:30:05Z")
 
+    def test_report_no_github_writes_field_is_stable(self):
+        result = self.compare()
+        self.assertIs(result["no_github_writes"], True)
+        self.assertNotIn("no_gitHub_writes", result)
+        json_report = json.loads(json.dumps(result))
+        self.assertIs(json_report["no_github_writes"], True)
+
     def test_wrong_head_ref_and_repository_are_mismatches(self):
         cases = (
             (github_pr(head={"sha": "b" * 40}), "head_sha_mismatch"),
