@@ -25,4 +25,4 @@ Describe the change and exactly what behavior or documentation it affects.
 **Known limitations / unresolved review:**
 
 > This form collects contributor statements; it does not validate legal
-> ownership or transfer copyright. See [CONTRIBUTING.md](../CONTRIBUTING.md).
+> ownership or transfer copyright. See [CONTRIBUTING.md](https://github.com/prettybusysolutions-eng/proofrail/blob/main/CONTRIBUTING.md).
