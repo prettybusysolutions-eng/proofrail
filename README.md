@@ -1,8 +1,19 @@
-# ProofRail
+# Grantifold — working name
 
-**Single-use cryptographic authority for autonomous execution.**
+**Single-use cryptographic authority research for autonomous execution.**
 
-ProofRail issues signed permits that bind an autonomous agent to one exact
+Grantifold is a **provisional project name**, pending legal trademark clearance.
+This repository is the original public code history of the project formerly
+called ProofRail. The existing `proofrail` Python import path, historical
+artifact schemas, CLI aliases, commit history, and repository slug remain for
+compatibility; they are **not** evidence of exclusive rights to that name.
+
+**Install only from this source checkout** until a new distribution is
+published and its provenance is independently confirmed. The unrelated
+`proofrail` project on PyPI is **not this software**. Never use
+`pip install proofrail` to install this project.
+
+The implementation issues signed permits that bind an autonomous agent to one exact
 action, target, evidence set, policy state, approval, and expected outcome.
 Authority is consumed before the side effect. Provider state is checked after
 execution. Changed or ambiguous conditions fail closed.
@@ -12,7 +23,7 @@ intent -> evidence -> policy -> approval -> signed permit
        -> one execution -> provider observation -> audit proof
 ```
 
-ProofRail currently demonstrates the same authority model across two
+The implementation currently demonstrates the same authority model across two
 high-consequence domains:
 
 1. merging an exact GitHub pull-request head
@@ -27,7 +38,7 @@ that the pilot components are production infrastructure.
 **Can a reviewer verify that an automated change matched the authority granted
 for that exact change, without trusting the agent's own success message?**
 
-ProofRail's current reference implementation demonstrates signed, single-use
+The Grantifold reference implementation demonstrates signed, single-use
 action permits, provider reconciliation and portable verification. Its GitHub
 merge adapter and SQLite migration adapter are testable examples, not
 production-certified integrations.
@@ -39,7 +50,7 @@ Run the **public, synthetic reproduction package on your own machine**:
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install .
-.venv/bin/proofrail reproduce examples/reproduce_artifact/
+.venv/bin/grantifold reproduce examples/reproduce_artifact/
 ```
 
 This first check requires **no private repository access, GitHub token,
@@ -51,7 +62,7 @@ For an evaluation with independently provisioned trust keys, the verifier
 accepts a directory of public keys that the buyer has pinned separately:
 
 ```bash
-.venv/bin/proofrail reproduce PATH/TO/EVIDENCE-BUNDLE --trusted-keys DIR
+.venv/bin/grantifold reproduce PATH/TO/EVIDENCE-BUNDLE --trusted-keys DIR
 ```
 
 `DIR` must contain trusted public keys corresponding to the issuers of that
@@ -71,7 +82,7 @@ how a read-only GitHub API observer runs and retains all credentials; this is a
 separate, permissioned step and not a fully offline check.
 
 For a **buyer-operated baseline of real GitHub PRs**, the separate
-`proofrail compare-github-prs` command compares an internal CSV of independently
+`grantifold compare-github-prs` command compares an internal CSV of independently
 recorded expected head commits and target branches to read-only GitHub PR data.
 It requires no retrospective signed ProofRail authorization, but it **cannot
 prove an actual historical approval**. See the
@@ -126,7 +137,7 @@ Requirements: Python 3.11 or newer.
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install .
-.venv/bin/proofrail reproduce examples/reproduce_artifact/
+.venv/bin/grantifold reproduce examples/reproduce_artifact/
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
@@ -143,7 +154,7 @@ key also exits `0`. To verify origin, obtain the six `*-public-key.txt` files
 through a channel independent of the bundle and pin them:
 
 ```bash
-.venv/bin/proofrail reproduce examples/reproduce_artifact/ --trusted-keys /path/to/pinned-keys/
+.venv/bin/grantifold reproduce examples/reproduce_artifact/ --trusted-keys /path/to/pinned-keys/
 ```
 
 With pinned keys, any in-bundle key that differs from its pinned value fails
@@ -232,9 +243,9 @@ sources, and deployment hardening.
 
 ## Product Line
 
-**ProofRail issues single-use cryptographic permits for autonomous agents,
-binding exact authority to exact actions across code, infrastructure, and data
-changes.**
+**Grantifold (working title) researches single-use cryptographic permits
+for autonomous agents, binding exact authority to actions across code and
+data changes in testable reference implementations.**
 
 Code and data changes are demonstrated today. Infrastructure changes are the
 intended substrate direction, not a currently verified adapter claim.
