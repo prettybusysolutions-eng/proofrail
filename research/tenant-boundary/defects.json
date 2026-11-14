@@ -1,0 +1,69 @@
+{
+  "version": "1",
+  "note": "Each defect replaces exactly one line marked `// @anchor:<anchor>` in fixture/runtime.ts. Grounding cites the public report whose shape the defect copies; it does not claim the real product still has the bug.",
+  "defects": [
+    {
+      "id": "D1-global-memory",
+      "anchor": "memory-dir",
+      "replacement": "return join(this.root, 'memories');",
+      "boundary": "memory",
+      "grounding": "Hermes #85497 (kanban HERMES_TENANT has no memory-isolation effect; all workers write one global MEMORY.md) and #34352 (memory is global; DM content reaches group sessions)"
+    },
+    {
+      "id": "D2-pinned-provider-client",
+      "anchor": "memory-client",
+      "replacement": "return (this.pinnedClient ??= new MemoryClient(this.memoryDir(s)));",
+      "boundary": "memory",
+      "grounding": "Hermes #75996 vector 1 (process-wide memory-provider singleton pins the first profile's workspace for the process lifetime)"
+    },
+    {
+      "id": "D3-session-key-collision",
+      "anchor": "session-key",
+      "replacement": "return `${user}`;",
+      "boundary": "session state",
+      "grounding": "Hermes #17068 as summarized in #34352 (two bots on one instance produce identical session keys, causing session state bleed)"
+    },
+    {
+      "id": "D4-shared-cache-key",
+      "anchor": "cache-key",
+      "replacement": "return topic;",
+      "boundary": "cache / retrieval",
+      "grounding": "Microsoft multitenant agentic-systems guidance (shared caches and retrieval as tenant boundaries); mcp-tenant-isolation rule category 'cache and session isolation'"
+    },
+    {
+      "id": "D5-model-supplied-tenant",
+      "anchor": "record-tenant",
+      "replacement": "if (a.tenant_id !== undefined) return a.tenant_id;",
+      "boundary": "tool call",
+      "grounding": "Issue #82 test list (spoofed tenant_id tool argument); OWASP-style broken object-level authorization"
+    },
+    {
+      "id": "D6-handoff-drops-tenant",
+      "anchor": "child-session",
+      "replacement": "return { ...s, tenant: DEFAULT_TENANT, key: `${s.botId}:${DEFAULT_TENANT}:${s.user}:child` };",
+      "boundary": "delegation / handoff",
+      "grounding": "Issue #82 test list (subagent handoff drop); Microsoft guidance (agent handoffs as a separate isolation boundary)"
+    },
+    {
+      "id": "D7-shared-log",
+      "anchor": "log-file",
+      "replacement": "return join(this.root, 'logs', 'agent.log');",
+      "boundary": "logs",
+      "grounding": "Issue #82 test list (log/artifact leakage); Hermes test_log_isolation.py exists upstream, indicating the bug class"
+    },
+    {
+      "id": "D8-pinned-artifact-path",
+      "anchor": "artifacts-dir",
+      "replacement": "return (this.pinnedArtifactsDir ??= join(this.tenantDir(s.tenant), 'artifacts'));",
+      "boundary": "artifacts / persistence",
+      "grounding": "Hermes conformance tripwire docstring: store paths frozen at import time (#89625) and import-time snapshot leaks (#92156)"
+    },
+    {
+      "id": "D9-shared-consolidation-buffer",
+      "anchor": "consolidation-file",
+      "replacement": "return join(this.root, 'consolidation', 'recent.log');",
+      "boundary": "memory (latent, via consolidation)",
+      "grounding": "MemLeak (arXiv 2610.04195) retrieval-mediated cross-user contamination; Hermes memory-consolidation features (#5533, #10771). Leak is in state immediately but surfaces in outputs only after consolidation runs"
+    }
+  ]
+}
