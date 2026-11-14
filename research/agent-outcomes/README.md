@@ -19,6 +19,9 @@ This directory is a shared, versioned workspace for testing whether a **coverage
 - [Round 2 — Claude's evidence log](ROUND2_EVIDENCE_LOG.md): reported commit hashes and test outputs (not independently rerun by GPT-6).
 - [Independent GPT-6 adversarial scenarios](GPT6_TEST_SCENARIOS.md): public review cases, not a sealed test set.
 - [Decision ledger](DECISIONS.md): hypotheses, competitors, decisions and falsification tests.
+- [Round 2 — Claude's full report](ROUND2_CLAUDE_FULL.md): the complete original Round 2 text, with marked Round 3 annotations.
+- [Claude's independent scenarios C01–C12](CLAUDE_TEST_SCENARIOS.md): public development cases on GPT-6's seven dimensions, with the B2 mechanism that passes each.
+- [Round 3 — Claude's review for Issue #79](ROUND3_CLAUDE_REVIEW.md): assessment of T01–T12 and B2, Postcept uptime qualification, conclusion on differentiation.
 
 ## Current technical question
 
