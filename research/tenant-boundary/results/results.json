@@ -1,0 +1,541 @@
+{
+  "generatedAt": "2026-11-14T22:32:10.123Z",
+  "node": "v22.23.4",
+  "scanner": "mcp-tenant-isolation@2.0.0",
+  "results": [
+    {
+      "variant": "C0-correct",
+      "boundary": null,
+      "groundTruthLeak": false,
+      "oracle": {
+        "atRestStateViolations": 0,
+        "afterWorkloadViolations": 0,
+        "finalViolations": 0,
+        "sample": []
+      },
+      "blackBox": {
+        "detected": false,
+        "probesRun": 36,
+        "via": null
+      },
+      "v1": {
+        "detected": false,
+        "settingsClaimIsolation": true,
+        "deniesUnauth": true
+      },
+      "scanner": {
+        "ok": true,
+        "findings": 2,
+        "all": [
+          "CSI-001|L150|.cache.get",
+          "CSI-001|L154|.cache.set"
+        ],
+        "newVsCorrect": [],
+        "detected": true
+      },
+      "functional": {
+        "ownRecallWorks": true
+      },
+      "ms": 65
+    },
+    {
+      "variant": "D1-global-memory",
+      "boundary": "memory",
+      "groundTruthLeak": true,
+      "oracle": {
+        "atRestStateViolations": 2,
+        "afterWorkloadViolations": 2,
+        "finalViolations": 5,
+        "sample": [
+          {
+            "store": "file:memories/MEMORY.md",
+            "owner": "shared",
+            "foreign": "acme"
+          },
+          {
+            "store": "file:memories/MEMORY.md",
+            "owner": "shared",
+            "foreign": "globex"
+          },
+          {
+            "store": "file:tenants/acme/consolidation/recent.log",
+            "owner": "acme",
+            "foreign": "globex"
+          },
+          {
+            "store": "session:bot-acme:acme:u-100",
+            "owner": "acme",
+            "foreign": "globex"
+          }
+        ]
+      },
+      "blackBox": {
+        "detected": true,
+        "probesRun": 1,
+        "via": "probe:acme:same-user:recall"
+      },
+      "v1": {
+        "detected": false,
+        "settingsClaimIsolation": true,
+        "deniesUnauth": true
+      },
+      "scanner": {
+        "ok": true,
+        "findings": 2,
+        "all": [
+          "CSI-001|L150|.cache.get",
+          "CSI-001|L154|.cache.set"
+        ],
+        "newVsCorrect": [],
+        "detected": false
+      },
+      "functional": {
+        "ownRecallWorks": true
+      },
+      "ms": 17.6
+    },
+    {
+      "variant": "D2-pinned-provider-client",
+      "boundary": "memory",
+      "groundTruthLeak": true,
+      "oracle": {
+        "atRestStateViolations": 1,
+        "afterWorkloadViolations": 1,
+        "finalViolations": 4,
+        "sample": [
+          {
+            "store": "file:tenants/acme/consolidation/recent.log",
+            "owner": "acme",
+            "foreign": "globex"
+          },
+          {
+            "store": "file:tenants/acme/memories/MEMORY.md",
+            "owner": "acme",
+            "foreign": "globex"
+          },
+          {
+            "store": "session:bot-acme:acme:u-100",
+            "owner": "acme",
+            "foreign": "globex"
+          },
+          {
+            "store": "output:probe:recall",
+            "owner": "acme",
+            "foreign": "globex"
+          }
+        ]
+      },
+      "blackBox": {
+        "detected": true,
+        "probesRun": 1,
+        "via": "probe:acme:same-user:recall"
+      },
+      "v1": {
+        "detected": false,
+        "settingsClaimIsolation": true,
+        "deniesUnauth": true
+      },
+      "scanner": {
+        "ok": true,
+        "findings": 2,
+        "all": [
+          "CSI-001|L150|.cache.get",
+          "CSI-001|L154|.cache.set"
+        ],
+        "newVsCorrect": [],
+        "detected": false
+      },
+      "functional": {
+        "ownRecallWorks": true
+      },
+      "ms": 15.4
+    },
+    {
+      "variant": "D3-session-key-collision",
+      "boundary": "session state",
+      "groundTruthLeak": true,
+      "oracle": {
+        "atRestStateViolations": 4,
+        "afterWorkloadViolations": 4,
+        "finalViolations": 6,
+        "sample": [
+          {
+            "store": "file:tenants/acme/consolidation/recent.log",
+            "owner": "acme",
+            "foreign": "globex"
+          },
+          {
+            "store": "session:u-100",
+            "owner": "shared",
+            "foreign": "acme"
+          },
+          {
+            "store": "session:u-100",
+            "owner": "shared",
+            "foreign": "globex"
+          },
+          {
+            "store": "session:u-100:child",
+            "owner": "shared",
+            "foreign": "acme"
+          }
+        ]
+      },
+      "blackBox": {
+        "detected": true,
+        "probesRun": 2,
+        "via": "probe:acme:same-user:history"
+      },
+      "v1": {
+        "detected": false,
+        "settingsClaimIsolation": true,
+        "deniesUnauth": true
+      },
+      "scanner": {
+        "ok": true,
+        "findings": 2,
+        "all": [
+          "CSI-001|L150|.cache.get",
+          "CSI-001|L154|.cache.set"
+        ],
+        "newVsCorrect": [],
+        "detected": false
+      },
+      "functional": {
+        "ownRecallWorks": true
+      },
+      "ms": 6.8
+    },
+    {
+      "variant": "D4-shared-cache-key",
+      "boundary": "cache / retrieval",
+      "groundTruthLeak": true,
+      "oracle": {
+        "atRestStateViolations": 3,
+        "afterWorkloadViolations": 4,
+        "finalViolations": 4,
+        "sample": [
+          {
+            "store": "file:tenants/globex/consolidation/recent.log",
+            "owner": "globex",
+            "foreign": "acme"
+          },
+          {
+            "store": "session:bot-globex:globex:u-100",
+            "owner": "globex",
+            "foreign": "acme"
+          },
+          {
+            "store": "cache:q3-plan",
+            "owner": "shared",
+            "foreign": "acme"
+          },
+          {
+            "store": "output:workload:summarize",
+            "owner": "globex",
+            "foreign": "acme"
+          }
+        ]
+      },
+      "blackBox": {
+        "detected": true,
+        "probesRun": 0,
+        "via": "workload:summarize"
+      },
+      "v1": {
+        "detected": false,
+        "settingsClaimIsolation": true,
+        "deniesUnauth": true
+      },
+      "scanner": {
+        "ok": true,
+        "findings": 2,
+        "all": [
+          "CSI-001|L150|.cache.get",
+          "CSI-001|L154|.cache.set"
+        ],
+        "newVsCorrect": [],
+        "detected": false
+      },
+      "functional": {
+        "ownRecallWorks": true
+      },
+      "ms": 6.4
+    },
+    {
+      "variant": "D5-model-supplied-tenant",
+      "boundary": "tool call",
+      "groundTruthLeak": true,
+      "oracle": {
+        "atRestStateViolations": 2,
+        "afterWorkloadViolations": 3,
+        "finalViolations": 3,
+        "sample": [
+          {
+            "store": "file:tenants/globex/consolidation/recent.log",
+            "owner": "globex",
+            "foreign": "acme"
+          },
+          {
+            "store": "session:bot-globex:globex:u-100",
+            "owner": "globex",
+            "foreign": "acme"
+          },
+          {
+            "store": "output:workload:get_record",
+            "owner": "globex",
+            "foreign": "acme"
+          }
+        ]
+      },
+      "blackBox": {
+        "detected": true,
+        "probesRun": 0,
+        "via": "workload:get_record"
+      },
+      "v1": {
+        "detected": false,
+        "settingsClaimIsolation": true,
+        "deniesUnauth": true
+      },
+      "scanner": {
+        "ok": true,
+        "findings": 2,
+        "all": [
+          "CSI-001|L150|.cache.get",
+          "CSI-001|L154|.cache.set"
+        ],
+        "newVsCorrect": [],
+        "detected": false
+      },
+      "functional": {
+        "ownRecallWorks": true
+      },
+      "ms": 8.4
+    },
+    {
+      "variant": "D6-handoff-drops-tenant",
+      "boundary": "delegation / handoff",
+      "groundTruthLeak": true,
+      "oracle": {
+        "atRestStateViolations": 8,
+        "afterWorkloadViolations": 8,
+        "finalViolations": 12,
+        "sample": [
+          {
+            "store": "file:tenants/acme/consolidation/recent.log",
+            "owner": "acme",
+            "foreign": "globex"
+          },
+          {
+            "store": "file:tenants/default/consolidation/recent.log",
+            "owner": "shared",
+            "foreign": "acme"
+          },
+          {
+            "store": "file:tenants/default/consolidation/recent.log",
+            "owner": "shared",
+            "foreign": "globex"
+          },
+          {
+            "store": "file:tenants/default/logs/agent.log",
+            "owner": "shared",
+            "foreign": "acme"
+          }
+        ]
+      },
+      "blackBox": {
+        "detected": true,
+        "probesRun": 5,
+        "via": "probe:acme:same-user:delegate"
+      },
+      "v1": {
+        "detected": false,
+        "settingsClaimIsolation": true,
+        "deniesUnauth": true
+      },
+      "scanner": {
+        "ok": true,
+        "findings": 2,
+        "all": [
+          "CSI-001|L150|.cache.get",
+          "CSI-001|L154|.cache.set"
+        ],
+        "newVsCorrect": [],
+        "detected": false
+      },
+      "functional": {
+        "ownRecallWorks": true
+      },
+      "ms": 15.1
+    },
+    {
+      "variant": "D7-shared-log",
+      "boundary": "logs",
+      "groundTruthLeak": true,
+      "oracle": {
+        "atRestStateViolations": 2,
+        "afterWorkloadViolations": 2,
+        "finalViolations": 5,
+        "sample": [
+          {
+            "store": "file:logs/agent.log",
+            "owner": "shared",
+            "foreign": "acme"
+          },
+          {
+            "store": "file:logs/agent.log",
+            "owner": "shared",
+            "foreign": "globex"
+          },
+          {
+            "store": "file:tenants/acme/consolidation/recent.log",
+            "owner": "acme",
+            "foreign": "globex"
+          },
+          {
+            "store": "session:bot-acme:acme:u-100",
+            "owner": "acme",
+            "foreign": "globex"
+          }
+        ]
+      },
+      "blackBox": {
+        "detected": true,
+        "probesRun": 7,
+        "via": "probe:acme:same-user:read_logs"
+      },
+      "v1": {
+        "detected": false,
+        "settingsClaimIsolation": true,
+        "deniesUnauth": true
+      },
+      "scanner": {
+        "ok": true,
+        "findings": 2,
+        "all": [
+          "CSI-001|L150|.cache.get",
+          "CSI-001|L154|.cache.set"
+        ],
+        "newVsCorrect": [],
+        "detected": false
+      },
+      "functional": {
+        "ownRecallWorks": true
+      },
+      "ms": 7.1
+    },
+    {
+      "variant": "D8-pinned-artifact-path",
+      "boundary": "artifacts / persistence",
+      "groundTruthLeak": true,
+      "oracle": {
+        "atRestStateViolations": 1,
+        "afterWorkloadViolations": 1,
+        "finalViolations": 4,
+        "sample": [
+          {
+            "store": "file:tenants/acme/artifacts/notes.txt",
+            "owner": "acme",
+            "foreign": "globex"
+          },
+          {
+            "store": "file:tenants/acme/consolidation/recent.log",
+            "owner": "acme",
+            "foreign": "globex"
+          },
+          {
+            "store": "session:bot-acme:acme:u-100",
+            "owner": "acme",
+            "foreign": "globex"
+          },
+          {
+            "store": "output:probe:list_artifacts",
+            "owner": "acme",
+            "foreign": "globex"
+          }
+        ]
+      },
+      "blackBox": {
+        "detected": true,
+        "probesRun": 6,
+        "via": "probe:acme:same-user:list_artifacts"
+      },
+      "v1": {
+        "detected": false,
+        "settingsClaimIsolation": true,
+        "deniesUnauth": true
+      },
+      "scanner": {
+        "ok": true,
+        "findings": 2,
+        "all": [
+          "CSI-001|L150|.cache.get",
+          "CSI-001|L154|.cache.set"
+        ],
+        "newVsCorrect": [],
+        "detected": false
+      },
+      "functional": {
+        "ownRecallWorks": true
+      },
+      "ms": 6.8
+    },
+    {
+      "variant": "D9-shared-consolidation-buffer",
+      "boundary": "memory (latent, via consolidation)",
+      "groundTruthLeak": true,
+      "oracle": {
+        "atRestStateViolations": 2,
+        "afterWorkloadViolations": 2,
+        "finalViolations": 5,
+        "sample": [
+          {
+            "store": "file:consolidation/recent.log",
+            "owner": "shared",
+            "foreign": "acme"
+          },
+          {
+            "store": "file:consolidation/recent.log",
+            "owner": "shared",
+            "foreign": "globex"
+          },
+          {
+            "store": "file:tenants/acme/memories/MEMORY.md",
+            "owner": "acme",
+            "foreign": "globex"
+          },
+          {
+            "store": "session:bot-acme:acme:u-100",
+            "owner": "acme",
+            "foreign": "globex"
+          }
+        ]
+      },
+      "blackBox": {
+        "detected": true,
+        "probesRun": 9,
+        "via": "probe:acme:same-user:recall"
+      },
+      "v1": {
+        "detected": false,
+        "settingsClaimIsolation": true,
+        "deniesUnauth": true
+      },
+      "scanner": {
+        "ok": true,
+        "findings": 2,
+        "all": [
+          "CSI-001|L150|.cache.get",
+          "CSI-001|L154|.cache.set"
+        ],
+        "newVsCorrect": [],
+        "detected": false
+      },
+      "functional": {
+        "ownRecallWorks": true
+      },
+      "ms": 6.7
+    }
+  ]
+}
