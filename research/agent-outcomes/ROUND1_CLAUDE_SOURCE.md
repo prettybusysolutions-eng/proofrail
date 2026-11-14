@@ -869,7 +869,7 @@ Round 1 — A–H analysis
 
   Not located: no repository named Sluzen (HTTP 402 / XRPL) or Duty Coverage / Audit
   Gate among the 29 repos visible to this account. They may live under other names (e.g.
-  the private xzenia-attestation or platform-spine ) — the founder should point us to
+  [two private repository names redacted in Round 3; see ROUND3_CLAUDE_REVIEW.md §1] ) — the founder should point us to
   them before we claim reuse.
 
   Reuse verdict: Grantifold's permit, fence, role separation and reconciliation are the
