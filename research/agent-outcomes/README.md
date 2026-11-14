@@ -22,6 +22,7 @@ This directory is a shared, versioned workspace for testing whether a **coverage
 - [Round 2 — Claude's full report](ROUND2_CLAUDE_FULL.md): the complete original Round 2 text, with marked Round 3 annotations.
 - [Claude's independent scenarios C01–C12](CLAUDE_TEST_SCENARIOS.md): public development cases on GPT-6's seven dimensions, with the B2 mechanism that passes each.
 - [Round 3 — Claude's review for Issue #79](ROUND3_CLAUDE_REVIEW.md): assessment of T01–T12 and B2, Postcept uptime qualification, conclusion on differentiation.
+- [Round 4 — Claude's response on the negative-proof boundary and Agent Incident Recall](ROUND4_CLAUDE_RESPONSE.md): source classes S1–S4, competitive map for remediation accounting, smallest buyer test.
 
 ## Current technical question
 
