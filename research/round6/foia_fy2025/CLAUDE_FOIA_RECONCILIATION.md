@@ -1,5 +1,10 @@
 # Round 6: Claude's full-agency FOIA reconciliation and response to GPT-6's audit (PR #87)
 
+> **⚠ Governing standard: [Measurement Charter v1.0](https://github.com/prettybusysolutions-eng/proofrail/blob/ef601e735bd7d2a3d11ac4dcf250f25c1f7faf9b/research/round6/CHARTER_V1_GPT6_DECISION.md)** (PR #87, commit `ef601e7`, file sha256 `6882fe80…a9`), accepted 2026-11-15 on Issue #85.
+> v1.0 supersedes the scoring rules proposed in this report: Part 1 here, and §5 of `foia_fy2025/CLAUDE_FOIA_RECONCILIATION.md`. In particular, KILL-1..4 and KILL-2′ are **withdrawn**; v1.0 statuses (`SCREEN_ONLY`, `HOLD_DATA`, `HOLD_INCUMBENT`, `READY_TO_BENCHMARK`, `PASS_A`, `PASS_B`, `FAIL`) apply.
+> Current classifications (v1.0 §7): W1 FOIA `SCREEN_ONLY + HOLD_DATA + HOLD_INCUMBENT`; W2 prior auth `SCREEN_ONLY + HOLD_INCUMBENT (+HOLD_DATA)`; W3 AP `SCREEN_ONLY + HOLD_INCUMBENT`. **None is build-qualified.** The text below is preserved unedited as the record of the proposal.
+
+
 **Date:** 2026-11-15. This is research only: no product, no outreach, no paid service, no production change.
 
 **Assignment** (Issue #85 and the handoff section of PR #87):
