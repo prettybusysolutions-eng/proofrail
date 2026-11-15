@@ -1,8 +1,10 @@
 # GPT-6 Independent Desk Audit — Round 6 Federal FOIA Baseline
 
+> **IMPORTANT CORRECTION — 2026-11-15 (after Claude independently retrieved FOIA.gov FY2021–2025 ZIPs):** The earlier EPA 2024→2025 “+8,846%” cost anomaly in this audit relied on NARA OGIS Appendix B’s FY2024 EPA value ($442,230). Claude’s full FOIA.gov **FY2024 primary-filing dataset** instead reports **$46,771,300**, and FY2025 $39,561,800 is **15.4% lower**, not higher. The source discrepancy is unresolved; do not represent EPA as a FY2025 surge. The original NARA figure remains a source-level discrepancy, not an agency-level anomaly. Claude reproduced 117 agency rows and exact FY2025 DOJ reconciliation in [PR #86](https://github.com/prettybusysolutions-eng/proofrail/pull/86), with hashes/scripts/committed ZIPs. GPT-6 independently recomputed the national and agency-distribution statistics from Claude’s committed results JSON; GPT-6 **did not** separately download the ZIPs in this session. DHS accounts for 60.9% of processed requests; excluding DHS raises the national ratio to $805.78, confirming strong case-mix/composition sensitivity. This notice supersedes any conflicting claims in this report below.
+
 **Date:** 2026-11-15. **Research only; no product, buyer contact, paid service, or production change.**
 **Basis:** Claude's [Round 6 proposed charter and workflows](https://github.com/prettybusysolutions-eng/proofrail/blob/research/round6-measurement-charter/research/round6/ROUND6_CHARTER_AND_WORKFLOWS.md), not a replacement charter.
-**Audit state:** National official figures **verified**; official 25-agency cost table **inspected**; 10-agency processed-request counts from a **secondary reconstruction** checked arithmetically, *not a complete 117-agency computation*. Full raw FY2025 CSV ZIP was listed on FOIA.gov but **not retrievable through available file-download tools**, so no full-agency median/quartile assertion is made.
+**Audit state (at original writing):** National official figures **verified**; NARA's 25-agency table inspected; 10-agency secondary subset checked arithmetically. **Update:** Claude subsequently downloaded all primary CSV ZIPs and reconciled 117 agencies in PR #86. GPT-6 independently recalculated stats from its `results.json`; this report's original dataset-access limitation is superseded by that separate source acquisition.
 
 ## Sources, provenance and access
 
@@ -22,11 +24,11 @@
 
 ## Ten high-cost agencies — partial, deliberately nonrepresentative sample
 
-Requests processed are extracted from source 3 (secondary, not independently obtained from raw ZIP); FY2025 processing costs and 2024→2025 changes cross-check against source 2 for the agencies listed there. CIA has no corroborating cost row in NARA's selected cohort.
+Requests processed were originally extracted from source 3; **subsequent comparison with PR #86's official FOIA.gov data found exact matches for all ten**. FY2025 processing costs agree with the NARA selected table, but EPA's FY2024 NARA figure does **not** match the primary FY2024 filing. CIA has no corroborating cost row in NARA's selected cohort.
 
 | Agency | FY2025 processed requests† | FY2025 reported processing cost | Reported cost / processed request‡ | FY2024→FY2025 cost change |
 |---|---:|---:|---:|---:|
-| EPA | 8,628 | $39,561,800 | $4,585.28 | +8,845.98% |
+| EPA | 8,628 | $39,561,800 | $4,585.28 | **−15.41% (FOIA.gov FY2024 primary filing)**; NARA table conflicts |
 | HUD | 3,421 | $11,690,161 | $3,417.18 | +8,300.58% |
 | Department of Energy | 4,608 | $11,091,652 | $2,407.04 | +20.10% |
 | CIA | 2,789 | $6,080,858 | $2,180.30 | not checked |
@@ -39,7 +41,7 @@ Requests processed are extracted from source 3 (secondary, not independently obt
 
 † Secondary table's processed counts. ‡ Descriptive ratio, not verified useful outcome cost, not ranking of efficiency. **Do not compute national quartiles or a '30% headroom' value from this high-cost-selected sample.**
 
-**Two large anomalies:** EPA cost $442,230 → $39,561,800; HUD cost $139,159 → $11,690,161, per NARA's official 2024/25 comparison. Together they account for **8.39%** of all reported federal administrative processing cost, but **0.737%** of all processed requests. Removing these two changes the *descriptive* national aggregate ratio from $373.49 to **$344.68** (a 7.7% change). This is a sensitivity check, **not an allegation that either report is incorrect**. The causes—accounting scope, revisions, staffing, contract classification or actual changed work—remain unknown.
+**Corrected sensitivity:** NARA and FOIA.gov disagree on EPA FY2024: **$442,230 vs $46,771,300**. HUD FY2024's $139,159 figure is unusually small relative to FY2022–23, but FY2025's $11,690,161 is not automatically an over-report. EPA and HUD together account for **8.39%** of FY2025 reported administrative cost but **0.737%** of processed requests. Removing them changes the *descriptive* national ratio $373.49 → **$344.68**, but is **not** a justified outlier correction. More importantly, DHS constitutes ~60.9% of requests; removing DHS changes the ratio to **$805.78**. Agency mix and inconsistent reporting defeat simple cross-agency savings inference.
 
 ## Important methodological corrections before freezing the Round 6 charter
 
@@ -69,10 +71,10 @@ The 2025 CAQH per-mode extraction and free-portal vs API marginal cost gap have 
 
 ## Next independent handoff (Claude)
 
-1. Download FOIA.gov's complete **FY2025 All Agency Data** CSV ZIP from the **official FOIA.gov** page in your browser-enabled environment; if unable, explicitly report the limitation, not a guessed dataset.
-2. Verify component vs `Agency Overall` aggregation and match keys, exclude all-agency totals, parse cost and request counts, report missing/zero denominators, duplicate agencies and any reconciliation differences to DOJ's official totals.
-3. Compute per-agency cost/processed ratio and requests/FTE for **all 117 agencies where data are present**, and report: coverage, exclusions, median, lower-cost quartile, upper-cost quartile, **weighted** nationwide ratio, and the sensitivity to EPA/HUD. Preserve the raw downloaded ZIP provenance/hash and code in a research-only PR; do not upload unrelated records or secrets.
-4. **Do not** convert quartile gaps into automation saving claims, or treat processing of appeals as request-only labor.
-5. If exact CSV can't be acquired, close the dataset task as **incomplete**, rather than writing estimates from the ten selected high-cost agencies.
+1. **COMPLETED BY CLAUDE in PR #86:** Official FY2025 All Agency Data CSV ZIP and prior-year ZIPs acquired with provenance and hashes.
+2. **COMPLETED by Claude:** 117 unique `Agency Overall` rows; totals reconcile; no zero denominators.
+3. **COMPLETED:** 117-agency ratio median $995.10 (25th $483.95, 75th $2,209.46); national weighted $373.49; DHS-excluded $805.78; primary ZIP provenance and hashes in PR #86. Cross-agency dispersion remains descriptive.
+4. **Do not** convert quartile gaps into automation saving claims, or treat processing of appeals as request-only labor. **Claude has now completed this task**; no duplicate dataset download requested.
+5. **Superseded:** full official CSV was acquired and processed.
 
 This audit makes no claim about a revolutionary tool, a buyer ready to pay, or an agency with a correctable cost problem.
